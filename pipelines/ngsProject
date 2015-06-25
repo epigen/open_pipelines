@@ -48,6 +48,7 @@ def main():
 
     # Exit
     print("Finished and exiting.")
+    sys.exit(0)
 
 
 def addArgs(parser):
@@ -69,8 +70,14 @@ def addArgs(parser):
                         help="Dry run. Assemble commands, but do not submit jobs to slurm. Default=False.")
     parser.add_argument("--no-checks", dest="checks", action="store_false",
                         help="Don't check file existence and integrity. Default=False.")
-    parser.add_argument("--overwrite", dest="overwrite", action="store_true",
+
+    # Pypiper
+    parser.add_argument("--overwrite", dest="recover", action="store_true",
                         help="Overwrite existing files. Default=False.")
+    parser.add_argument("--fresh-start", dest="fresh", action="store_true",
+                        help="Start from beginning of pipeline. Default=False.")
+    parser.add_argument("--manual-clean", dest="manual_clean", action="store_true",
+                        help="Manually clean temporary files. Default=False.")
 
     # Slurm-related
     parser.add_argument("-c", "--cpus", default=4, dest="cpus",
@@ -123,25 +130,24 @@ def sampleLoop(args, prj):
 
     print("Starting sample preprocessing into jobs.")
 
-    # Start pipeline
+    # start pipeline
     runName = "_".join([prj.name, time.strftime("%Y%m%d-%H%M%S")])
 
-    # Add track headers to track hubs
+    # add track headers to track hubs
     for genome in pd.Series([s.genome for s in prj.samples]).unique():
         with open(os.path.join(prj.dirs.html, "trackHub_{0}.txt".format(genome)), "w") as handle:
             handle.write("browser position {0}\n".format(prj.config["defaultposition"]))
 
-    # Loop through samples, submit to corresponding pipeline
+    # Loop through samples, submit to corresponding job (preprocess, analyse)
     for sample in prj.samples:
         # get jobname
         jobName = "_".join([runName, sample.sampleName])
 
-        # If unmappedBam is a list (multiple samples to be merged)
-        # replace "unmapped" attr with merged final unmapped bam file
+        # if unmappedBam is a list, add final "unmapped" attr to sample object
         if type(sample.unmappedBam) is list:
             sample.unmapped = os.path.join(sample.dirs.unmapped, sample.name + ".bam")
 
-        # Assemble command
+        # assemble command
         # slurm header
         jobCode = tk.slurmHeader(
             jobName=jobName,
@@ -154,27 +160,25 @@ def sampleLoop(args, prj):
         )
 
         samplePickle = os.path.join(prj.dirs.pickles, jobName + ".pickle")
-        # Self reference the pickle file in its sample
+        # self reference the pickle file in its sample
         sample.pickle = samplePickle
 
         # If sample has control attribute, get that sample and pair them
         if hasattr(sample, "controlSampleName"):
             if type(sample.controlSampleName) == str:
-                # get Sample object which is referenced as control
+                # Assign the sample with that name to ctrl
                 ctrl = [s for s in prj.samples if s.sampleName == sample.controlSampleName]
                 # if there is only one record, use that as control
-                # assign control sample as ctrl attribute
                 if len(ctrl) == 1:
                     sample.ctrl = ctrl[0]
                 else:
                     # if not, process sample anyway, but without a matched control
                     print("Provided control sample name does not exist or is ambiguous: %s" % sample.controlSampleName)
 
-        # Save pickle with (Project, Sample, args) objects
+        # save pickle with all objects (this time, 2nd element is a tuple!)
         pickle.dump((prj, sample, args), open(samplePickle, "wb"))
 
-        # Actual call to pipeline - dependent on sample's technique
-        # in the future this could be dependent on type(Sample)
+        # Actual call to pipeline
         technique = sample.technique.upper()
         if technique in prj.config["techniques"]["chipseq"]:
             jobCode += "chipseq-pipeline {0}\n".format(samplePickle)
@@ -213,10 +217,9 @@ def sampleLoop(args, prj):
             genome=sample.genome
         )
 
-    # Write original annotation sheet to project folder
-    # if controlSampleName field does not exist, add it for later manual sample-control pairing
-    if not hasattr(prj.sheet.df, "controlSampleName"):
-        prj.sheet.df.controlSampleName = None
+    # write original annotation sheet to project folder
+    # add field for manual sample-control pairing
+    prj.sheet.df.controlSampleName = None
     prj.sheet.to_csv(os.path.join(prj.dirs.root, prj.name + ".annotation_sheet.csv"))
 
     print("Finished preprocessing")
@@ -302,6 +305,46 @@ def compare(args, prj):
     raise NotImplementedError
 
 
+def getReadType(bamFile, n=10):
+    """
+    Gets the read type (single, paired) and length of bam file.
+
+    :param bamFile: Bam file to determine read attributes.
+    :type bamFile: str
+    :param n: Number of lines to read from bam file.
+    :type n: int
+    :returns: tuple of (readType=string, readLength=int).
+    :rtype: tuple
+    """
+    from collections import Counter
+    try:
+        p = subprocess.Popen(['samtools', 'view', bamFile], stdout=subprocess.PIPE)
+
+        # Count paired alignments
+        paired = 0
+        readLength = Counter()
+        while n > 0:
+            line = p.stdout.next().split("\t")
+            flag = int(line[1])
+            readLength[len(line[9])] += 1
+            if 1 & flag:  # check decimal flag contains 1 (paired)
+                paired += 1
+            n -= 1
+        p.kill()
+    except:
+        print("Cannot read provided bam file.")
+        raise
+
+    # Get most abundant read readLength
+    readLength = sorted(readLength)[-1]
+
+    # If at least half is paired, return True
+    if paired > (n / 2):
+        return ("PE", readLength)
+    else:
+        return ("SE", readLength)
+
+
 def parseBowtieStats(statsFile):
     """
     Parses Bowtie2 stats file, returns series with values.
@@ -368,7 +411,6 @@ def parseQC(sampleName, qcFile):
 if __name__ == '__main__':
     try:
         main()
-        sys.exit(0)
     except KeyboardInterrupt:
         print("Program canceled by user!")
         sys.exit(1)

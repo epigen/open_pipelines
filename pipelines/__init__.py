@@ -460,8 +460,8 @@ class Sample(object):
         """
         self.name = "_".join(
             [str(self.__getattribute__(attr)) for attr in [
-                "cellLine", "numberCells", "technique",
-                "ip", "patient", "patientID", "sampleID", "treatment",
+                "cellLine", "numberCells", "technique", "ip",
+                "patient", "patientID", "sampleID", "treatment", "condition",
                 "biologicalReplicate", "technicalReplicate",
                 "experimentName", "genome"] if hasattr(self, attr) and str(self.__getattribute__(attr)) != "nan"]
         )
