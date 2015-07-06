@@ -201,7 +201,7 @@ def process(args, prj, sample):
         outputBigWig=sample.bigwig,
         genomeSizes=prj.config["annotations"]["chrsizes"][sample.genome],
         genome=sample.genome,
-        tagmented=sample.tagmented
+        tagmented=False  # by default tracks are made for full extended reads
     )
     pipe.call_lock(cmd, sample.bigwig, shell=True)
     cmd = tk.addTrackToHub(
