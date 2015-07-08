@@ -219,10 +219,11 @@ def process(args, prj, sample):
     )
 
     # Plot fragment distribution
-    pipe.timestamp("Plotting insert size ditribution")
+    pipe.timestamp("Plotting insert size distribution")
     tk.plotInsertSizesFit(
         bam=sample.filtered,
-        plot=sample.insertplot
+        plot=sample.insertplot,
+        outputCSV=self.insertdata
     )
 
     # Count coverage genome-wide
@@ -261,7 +262,7 @@ def process(args, prj, sample):
 
     # Filter peaks based on mappability regions
     pipe.timestamp("Filtering peaks in low mappability regions")
-    
+
     # get closest read length of sample to available mappability read lengths
     closestLength = min(prj.config["annotations"]["alignability"][sample.genome].keys(), key=lambda x:abs(x - sample.readLength)) 
 

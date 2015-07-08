@@ -6,7 +6,7 @@ Project management and Sample loop.
 
 from argparse import ArgumentParser
 from pipelines import Project
-from pypiper import ngstk as tk
+from pipelines import toolkit as tk
 import cPickle as pickle
 import os
 import pandas as pd
@@ -39,12 +39,12 @@ def main():
     prj.addSampleSheet(args.csv)
 
     # Start main function
-    if not args.stats:
-        sampleLoop(args, prj)
-    elif not args.compare:
+    if args.stats:
+        readStats(args, prj)
+    elif args.compare:
         compare(args, prj)
     else:
-        readStats(args, prj)
+        sampleLoop(args, prj)
 
     # Exit
     print("Finished and exiting.")
@@ -239,41 +239,40 @@ def readStats(args, prj):
 
     cols = ["readCount", "unpaired", "unaligned", "unique", "multiple", "alignmentRate"]
 
+    samples = pd.DataFrame(index=["sampleName"] + cols + ["NSC", "RSC", "qualityTag", "peakNumber", "FRiP"])
+
     for sample in prj.samples:
+        sample = sample.asSeries()
         # Get alignment stats
         try:
-            sample.alnStats = parseBowtieStats(sample.alnRates)
+            sample = sample.append(parseBowtieStats(sample.alnRates))
         except:
             print("Record with alignment rates is empty or not found for sample %s" % sample.sampleName)
             pass
 
         # Get duplicate stats
         try:
-            dups = pd.read_csv(sample.dupsMetrics, sep="\t", comment="#", header=0)
-            # drop if empty
-            dups.dropna(thresh=len(dups.columns) - 1, inplace=True)
-
-            # Add values to sample sheet
-            for col in range(len(cols)):
-                sample.append(dups.drop(["LIBRARY"], axis=1).ix[0][col])
+            sample = sample.append(parseDuplicateStats(sample.dupsMetrics))
         except:
             print("Record with duplicates is empty or not found for sample %s" % sample.sampleName)
             pass
 
         # Get NSC and RSC
-        qcFile = os.path.join(prj.dirs.results, "sample_QC.tsv")
-        qc = parseQC(sample.sampleName, qcFile)
-        sample["NSC"] = qc["NSC"]
-        sample["RSC"] = qc["RSC"]
-        sample["qualityTag"] = qc["qualityTag"]
+        try:
+            sample = sample.append(parseQC(sample.sampleName, sample.qc))
+        except:
+            print("Record with quality control is empty or not found for sample %s" % sample.sampleName)
+            pass
 
         # Count peak number (if peaks exist)
         if hasattr(sample, "peaks"):
             # and if sample has peaks
             if str(sample.peaks) != "nan":
-                proc = subprocess.Popen(["wc", "-l", sample.peaks], stdout=subprocess.PIPE)
-                out, err = proc.communicate()
-                sample["peakNumber"] = re.sub("\D.*", "", out)
+                # if peak file exist
+                if os.path.exists(sample.peaks):
+                    proc = subprocess.Popen(["wc", "-l", sample.peaks], stdout=subprocess.PIPE)
+                    out, err = proc.communicate()
+                    sample["peakNumber"] = re.sub("\D.*", "", out)
 
         # Get FRiP from file (if exists) and add to sheet
         if hasattr(sample, "peaks"):
@@ -284,19 +283,16 @@ def readStats(args, prj):
                         content = handle.readlines()
 
                     readsInPeaks = int(re.sub("\D", "", content[0]))
-                    mappedReads = sample.readCount - sample.unaligned
+                    mappedReads = sample["readCount"] - sample["unaligned"]
 
                     sample["FRiP"] = readsInPeaks / mappedReads
                 except:
                     print("Record with FRiP value is empty or not found for sample %s" % sample.sampleName)
                     pass
+        samples[sample.sampleName] = sample
 
-    samples = pd.DataFrame(prj.samples)
-    # convert duplicate rate to percentage
-    samples.loc[:, 'percentDuplication'] = samples['percentDuplication'] * 100
-
-    # write annotation sheet with biological replicates
-    samples.to_csv(prj.sampleStats, index=False)
+    # write annotation sheet with statistics
+    samples.T.to_csv(prj.sampleStats, index=False)
 
     print("Finished getting read statistics.")
 
@@ -354,8 +350,11 @@ def parseBowtieStats(statsFile):
     """
     stats = pd.Series(index=["readCount", "unpaired", "unaligned", "unique", "multiple", "alignmentRate"])
 
-    with open(statsFile) as handle:
-        content = handle.readlines()  # list of strings per line
+    try:
+        with open(statsFile) as handle:
+            content = handle.readlines()  # list of strings per line
+    except:
+        return stats
 
     # total reads
     try:
@@ -380,30 +379,49 @@ def parseBowtieStats(statsFile):
     return stats
 
 
+def parseDuplicateStats(statsFile):
+    """
+    Parses Bowtie2 stats file, returns series with values.
+
+    :param statsFile: Bowtie2 output file with alignment statistics.
+    :type statsFile: str
+    """
+    series = pd.Series()
+
+    try:
+        with open(statsFile) as handle:
+            content = handle.readlines()  # list of strings per line
+    except:
+        return series
+
+    # total reads
+    try:
+        line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
+        series["total"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+        line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
+        series["duplicates"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+    except IndexError:
+        pass
+    return series
+
+
 def parseQC(sampleName, qcFile):
     """
-    Parses QC table produced by phantompeakqualtools (spp) and adds to sample annotation sheet
-    sample quality metrics for each sample.
+    Parses QC table produced by phantompeakqualtools (spp) and returns sample quality metrics.
 
     :param sampleName: Sample name.
     :type sampleName: str
     :param qcFile: phantompeakqualtools output file sample quality measurements.
     :type qcFile: str
     """
-    series = pd.Series(index=["NSC", "RSC", "qualityTag"])
+    series = pd.Series()
     try:
         with open(qcFile) as handle:
-            content = handle.readlines()  # list of strings per line
+            line = handle.readlines()[0].strip().split("\t")  # list of strings per line
+        series["NSC"] = line[-3]
+        series["RSC"] = line[-2]
+        series["qualityTag"] = line[-1]
     except:
-        return series
-
-    try:
-        line = [i for i in range(len(content)) if str(sampleName) in content[i]][0]
-        attrs = content[line].strip().split("\t")
-        series["NSC"] = attrs[-3]
-        series["RSC"] = attrs[-2]
-        series["qualityTag"] = attrs[-1]
-    except IndexError:
         pass
     return series
 
