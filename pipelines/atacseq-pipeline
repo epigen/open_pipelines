@@ -261,9 +261,13 @@ def process(args, prj, sample):
 
     # Filter peaks based on mappability regions
     pipe.timestamp("Filtering peaks in low mappability regions")
+    
+    # get closest read length of sample to available mappability read lengths
+    closestLength = min(prj.config["annotations"]["alignability"][sample.genome].keys(), key=lambda x:abs(x - sample.readLength)) 
+
     cmd = tk.filterPeaksMappability(
         peaks=sample.peaks,
-        alignability=prj.config["annotations"]["alignability"][sample.genome][sample.readLength],
+        alignability=prj.config["annotations"]["alignability"][sample.genome][closestLength],
         filteredPeaks=sample.filteredPeaks
     )
     pipe.call_lock(cmd, sample.filteredPeaks, shell=True)
