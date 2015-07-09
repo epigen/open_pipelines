@@ -234,12 +234,13 @@ def readStats(args, prj):
     :param prj: `Project` object.
     :type prj: pipelines.Project
     """
+    import re
 
     print("Starting sample read stats.")
 
-    cols = ["readCount", "unpaired", "unaligned", "unique", "multiple", "alignmentRate"]
+    bowtieCols = ["readCount", "unpaired", "unaligned", "unique", "multiple", "alignmentRate"]
 
-    samples = pd.DataFrame(index=["sampleName"] + cols + ["NSC", "RSC", "qualityTag", "peakNumber", "FRiP"])
+    samples = pd.DataFrame(index=["sampleName"] + bowtieCols + ["single-ends", "paired-ends", "duplicates", "NSC", "RSC", "qualityTag", "peakNumber", "FRiP"])
 
     for sample in prj.samples:
         sample = sample.asSeries()
@@ -270,22 +271,14 @@ def readStats(args, prj):
             if str(sample.peaks) != "nan":
                 # if peak file exist
                 if os.path.exists(sample.peaks):
-                    proc = subprocess.Popen(["wc", "-l", sample.peaks], stdout=subprocess.PIPE)
-                    out, err = proc.communicate()
-                    sample["peakNumber"] = re.sub("\D.*", "", out)
+                    sample = getPeakNumber(sample)
 
         # Get FRiP from file (if exists) and add to sheet
         if hasattr(sample, "peaks"):
             # if sample has peaks
             if str(sample.peaks) != "nan":
                 try:
-                    with open(sample.frip, "r") as handle:
-                        content = handle.readlines()
-
-                    readsInPeaks = int(re.sub("\D", "", content[0]))
-                    mappedReads = sample["readCount"] - sample["unaligned"]
-
-                    sample["FRiP"] = readsInPeaks / mappedReads
+                    sample = getFRiP(sample)
                 except:
                     print("Record with FRiP value is empty or not found for sample %s" % sample.sampleName)
                     pass
@@ -313,6 +306,7 @@ def getReadType(bamFile, n=10):
     :rtype: tuple
     """
     from collections import Counter
+
     try:
         p = subprocess.Popen(['samtools', 'view', bamFile], stdout=subprocess.PIPE)
 
@@ -348,6 +342,8 @@ def parseBowtieStats(statsFile):
     :param statsFile: Bowtie2 output file with alignment statistics.
     :type statsFile: str
     """
+    import re
+
     stats = pd.Series(index=["readCount", "unpaired", "unaligned", "unique", "multiple", "alignmentRate"])
 
     try:
@@ -373,7 +369,7 @@ def parseBowtieStats(statsFile):
         line = [i for i in range(len(content)) if "aligned >1 times" in content[i]][0]
         stats["multiple"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
         line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
-        stats["alignmentRate"] = re.sub("\D.*", "", content[line])
+        stats["alignmentRate"] = re.sub("\%.*", "", content[line]).strip()
     except IndexError:
         pass
     return stats
@@ -386,6 +382,8 @@ def parseDuplicateStats(statsFile):
     :param statsFile: Bowtie2 output file with alignment statistics.
     :type statsFile: str
     """
+    import re
+
     series = pd.Series()
 
     try:
@@ -394,12 +392,13 @@ def parseDuplicateStats(statsFile):
     except:
         return series
 
-    # total reads
     try:
+        line = [i for i in range(len(content)) if "single ends (among them " in content[i]][0]
+        series["single-ends"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
         line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
-        series["total"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+        series["paired-ends"] = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
         line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
-        series["duplicates"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+        series["duplicates"] = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
     except IndexError:
         pass
     return series
@@ -424,6 +423,41 @@ def parseQC(sampleName, qcFile):
     except:
         pass
     return series
+
+
+def getPeakNumber(sample):
+    """
+    Counts number of peaks from a sample's peak file.
+
+    :param sample: A Sample object with the "peaks" attribute.
+    :type sampleName: pipelines.Sample
+    """
+    import subprocess
+    import re
+
+    proc = subprocess.Popen(["wc", "-l", sample.peaks], stdout=subprocess.PIPE)
+    out, err = proc.communicate()
+    sample["peakNumber"] = re.sub("\D.*", "", out)
+
+    return sample
+
+
+def getFRiP(sample):
+    """
+    Calculates the fraction of reads in peaks for a given sample.
+
+    :param sample: A Sample object with the "peaks" attribute.
+    :type sampleName: pipelines.Sample
+    """
+    import re
+
+    with open(sample.frip, "r") as handle:
+        content = handle.readlines()
+
+    readsInPeaks = int(re.sub("\D", "", content[0]))
+    mappedReads = sample["readCount"] - sample["unaligned"]
+
+    return pd.Series(readsInPeaks / mappedReads, index="FRiP")
 
 
 if __name__ == '__main__':
