@@ -7,7 +7,7 @@ ATAC-seq pipeline
 from argparse import ArgumentParser
 import os
 import sys
-from pypiper import ngstk as tk
+from pipelines import toolkit as tk
 import cPickle as pickle
 from pypiper import Pypiper
 
@@ -71,7 +71,7 @@ def process(args, prj, sample):
     # Start Pypiper object
     pipe = Pypiper("pipe", sample.dirs.sampleRoot, args=args)
 
-    # if more than one technical replicate, merge bams
+    # Merge Bam files if more than one technical replicate
     if type(sample.unmappedBam) == list:
         pipe.timestamp("Merging bam files from replicates")
         cmd = tk.mergeBams(
@@ -83,7 +83,7 @@ def process(args, prj, sample):
 
     # Fastqc
     pipe.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastQC(
+    cmd = tk.fastqc(
         inputBam=sample.unmappedBam,
         outputDir=sample.dirs.sampleRoot,
         sampleName=sample.name
@@ -151,7 +151,7 @@ def process(args, prj, sample):
     pipe.timestamp("Mapping reads with Bowtie2")
     cmd = tk.bowtie2Map(
         inputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-        inputFastq2=sample.trimmed1 if sample.paired else None,
+        inputFastq2=sample.trimmed2 if sample.paired else None,
         outputBam=sample.mapped,
         log=sample.alnRates,
         metrics=sample.alnMetrics,
@@ -202,7 +202,7 @@ def process(args, prj, sample):
         outputBigWig=sample.bigwig,
         genomeSizes=prj.config["annotations"]["chrsizes"][sample.genome],
         genome=sample.genome,
-        tagmented=False,  # by default tracks are made for full extended reads
+        tagmented=False,  # by default make extended tracks
         normalize=True
     )
     pipe.call_lock(cmd, sample.bigwig, shell=True)
@@ -224,7 +224,7 @@ def process(args, prj, sample):
     tk.plotInsertSizesFit(
         bam=sample.filtered,
         plot=sample.insertplot,
-        outputCSV=self.insertdata
+        outputCSV=sample.insertdata
     )
 
     # Count coverage genome-wide
@@ -252,33 +252,32 @@ def process(args, prj, sample):
     if not os.path.exists(sample.dirs.peaks):
         os.makedirs(sample.dirs.peaks)
 
-    cmd = tk.macs2CallPeaks(
+    cmd = tk.macs2CallPeaksATACSeq(
         treatmentBam=sample.filteredshifted,
         outputDir=sample.dirs.peaks,
         sampleName=sample.name,
-        genome=sample.genome,
-        broad=True
+        genome=sample.genome
     )
     pipe.call_lock(cmd, sample.peaks, shell=True)
 
-    # Filter peaks based on mappability regions
-    pipe.timestamp("Filtering peaks in low mappability regions")
+    # # Filter peaks based on mappability regions
+    # pipe.timestamp("Filtering peaks in low mappability regions")
 
-    # get closest read length of sample to available mappability read lengths
-    closestLength = min(prj.config["annotations"]["alignability"][sample.genome].keys(), key=lambda x:abs(x - sample.readLength)) 
+    # # get closest read length of sample to available mappability read lengths
+    # closestLength = min(prj.config["annotations"]["alignability"][sample.genome].keys(), key=lambda x:abs(x - sample.readLength)) 
 
-    cmd = tk.filterPeaksMappability(
-        peaks=sample.peaks,
-        alignability=prj.config["annotations"]["alignability"][sample.genome][closestLength],
-        filteredPeaks=sample.filteredPeaks
-    )
-    pipe.call_lock(cmd, sample.filteredPeaks, shell=True)
+    # cmd = tk.filterPeaksMappability(
+    #     peaks=sample.peaks,
+    #     alignability=prj.config["annotations"]["alignability"][sample.genome][closestLength],
+    #     filteredPeaks=sample.filteredPeaks
+    # )
+    # pipe.call_lock(cmd, sample.filteredPeaks, shell=True)
 
     # Calculate fraction of reads in peaks (FRiP)
     pipe.timestamp("Calculating fraction of reads in peaks (FRiP)")
     cmd = tk.calculateFRiP(
         inputBam=sample.filteredshifted,
-        inputBed=sample.filteredPeaks,
+        inputBed=sample.peaks,
         output=sample.frip
     )
     pipe.call_lock(cmd, sample.frip, shell=True)
