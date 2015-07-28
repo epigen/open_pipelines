@@ -7,7 +7,7 @@ Quant-seq pipeline
 from argparse import ArgumentParser
 import os
 import sys
-from pypiper import ngstk as tk
+from . import toolkit as tk
 import cPickle as pickle
 from pypiper import Pypiper
 

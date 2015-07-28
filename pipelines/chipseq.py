@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 """
-ATAC-seq pipeline
+ChIP-seq pipeline
 """
 
 from argparse import ArgumentParser
 import os
 import sys
-from pipelines import toolkit as tk
+from . import toolkit as tk
 import cPickle as pickle
 from pypiper import Pypiper
 
@@ -24,7 +24,10 @@ __status__ = "Development"
 
 def main():
     # Parse command-line arguments
-    parser = ArgumentParser(description="ATAC-seq pipeline.")
+    parser = ArgumentParser(
+        prog="chipseq-pipeline",
+        description="ChIP-seq pipeline."
+    )
     parser = mainArgParser(parser)
     args = parser.parse_args()
     # save pickle
@@ -62,11 +65,10 @@ def mainArgParser(parser):
 def process(args, prj, sample):
     """
     This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
-    and removed, indexed, shifted Bam files along with a UCSC browser track.
-    Peaks are called and filtered.
+    and removed, indexed (and shifted if necessary) Bam files
+    along with a UCSC browser track.
     """
-
-    print("Start processing ATAC-seq sample %s." % sample.name)
+    print("Start processing ChIP-seq sample %s." % sample.name)
 
     # Start Pypiper object
     pipe = Pypiper("pipe", sample.dirs.sampleRoot, args=args)
@@ -83,7 +85,7 @@ def process(args, prj, sample):
 
     # Fastqc
     pipe.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastqc(
+    cmd = tk.fastQC(
         inputBam=sample.unmappedBam,
         outputDir=sample.dirs.sampleRoot,
         sampleName=sample.name
@@ -135,7 +137,7 @@ def process(args, prj, sample):
             inputFastq2=sample.fastq2 if sample.paired else None,
             outputPrefix=os.path.join(sample.dirs.unmapped, sample.name),
             outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-            outputFastq2=sample.trimmed2 if sample.paired else None,
+            outputFastq2=sample.trimmed1 if sample.paired else None,
             trimLog=sample.trimlog,
             cpus=args.cpus,
             adapters=prj.config["adapters"]
@@ -198,11 +200,11 @@ def process(args, prj, sample):
     # right now tracks are only made for bams without duplicates
     pipe.timestamp("Making bigWig tracks from bam file")
     cmd = tk.bamToBigWig(
-        inputBam=sample.filteredshifted,
+        inputBam=sample.filtered,
         outputBigWig=sample.bigwig,
         genomeSizes=prj.config["annotations"]["chrsizes"][sample.genome],
         genome=sample.genome,
-        tagmented=False,  # by default make extended tracks
+        tagmented=False,  # by default tracks are made for full extended reads
         normalize=True
     )
     pipe.call_lock(cmd, sample.bigwig, shell=True)
@@ -219,18 +221,10 @@ def process(args, prj, sample):
         genome=sample.genome
     )
 
-    # Plot fragment distribution
-    pipe.timestamp("Plotting insert size distribution")
-    tk.plotInsertSizesFit(
-        bam=sample.filtered,
-        plot=sample.insertplot,
-        outputCSV=sample.insertdata
-    )
-
     # Count coverage genome-wide
     pipe.timestamp("Calculating genome-wide coverage")
     cmd = tk.genomeWideCoverage(
-        inputBam=sample.filteredshifted,
+        inputBam=sample.filtered,
         genomeWindows=prj.config["annotations"]["genomewindows"][sample.genome],
         output=sample.coverage
     )
@@ -239,44 +233,175 @@ def process(args, prj, sample):
     # Calculate NSC, RSC
     pipe.timestamp("Assessing signal/noise in sample")
     cmd = tk.peakTools(
-        inputBam=sample.filteredshifted,
+        inputBam=sample.filtered,
         output=sample.qc,
         plot=sample.qcPlot,
         cpus=args.cpus
     )
     pipe.call_lock(cmd, sample.qcPlot, shell=True, nofail=True)
 
-    # Call peaks
-    pipe.timestamp("Calling peaks with MACS2")
-    # make dir for output (macs fails if it does not exist)
-    if not os.path.exists(sample.dirs.peaks):
-        os.makedirs(sample.dirs.peaks)
+    # If sample does not have "ctrl" attribute, finish processing it.
+    if not hasattr(sample, "ctrl"):
+        print("Finished processing sample %s." % sample.name)
+        return
 
-    cmd = tk.macs2CallPeaksATACSeq(
-        treatmentBam=sample.filteredshifted,
-        outputDir=sample.dirs.peaks,
-        sampleName=sample.name,
-        genome=sample.genome
+    if args.peak_caller == "macs2":
+        pipe.timestamp("Calling peaks with MACS2")
+        # make dir for output (macs fails if it does not exist)
+        if not os.path.exists(sample.dirs.peaks):
+            os.makedirs(sample.dirs.peaks)
+
+        # For point-source factors use default settings
+        # For broad factors use broad settings
+        cmd = tk.macs2CallPeaks(
+            treatmentBam=sample.filtered,
+            controlBam=sample.ctrl.filtered,
+            outputDir=sample.dirs.peaks,
+            sampleName=sample.name,
+            genome=sample.genome,
+            broad=True if sample.broad else False
+        )
+        pipe.call_lock(cmd, sample.peaks, shell=True)
+
+        pipe.timestamp("Ploting MACS2 model")
+        cmd = tk.macs2PlotModel(
+            sampleName=sample.name,
+            outputDir=os.path.join(sample.dirs.peaks, sample.name)
+        )
+        pipe.call_lock(cmd, os.path.join(sample.dirs.peaks, sample.name, sample.name + "_model.pdf"), shell=True)
+    elif args.peak_caller == "spp":
+        pipe.timestamp("Calling peaks with spp")
+        # For point-source factors use default settings
+        # For broad factors use broad settings
+        cmd = tk.sppCallPeaks(
+            treatmentBam=sample.filtered,
+            controlBam=sample.ctrl.filtered,
+            treatmentName=sample.name,
+            controlName=sample.ctrl.sampleName,
+            outputDir=os.path.join(sample.dirs.peaks, sample.name),
+            broad=True if sample.broad else False,
+            cpus=args.cpus
+        )
+        pipe.call_lock(cmd, sample.peaks, shell=True)
+    elif args.peak_caller == "zinba":
+        raise NotImplementedError("Calling peaks with Zinba is not yet implemented.")
+        # pipe.timestamp("Calling peaks with Zinba")
+        # cmd = tk.bamToBed(
+        #     inputBam=sample.filtered,
+        #     outputBed=os.path.join(sample.dirs.peaks, sample.name + ".bed"),
+        # )
+        # pipe.call_lock(cmd, os.path.join(sample.dirs.peaks, sample.name + ".bed"), shell=True)
+        # cmd = tk.bamToBed(
+        #     inputBam=sample.ctrl.filtered,
+        #     outputBed=os.path.join(sample.dirs.peaks, control.sampleName + ".bed"),
+        # )
+        # pipe.call_lock(cmd, os.path.join(sample.dirs.peaks, control.sampleName + ".bed"), shell=True)
+        # cmd = tk.zinbaCallPeaks(
+        #     treatmentBed=os.path.join(sample.dirs.peaks, sample.name + ".bed"),
+        #     controlBed=os.path.join(sample.dirs.peaks, control.sampleName + ".bed"),
+        #     tagmented=sample.tagmented,
+        #     cpus=args.cpus
+        # )
+        # pipe.call_lock(cmd, shell=True)
+
+    # Find motifs
+    pipe.timestamp("Finding motifs")
+    if not sample.histone:
+        # For TFs, find the "self" motif
+        cmd = tk.homerFindMotifs(
+            peakFile=sample.peaks,
+            genome=sample.genome,
+            outputDir=sample.motifsDir,
+            size="50",
+            length="8,10,12,14,16",
+            n_motifs=8
+        )
+        pipe.call_lock(cmd, os.path.join(sample.motifsDir, "homerResults", "motif1.motif"), shell=True)
+        # For TFs, find co-binding motifs (broader region)
+        cmd = tk.homerFindMotifs(
+            peakFile=sample.peaks,
+            genome=sample.genome,
+            outputDir=sample.motifsDir + "_cobinders",
+            size="200",
+            length="8,10,12,14,16",
+            n_motifs=12
+        )
+        pipe.call_lock(cmd, os.path.join(sample.motifsDir + "_cobinders", "homerResults", "motif1.motif"), shell=True)
+    else:
+        # For histones, use a broader region to find motifs
+        cmd = tk.homerFindMotifs(
+            peakFile=sample.peaks,
+            genome=sample.genome,
+            outputDir=sample.motifsDir,
+            size="1000",
+            length="8,10,12,14,16",
+            n_motifs=20
+        )
+        pipe.call_lock(cmd, os.path.join(sample.motifsDir, "homerResults", "motif1.motif"), shell=True)
+
+    # Center peaks on motifs
+    pipe.timestamp("Centering peak in motifs")
+    # TODO:
+    # right now this assumes peaks were called with MACS2
+    # figure a way of magetting the peak files withough using the peak_caller option
+    # for that would imply taht option would be required when selecting this stage
+    cmd = tk.centerPeaksOnMotifs(
+        peakFile=sample.peaks,
+        genome=sample.genome,
+        windowWidth=prj.config["options"]["peakwindowwidth"],
+        motifFile=os.path.join(sample.motifsDir, "homerResults", "motif1.motif"),
+        outputBed=sample.peaksMotifCentered
     )
-    pipe.call_lock(cmd, sample.peaks, shell=True)
+    pipe.call_lock(cmd, sample.peaksMotifCentered, shell=True)
 
-    # # Filter peaks based on mappability regions
-    # pipe.timestamp("Filtering peaks in low mappability regions")
+    # Annotate peaks with motif info
+    pipe.timestamp("Annotating peaks with motif info")
+    # TODO:
+    # right now this assumes peaks were called with MACS2
+    # figure a way of getting the peak files withough using the peak_caller option
+    # for that would imply taht option would be required when selecting this stage
+    cmd = tk.AnnotatePeaks(
+        peakFile=sample.peaks,
+        genome=sample.genome,
+        motifFile=os.path.join(sample.motifsDir, "homerResults", "motif1.motif"),
+        outputBed=sample.peaksMotifAnnotated
+    )
+    pipe.call_lock(cmd, sample.peaksMotifAnnotated, shell=True)
 
-    # # get closest read length of sample to available mappability read lengths
-    # closestLength = min(prj.config["annotations"]["alignability"][sample.genome].keys(), key=lambda x:abs(x - sample.readLength)) 
+    # Plot enrichment at peaks centered on motifs
+    pipe.timestamp("Ploting enrichment at peaks centered on motifs")
+    cmd = tk.peakAnalysis(
+        inputBam=sample.filtered,
+        peakFile=sample.peaksMotifCentered,
+        plotsDir=os.path.join(prj.dirs.results, 'plots'),
+        windowWidth=prj.config["options"]["peakwindowwidth"],
+        fragmentsize=1 if sample.tagmented else sample.readLength,
+        genome=sample.genome,
+        n_clusters=5,
+        strand_specific=True,
+        duplicates=True
+    )
+    pipe.call_lock(cmd, shell=True, nofail=True)
 
-    # cmd = tk.filterPeaksMappability(
-    #     peaks=sample.peaks,
-    #     alignability=prj.config["annotations"]["alignability"][sample.genome][closestLength],
-    #     filteredPeaks=sample.filteredPeaks
-    # )
-    # pipe.call_lock(cmd, sample.filteredPeaks, shell=True)
+    # Plot enrichment around TSSs
+    pipe.timestamp("Ploting enrichment around TSSs")
+    cmd = tk.tssAnalysis(
+        inputBam=sample.filtered,
+        tssFile=prj.config["annotations"]["tss"][sample.genome],
+        plotsDir=os.path.join(prj.dirs.results, 'plots'),
+        windowWidth=prj.config["options"]["peakwindowwidth"],
+        fragmentsize=1 if sample.tagmented else sample.readLength,
+        genome=sample.genome,
+        n_clusters=5,
+        strand_specific=True,
+        duplicates=True
+    )
+    pipe.call_lock(cmd, shell=True, nofail=True)
 
     # Calculate fraction of reads in peaks (FRiP)
     pipe.timestamp("Calculating fraction of reads in peaks (FRiP)")
     cmd = tk.calculateFRiP(
-        inputBam=sample.filteredshifted,
+        inputBam=sample.filtered,
         inputBed=sample.peaks,
         output=sample.frip
     )
