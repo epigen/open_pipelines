@@ -208,7 +208,7 @@ def process(args, prj, sample):
         gtf=prj.config["annotations"]["transcriptomes"]["ercc"],
         output=sample.erccQuant
     )
-    pipe.call_lock(cmd, sample.erccQuant, shell=True)
+    pipe.call_lock(cmd, sample.erccQuant, shell=True, nofail=True)
 
     # With kallisto from unmapped reads
     pipe.timestamp("Quantifying read counts with kallisto")
@@ -220,7 +220,7 @@ def process(args, prj, sample):
         transcriptomeIndex=prj.config["annotations"]["kallistoindex"][sample.genome],
         cpus=args.cpus
     )
-    pipe.call_lock(cmd, sample.kallistoQuant, shell=True)
+    pipe.call_lock(cmd, sample.kallistoQuant, shell=True, nofail=True)
 
     print("Finished processing sample %s." % sample.name)
 

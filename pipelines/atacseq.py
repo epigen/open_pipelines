@@ -223,12 +223,13 @@ def process(args, prj, sample):
     )
 
     # Plot fragment distribution
-    pipe.timestamp("Plotting insert size distribution")
-    tk.plotInsertSizesFit(
-        bam=sample.filtered,
-        plot=sample.insertplot,
-        outputCSV=sample.insertdata
-    )
+    if sample.paired and not os.path.exists(sample.insertplot):
+        pipe.timestamp("Plotting insert size distribution")
+        tk.plotInsertSizesFit(
+            bam=sample.filtered,
+            plot=sample.insertplot,
+            outputCSV=sample.insertdata
+        )
 
     # Count coverage genome-wide
     pipe.timestamp("Calculating genome-wide coverage")

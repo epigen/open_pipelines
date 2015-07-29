@@ -85,7 +85,7 @@ def process(args, prj, sample):
 
     # Fastqc
     pipe.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastQC(
+    cmd = tk.fastqc(
         inputBam=sample.unmappedBam,
         outputDir=sample.dirs.sampleRoot,
         sampleName=sample.name
@@ -137,7 +137,7 @@ def process(args, prj, sample):
             inputFastq2=sample.fastq2 if sample.paired else None,
             outputPrefix=os.path.join(sample.dirs.unmapped, sample.name),
             outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-            outputFastq2=sample.trimmed1 if sample.paired else None,
+            outputFastq2=sample.trimmed2 if sample.paired else None,
             trimLog=sample.trimlog,
             cpus=args.cpus,
             adapters=prj.config["adapters"]
