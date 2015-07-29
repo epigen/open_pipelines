@@ -82,7 +82,7 @@ def process(args, prj, sample):
 
     # Fastqc
     pipe.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastQC(
+    cmd = tk.fastqc(
         inputBam=sample.unmappedBam,
         outputDir=sample.dirs.sampleRoot,
         sampleName=sample.name
@@ -154,59 +154,49 @@ def process(args, prj, sample):
     pipe.call_lock(cmd, sample.erccMapped, shell=True)
     pipe.clean_add(sample.erccMapped, conditional=True)
 
-    # Mark duplicates
-    pipe.timestamp("Marking sample's duplicates")
-    cmd = tk.picardMarkDuplicates(
+    # Filter reads
+    pipe.timestamp("Filtering reads")
+    cmd = tk.filterReads(
         inputBam=sample.mapped,
-        outputBam=sample.dups,
+        outputBam=sample.filtered,
         metricsFile=sample.dupsMetrics,
+        paired=sample.paired,
+        cpus=args.cpus,
+        Q=args.quality
     )
-    pipe.call_lock(cmd, sample.dups, shell=True)
-    pipe.clean_add(sample.dups, conditional=True)
+    pipe.call_lock(cmd, sample.filtered, shell=True)
 
-    pipe.timestamp("Marking ERCC's duplicates")
-    cmd = tk.picardMarkDuplicates(
+    pipe.timestamp("Filtering ERCC reads")
+    cmd = tk.filterReads(
         inputBam=sample.erccMapped,
-        outputBam=sample.erccDups,
-        metricsFile=sample.erccDupsMetrics
+        outputBam=sample.erccFiltered,
+        metricsFile=sample.erccDupsMetrics,
+        paired=sample.paired,
+        cpus=args.cpus,
+        Q=args.quality
     )
-    pipe.call_lock(cmd, sample.erccDups, shell=True)
-    pipe.clean_add(sample.erccDups, conditional=True)
-
-    # Remove duplicates
-    pipe.timestamp("Removing sample's duplicates")
-    cmd = tk.removeDuplicates(
-        inputBam=sample.dups,
-        outputBam=sample.nodups,
-        cpus=args.cpus
-    )
-    pipe.call_lock(cmd, sample.nodups, shell=True)
-
-    pipe.timestamp("Removing ERCC's duplicates")
-    cmd = tk.removeDuplicates(
-        inputBam=sample.erccDups,
-        outputBam=sample.erccNodups,
-        cpus=args.cpus
-    )
-    pipe.call_lock(cmd, sample.erccNodups, shell=True)
+    pipe.call_lock(cmd, sample.erccFiltered, shell=True)
 
     # Sort and index
+    pipe.timestamp("Sorting and indexing reads")
     cmd = tk.sortIndexBam(
-        inputBam=sample.nodups,
-        outputBam=sample.nodups
+        inputBam=sample.filtered,
+        outputBam=sample.filtered
     )
-    pipe.call_lock(cmd, lock_name="sample.nodups", shell=True)
+    pipe.call_lock(cmd, lock_name="sample.filtered", shell=True)
+
+    pipe.timestamp("Sorting and indexing ERCC reads")
     cmd = tk.sortIndexBam(
-        inputBam=sample.erccNodups,
-        outputBam=sample.erccNodups
+        inputBam=sample.erccFiltered,
+        outputBam=sample.erccFiltered
     )
-    pipe.call_lock(cmd, lock_name="sample.erccNodups", shell=True)
+    pipe.call_lock(cmd, lock_name="sample.erccFiltered", shell=True)
 
     # Quantify Transcripts
     # With HTseq-count from alignments
     pipe.timestamp("Quantify sample transcripts with htseq-count")
     cmd = tk.htSeqCount(
-        inputBam=sample.nodups,
+        inputBam=sample.filtered,
         gtf=prj.config["annotations"]["transcriptomes"][sample.genome],
         output=sample.quant
     )
@@ -214,7 +204,7 @@ def process(args, prj, sample):
 
     pipe.timestamp("Quantify ERCC transcripts with htseq-count")
     cmd = tk.htSeqCount(
-        inputBam=sample.erccNodups,
+        inputBam=sample.erccFiltered,
         gtf=prj.config["annotations"]["transcriptomes"]["ercc"],
         output=sample.erccQuant
     )

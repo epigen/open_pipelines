@@ -154,7 +154,7 @@ def sample_loop(args, prj):
         # assemble command
         # slurm header
         job_code = tk.slurmHeader(
-            job_name=job_name,
+            jobName=job_name,
             output=os.path.join(prj.dirs.logs, job_name + ".slurm.log"),
             queue=args.queue,
             time=args.time,
@@ -194,6 +194,8 @@ def sample_loop(args, prj):
             job_code += "atacseq-pipeline {0}\n".format(sample_pickle)
         elif technique in prj.config["techniques"]["quantseq"]:
             job_code += "quantseq-pipeline {0}\n".format(sample_pickle)
+        elif technique in prj.config["techniques"]["chemseq"]:
+            job_code += "chipseq-pipeline {0}\n".format(sample_pickle)
         else:
             raise TypeError("Sample is not in known sample class.")
 
