@@ -139,8 +139,9 @@ def sample_loop(args, prj):
 
     # add track headers to track hubs
     for genome in pd.Series([s.genome for s in prj.samples]).unique():
-        with open(os.path.join(prj.dirs.html, "trackHub_{0}.txt".format(genome)), "w") as handle:
-            handle.write("browser position {0}\n".format(prj.config["defaultposition"]))
+        if not os.path.exists(os.path.join(prj.dirs.html, "trackHub_{0}.txt".format(genome))):
+            with open(os.path.join(prj.dirs.html, "trackHub_{0}.txt".format(genome)), "w") as handle:
+                handle.write("browser position {0}\n".format(prj.config["defaultposition"]))
 
     # Loop through samples, submit to corresponding job (preprocess, analyse)
     for sample in prj.samples:
