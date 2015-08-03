@@ -351,6 +351,8 @@ def plotInsertSizesFit(bam, plot, outputCSV, maxInsert=1500, smallestInsert=30):
         import matplotlib.mlab as mlab
         from scipy.optimize import curve_fit
         from scipy.integrate import simps
+        import matplotlib
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
     except:
         print("Necessary Python modules couldn't be loaded.")
@@ -412,7 +414,11 @@ def plotInsertSizesFit(bam, plot, outputCSV, maxInsert=1500, smallestInsert=30):
         2.9e-02, 2.8e-02  # exponential
     ]
 
-    popt3, pcov3 = curve_fit(mixtureFunction, x[smallestInsert:], y[smallestInsert:], p0=paramGuess, maxfev=100000)
+    try:
+        popt3, pcov3 = curve_fit(mixtureFunction, x[smallestInsert:], y[smallestInsert:], p0=paramGuess, maxfev=100000)
+    except:
+        print("Nucleosomal fit could not be found.")
+        return
 
     m1, s1, w1, m2, s2, w2, m3, s3, w3, m4, s4, w4, q, r = popt3
 
@@ -483,7 +489,7 @@ def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, no
             "-5 " if tagmented else "",
             genomeSizes,
             transientFile
-        )
+    )
     cmds.append(cmd1)
 
     if normalize:
