@@ -407,6 +407,7 @@ def process(args, prj, sample):
     )
     pipe.call_lock(cmd, sample.frip, shell=True)
 
+    pipe.stop_pipeline()
     print("Finished processing sample %s." % sample.name)
 
 

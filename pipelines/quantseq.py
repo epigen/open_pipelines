@@ -222,6 +222,7 @@ def process(args, prj, sample):
     )
     pipe.call_lock(cmd, sample.kallistoQuant, shell=True, nofail=True)
 
+    pipe.stop_pipeline()
     print("Finished processing sample %s." % sample.name)
 
 

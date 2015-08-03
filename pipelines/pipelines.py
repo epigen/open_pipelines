@@ -44,9 +44,9 @@ def main():
 
     # Start main function
     if args.stats:
-        read_stats(args, prj)
+        read_stats(prj)
     elif args.compare:
-        compare(args, prj)
+        compare()
     else:
         sample_loop(args, prj)
 
@@ -232,12 +232,10 @@ def sample_loop(args, prj):
     print("Finished preprocessing")
 
 
-def read_stats(args, prj):
+def read_stats(prj):
     """
     Given an annotation sheet with replicates, gets number of reads mapped, duplicates, etc...
 
-    :param args: Parsed ArgumentParser object.
-    :type args: argparse.ArgumentParser
     :param prj: `Project` object.
     :type prj: pipelines.Project
     """
@@ -255,21 +253,18 @@ def read_stats(args, prj):
             sample = sample.append(parse_bowtie_stats(sample.alnRates))
         except:
             print("Record with alignment rates is empty or not found for sample %s" % sample.name)
-            pass
 
         # Get duplicate stats
         try:
             sample = sample.append(parse_duplicate_stats(sample.dupsMetrics))
         except:
             print("Record with duplicates is empty or not found for sample %s" % sample.name)
-            pass
 
         # Get NSC and RSC
         try:
-            sample = sample.append(parse_qc(sample.name, sample.qc))
+            sample = sample.append(parse_qc(sample.qc))
         except:
             print("Record with quality control is empty or not found for sample %s" % sample.name)
-            pass
 
         # Count peak number (if peaks exist)
         if hasattr(sample, "peaks"):
@@ -287,7 +282,6 @@ def read_stats(args, prj):
                     sample = get_frip(sample)
                 except:
                     print("Record with FRiP value is empty or not found for sample %s" % sample.name)
-                    pass
         samples[sample.name] = sample
 
     # write annotation sheet with statistics
@@ -296,7 +290,7 @@ def read_stats(args, prj):
     print("Finished getting read statistics.")
 
 
-def compare(args, prj):
+def compare():
     raise NotImplementedError
 
 
@@ -369,12 +363,10 @@ def parse_duplicate_stats(stats_file):
     return series
 
 
-def parse_qc(name, qc_file):
+def parse_qc(qc_file):
     """
     Parses QC table produced by phantompeakqualtools (spp) and returns sample quality metrics.
 
-    :param name: Sample name.
-    :type name: str
     :param qc_file: phantompeakqualtools output file sample quality measurements.
     :type qc_file: str
     """

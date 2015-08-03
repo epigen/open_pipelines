@@ -289,10 +289,10 @@ def indexBam(inputBam):
     return cmd
 
 
-def chipQC(inputBam, plot, cpus):
+def chipQC(inputBam, output, plot, cpus):
     import re
 
-    transientFile = re.sub("", repl, inputBam)
+    transientFile = re.sub(".bam", "", inputBam)
 
     cmd1 = "Q --thread-num {0} -bco -t {1} -o {2}".format(cpus, inputBam, output)
     cmd2 = "Rscript {0}-Q-binding-characteristics.R".format(transientFile)
