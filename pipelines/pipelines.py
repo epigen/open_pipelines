@@ -282,7 +282,7 @@ def read_stats(prj):
                     sample = get_frip(sample)
                 except:
                     print("Record with FRiP value is empty or not found for sample %s" % sample.name)
-        samples[sample.name] = sample
+        samples[sample["name"]] = sample
 
     # write annotation sheet with statistics
     samples.T.to_csv(prj.sampleStats, index=False)
