@@ -322,11 +322,11 @@ def parse_bowtie_stats(stats_file):
             line = [i for i in range(len(content)) if "were paired; of these:" in content[i]][0]
             stats["unpaired"] = stats["readCount"] - int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
         line = [i for i in range(len(content)) if "aligned 0 times" in content[i]][0]
-        stats["unaligned"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
-        line = [i for i in range(len(content)) if "aligned exactly 1 time" in content[i]][0]
-        stats["unique"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
-        line = [i for i in range(len(content)) if "aligned >1 times" in content[i]][0]
-        stats["multiple"] = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+        stats["unaligned"] = re.match("\d+", content[line].strip()).group()
+        line = [i for i in range(len(content)) if "aligned concordantly exactly 1 time" in content[i]][0]
+        stats["unique"] = re.match("\d+", content[line].strip()).group()
+        line = [i for i in range(len(content)) if "aligned concordantly >1 times" in content[i]][0]
+        stats["multiple"] = re.match("\d+", content[line].strip()).group()
         line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
         stats["alignmentRate"] = re.sub("\%.*", "", content[line]).strip()
     except IndexError:
