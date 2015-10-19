@@ -71,15 +71,17 @@ def mergeBams(inputBams, outputBam):
 def fastqc(inputBam, outputDir, sampleName):
     import os
 
+    cmds = list()
+
     initial = os.path.splitext(os.path.basename(inputBam))[0]
 
-    cmd1 = "fastqc --noextract --outdir {0} {1}".format(outputDir, inputBam)
+    cmds.append("fastqc --noextract --outdir {0} {1}".format(outputDir, inputBam))
 
-    cmd2 = "mv {0}_fastqc.html {1}_fastqc.html".format(os.path.join(outputDir, initial), os.path.join(outputDir, sampleName))
+    if initial != sampleName:
+        cmds.append("mv {0}_fastqc.html {1}_fastqc.html".format(os.path.join(outputDir, initial), os.path.join(outputDir, sampleName)))
+        cmds.append("mv {0}_fastqc.zip {1}_fastqc.zip".format(os.path.join(outputDir, initial), os.path.join(outputDir, sampleName)))
 
-    cmd3 = "mv {0}_fastqc.zip {1}_fastqc.zip".format(os.path.join(outputDir, initial), os.path.join(outputDir, sampleName))
-
-    return [cmd1, cmd2, cmd3]
+    return cmds
 
 
 def bam2fastq(inputBam, outputFastq, outputFastq2=None, unpairedFastq=None):
