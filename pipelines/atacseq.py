@@ -163,7 +163,6 @@ def process(args, prj, sample):
         cpus=args.cpus
     )
     pipe.call_lock(cmd, sample.mapped, shell=True)
-    pipe.clean_add(sample.mapped, conditional=True)
 
     # Filter reads
     pipe.timestamp("Filtering reads for quality")
