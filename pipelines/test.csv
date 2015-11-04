@@ -1,0 +1,9 @@
+sort,sample_name,BSF_name,specimen_id,treatment,library,organism,instrument_model,read_length,single_or_paired,flowcell,lane,run
+1,test_1,test_1,test_001,NA,CHIP-SEQ,human,Hiseq 2000,50,single,BSF_0081_C3N4DACXX,7,1
+2,test_2,test_2,test_002,NA,CHIP-SEQ,human,Hiseq 2000,50,single,BSF_0083_C3MNWACXX,6,1
+3,test_3,test_3,test_003,NA,CHIP-SEQ,human,Hiseq 2000,50,single,BSF_0085_C3UEKACXX,1,1
+4,test_4,test_4,test_004,NA,CHIP-SEQ,human,Hiseq 2000,50,single,BSF_0081_C3N4DACXX,6,1
+1,test_5,test_5,test_001,NA,WGBS,human,Hiseq 2000,50,single,BSF_0081_C3N4DACXX,7,1
+2,test_6,test_6,test_002,NA,SMART,human,Hiseq 2000,50,single,BSF_0083_C3MNWACXX,6,1
+3,test_7,test_7,test_003,NA,SMART-SEQ,human,Hiseq 2000,50,single,BSF_0085_C3UEKACXX,1,1
+4,test_8,test_8,test_004,NA,RRBS,human,Hiseq 2000,50,single,BSF_0081_C3N4DACXX,6,1
