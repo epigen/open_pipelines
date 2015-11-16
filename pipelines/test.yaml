@@ -12,18 +12,21 @@
 
 paths:
   # output_dir: the parent, shared space where results will go
-  output_dir: projects/test
+  output_dir: /home/afr/workspace/pipelines/pipelines/projects/test
   # raw_data_path: the parent directory with raw data
-  raw_data_path: projects/test/samples
+  raw_data_path: /home/afr/workspace/pipelines/pipelines/projects/test/samples
   # sample_annotation: one-row-per-sample metadata
-  sample_annotation: test.csv
+  sample_annotation: /home/afr/workspace/pipelines/pipelines/test.csv
   # merge_table: input for samples with more than one input file
-  merge_table: test_merge.csv
+  merge_table: /home/afr/workspace/pipelines/pipelines/test_merge.csv
   # compare_table: comparison pairs or groups, like normalization samples
-  compare_table: table_compare.csv
+  compare_table: /home/afr/workspace/pipelines/pipelines/table_compare.csv
   # pipelines_dir: the directory where the Looper will find pipeline
   # scripts (and accompanying pipeline config files) for submission.
-  pipelines_dir: ../src_pipelines
+  pipelines_dir: /home/afr/workspace/pipelines
+  # slurm_dir: the directory where the slurm scripts will be written to.
+  # I propose this is automatically created e.g.: output_dir/runs/slurm
+  slurm_dir: /home/afr/workspace/pipelines
 
 data_sources:
   # specify the location of input files using variable path expressions
