@@ -473,7 +473,6 @@ def plotInsertSizesFit(bam, plot, outputCSV, maxInsert=1500, smallestInsert=30):
 def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, normalize=False):
     import os
     import re
-    import subprocess
 
     # TODO:
     # addjust fragment length dependent on read size and real fragment size

@@ -169,16 +169,16 @@ def sample_loop(args, prj):
         sample.pickle = sample_pickle
 
         # If sample has control attribute, get that sample and pair them
-        if hasattr(sample, "controlname"):
-            if type(sample.controlname) == str:
+        if hasattr(sample, "controlSampleName"):
+            if type(sample.controlSampleName) == str:
                 # Assign the sample with that name to ctrl
-                ctrl = [s for s in prj.samples if s.name == sample.controlname]
+                ctrl = [s for s in prj.samples if s.name == sample.controlSampleName]
                 # if there is only one record, use that as control
                 if len(ctrl) == 1:
                     sample.ctrl = ctrl[0]
                 else:
                     # if not, process sample anyway, but without a matched control
-                    print("Provided control sample name does not exist or is ambiguous: %s" % sample.controlname)
+                    print("Provided control sample name does not exist or is ambiguous: %s" % sample.controlSampleName)
 
         # save pickle with all objects (this time, 2nd element is a tuple!)
         pickle.dump((prj, sample, args), open(sample_pickle, "wb"))
