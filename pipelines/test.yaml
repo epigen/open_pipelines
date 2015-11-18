@@ -12,27 +12,30 @@
 
 paths:
   # output_dir: the parent, shared space where results will go
-  output_dir: /home/afr/workspace/pipelines/pipelines/projects/test
+  output_dir: /scratch/lab_bock/shared/projects/test
   # raw_data_path: the parent directory with raw data
-  raw_data_path: /home/afr/workspace/pipelines/pipelines/projects/test/samples
+  results_subdir: /scratch/lab_bock/shared/projects/test/results
   # sample_annotation: one-row-per-sample metadata
-  sample_annotation: /home/afr/workspace/pipelines/pipelines/test.csv
-  # merge_table: input for samples with more than one input file
-  merge_table: /home/afr/workspace/pipelines/pipelines/test_merge.csv
-  # compare_table: comparison pairs or groups, like normalization samples
-  compare_table: /home/afr/workspace/pipelines/pipelines/table_compare.csv
+  submission_subdir: /scratch/lab_bock/shared/projects/test/submissions
   # pipelines_dir: the directory where the Looper will find pipeline
   # scripts (and accompanying pipeline config files) for submission.
-  pipelines_dir: /home/afr/workspace/pipelines
+  pipelines_dir: /home/arendeiro/workspace/pipelines
+
+metadata:
+  # sample_annotation: input for samples with more than one input file
+  sample_annotation: /data/groups/lab_bock/shared/resources/microtest/looper/sample_annotation.csv
+  # merge_table: input for samples with more than one input file
+  # merge_table:
+  # compare_table: comparison pairs or groups, like normalization samples
+  # compare_table:
   # slurm_dir: the directory where the slurm scripts will be written to.
   # I propose this is automatically created e.g.: output_dir/runs/slurm
-  slurm_dir: /home/afr/workspace/pipelines
 
 data_sources:
   # specify the location of input files using variable path expressions
   # entries correspond to values in the data_source column in sample_annotation table
   # {variable} can be used to replace environment variables or other sample_annotation columns
-  bsf_samples: "{RAWDATA}{flowcell}/{flowcell}_{lane}_samples/{flowcell}_{lane}#{BSF_name}.bam"
+  bsf_samples: "/scratch/lab_bsf/samples/{flowcell}/{flowcell}_{lane}_samples/{flowcell}_{lane}#{BSF_name}.bam"
   encode_rrbs: /fhgfs/groups/lab_bock/shared/projects/epigenome_compendium/data/encode_rrbs_data_hg19/fastq/{sample_name}.fastq.gz
 
 genomes:
