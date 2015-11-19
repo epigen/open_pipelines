@@ -1,27 +1,45 @@
-# Basic structure:
+# The pipeline interface file describes how the looper, which submits jobs, knows
+# what resources to request for a pipeline, and what arguments to pass to the
+# pipeline. For each pipeline, you specify two components: an arguments list,
+# and a resources list, like so:
+#
 # pipeline_name:
-#  arguments:
-#   "-k" : value
-#   "--key2" : value
-#   "--key3" : null # value-less argument flags
-#  resource_package_name:
-#     file_size: "0"
-#     cores: "4"
-#     mem: "6000"
-#     time: "2D"
-#     partition: "longq"
+#   arguments:
+#     "-k" : value
+#     "--key2" : value
+#     "--key3" : null # value-less argument flags
+#   resources:
+#     default:
+#       file_size: "0"
+#       cores: "4"
+#       mem: "6000"
+#       time: "2D"
+#       partition: "longq"
+#     resource_package_name:
+#       file_size: "0"
+#       cores: "4"
+#       mem: "6000"
+#       time: "2D"
+#       partition: "longq"
 
-# For each pipeline,
-# You must define at least 1 option named 'default' with file_size=0.
+# Arguments: the key corresponds verbatim to the string that will be passed on the
+# command line to the pipeline. The value corresponds to an attribute of the sample,
+# which will be derived from the sample_annotation csv file.
+#
+
+# Resources: You must define at least 1 option named 'default' with file_size=0.
 # Add as many additional resource sets as you want, with any names.
-# The determining component is the file_size.
+# The looper will determine which resource package to use based on the file_size
+# of the input file. It will select the lowest resource package whose file_size
+# attribute does not exceed the size of the input file.
 
 wgbs_pipeline.py:
   arguments:
     "-s": sample_name
     "-g": genome
-    "-i": data_path
+    "--input": data_path
     "-q": null
+    "-output_parent": results_subdir
     #"--test": null
   resources:
     default:
