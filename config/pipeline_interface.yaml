@@ -13,13 +13,13 @@
 #       file_size: "0"
 #       cores: "4"
 #       mem: "6000"
-#       time: "2D"
+#       time: "2-00:00:00"
 #       partition: "longq"
 #     resource_package_name:
 #       file_size: "0"
 #       cores: "4"
 #       mem: "6000"
-#       time: "2D"
+#       time: "2-00:00:00"
 #       partition: "longq"
 
 # Arguments: the key corresponds verbatim to the string that will be passed on the
@@ -38,6 +38,7 @@ wgbs_pipeline.py:
     "-s": sample_name
     "-g": genome
     "--input": data_path
+    "--read_type": read_type
     "-q": null
     "-output_parent": results_subdir
     #"--test": null
