@@ -88,33 +88,43 @@ rrbs_pipeline.py:
       partition: "longq"
 
 biseq:
- default:
-    file_size: "0"
-    cores: "6"
-    mem: "6000"
-    time: "2-00:00:00"
-    partition: "longq"
+  arguments:
+    "-l": read_length
+  resources:
+    default:
+      file_size: "0"
+      cores: "6"
+      mem: "6000"
+      time: "2-00:00:00"
+      partition: "longq"
 
 tophat:
-  default:
-    file_size: "0"
-    cores: "2"
-    mem: "30000"
-    time: "10-00:00:00"
-    partition: "longq"
+  arguments:
+    "-l": read_length
+  resources:
+    default:
+      file_size: "0"
+      cores: "2"
+      mem: "30000"
+      time: "10-00:00:00"
+      partition: "longq"
 
 atacseq:
-  default:
-    file_size: "0"
-    cores: "2"
-    mem: "30000"
-    time: "10-00:00:00"
-    partition: "longq"
+  arguments: null
+  resources:
+    default:
+      file_size: "0"
+      cores: "2"
+      mem: "30000"
+      time: "10-00:00:00"
+      partition: "longq"
 
 chipseq:
-  default:
-    file_size: "0"
-    cores: "2"
-    mem: "30000"
-    time: "10-00:00:00"
-    partition: "longq"
+  arguments: null
+  resources:
+    default:
+      file_size: "0"
+      cores: "2"
+      mem: "30000"
+      time: "10-00:00:00"
+      partition: "longq"

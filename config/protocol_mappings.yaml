@@ -19,6 +19,10 @@ CORE: >
   rnaTopHat_pipeline.py --core-seq
 RRBS: rrbs_pipeline.py
 WGBS: wgbs_pipeline.py
+EG: wgbs_pipeline.py
 WGBSQC: >
   wgbs_pipeline.py;
   (nnm.py, pdr.py)
+SMART:  >
+  rnaBitSeq_pipeline.py -f,
+  rnaTopHat_pipeline.py -f
