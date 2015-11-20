@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+Example Pipeline
+"""
 
 __author__ = "Nathan Sheffield"
 __credits__ = []

@@ -77,7 +77,7 @@ rrbs.py:
     "-s": sample_name
     "-g": genome
     "-i": data_path
-    "-q": null
+    "-q": single_or_paired
   resources:
     default:
       file_size: "0"
