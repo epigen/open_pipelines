@@ -26,6 +26,10 @@
 # command line to the pipeline. The value corresponds to an attribute of the sample,
 # which will be derived from the sample_annotation csv file.
 #
+# The looper will automatically add arguments for:
+# -c: config_file (the pipeline config file specified in the project config file;
+# or the default config file, if it exists)
+# -p: cores (the number of cores specified by the resource package chosen)
 
 # Resources: You must define at least 1 option named 'default' with file_size=0.
 # Add as many additional resource sets as you want, with any names.

@@ -10,7 +10,7 @@ __status__ = "Development"
 
 from pypiper import Pypiper
 from pypiper import ngstk
-from argparse import ArgumentParser 
+from argparse import ArgumentParser
 
 parser = ArgumentParser(description='Pipeline')
 
@@ -19,20 +19,23 @@ parser = ArgumentParser(description='Pipeline')
 # -R: Recover mode to overwrite locks
 # -D: Dirty mode to make suppress cleaning intermediate files
 parser = Pypiper.add_pypiper_args(parser)
- 
+
 parser.add_argument("-c", "--config", dest="config_file", default="cpgseq_pipeline_config.yaml", type=str, \
   help="optional: location of the YAML configuration file for the pipeline; defaults to: ./cpgseq_pipeline_config.yaml", metavar="")
 
 parser.add_argument("-i", "--input", dest="input", required=True, nargs="+", \
-  help="required: unmapped BAM file(s) used as input for the pipeline; will be merged if more than one file is provided.", metavar="INPUTS")
+  help="required: unmapped BAM file(s), used as input for the pipeline; will be merged if more than one file is provided.", metavar="INPUTS")
 # input was previously called unmapped_bam
 
 parser.add_argument("-o", "--output_parent", dest="output_parent", required=True, \
-  help="required: parent output directory of the project", metavar="") 
+  help="required: parent output directory of the project", metavar="")
 # output_parent was previously called project_root
 
 parser.add_argument("-s", "--sample_name", dest="sample_name", required=True, \
   help="required: sample name; will be used to establish the folder structure and for naming output files", metavar="SAMPLE")
+
+parser.add_argument("-p", "--cores", dest="cores", type=str, \
+  help="Number of cores to use for processes that request this.", metavar="")
 
 args = parser.parse_args()
 
@@ -44,7 +47,7 @@ with open(args.config_file, 'r') as config_file:
 # Create a Pypiper object, forwarding args to pypiper
 
 pipeline_outfolder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
-pipe = Pypiper(name="CpGseq", outfolder=pipeline_outfolder, args=args)  
+pipe = Pypiper(name="ExamplePipeline", outfolder=pipeline_outfolder, args=args)
 
 pipe.timestamp("### Running procedure")
 
@@ -53,5 +56,3 @@ pipe.timestamp("### Running procedure")
 
 # Terminate
 pipe.stop_pipeline()
-
-
