@@ -37,7 +37,7 @@
 # of the input file. It will select the lowest resource package whose file_size
 # attribute does not exceed the size of the input file.
 
-wgbs_pipeline.py:
+wgbs.py:
   arguments:
     "-s": sample_name
     "-g": genome
@@ -72,7 +72,7 @@ wgbs_pipeline.py:
       time: "50-00:00:00"
       partition: "longq"
 
-rrbs_pipeline.py:
+rrbs.py:
   arguments:
     "-s": sample_name
     "-g": genome

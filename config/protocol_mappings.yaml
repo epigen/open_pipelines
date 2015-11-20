@@ -14,15 +14,15 @@
 # Quant-seq: first-step.py; second-step.py
 # WGBSNM: first;second;third;(fourth, fifth)
 CORE: >
-  wgbs_pipeline.py,
-  rnaBitSeq_pipeline.py --core-seq,
-  rnaTopHat_pipeline.py --core-seq
-RRBS: rrbs_pipeline.py
-WGBS: wgbs_pipeline.py
-EG: wgbs_pipeline.py
+  wgbs.py,
+  rnaBitSeq.py --core-seq,
+  rnaTopHat.py --core-seq
+RRBS: rrbs.py
+WGBS: wgbs.py
+EG: wgbs.py
 WGBSQC: >
-  wgbs_pipeline.py;
+  wgbs.py;
   (nnm.py, pdr.py)
 SMART:  >
-  rnaBitSeq_pipeline.py -f,
-  rnaTopHat_pipeline.py -f
+  rnaBitSeq.py -f,
+  rnaTopHat.py -f
