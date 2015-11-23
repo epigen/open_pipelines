@@ -38,14 +38,12 @@
 # attribute does not exceed the size of the input file.
 
 wgbs.py:
+  looper_args: True
   arguments:
-    "-s": sample_name
-    "-g": genome
+    "--sample_name": sample_name
+    "--genome": genome
     "--input": data_path
-    "--read_type": read_type
-    "-q": null
-    "-output_parent": results_subdir
-    #"--test": null
+    "--single_or_paired": read_type
   resources:
     default:
       file_size: "0"
@@ -73,11 +71,12 @@ wgbs.py:
       partition: "longq"
 
 rrbs.py:
+  looper_args: True
   arguments:
-    "-s": sample_name
-    "-g": genome
-    "-i": data_path
-    "-q": single_or_paired
+    "--sample_name": sample_name
+    "--genome": genome
+    "--input": data_path
+    "--single_or_paired": read_type
   resources:
     default:
       file_size: "0"
