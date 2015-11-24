@@ -1,0 +1,134 @@
+# The pipeline interface file describes how the looper, which submits jobs, knows
+# what resources to request for a pipeline, and what arguments to pass to the
+# pipeline. For each pipeline, you specify two components: an arguments list,
+# and a resources list, like so:
+#
+# pipeline_name:
+#   arguments:
+#     "-k" : value
+#     "--key2" : value
+#     "--key3" : null # value-less argument flags
+#   resources:
+#     default:
+#       file_size: "0"
+#       cores: "4"
+#       mem: "6000"
+#       time: "2-00:00:00"
+#       partition: "longq"
+#     resource_package_name:
+#       file_size: "0"
+#       cores: "4"
+#       mem: "6000"
+#       time: "2-00:00:00"
+#       partition: "longq"
+
+# Arguments: the key corresponds verbatim to the string that will be passed on the
+# command line to the pipeline. The value corresponds to an attribute of the sample,
+# which will be derived from the sample_annotation csv file.
+#
+# The looper will automatically add arguments for:
+# -c: config_file (the pipeline config file specified in the project config file;
+# or the default config file, if it exists)
+# -p: cores (the number of cores specified by the resource package chosen)
+
+# Resources: You must define at least 1 option named 'default' with file_size=0.
+# Add as many additional resource sets as you want, with any names.
+# The looper will determine which resource package to use based on the file_size
+# of the input file. It will select the lowest resource package whose file_size
+# attribute does not exceed the size of the input file.
+
+wgbs.py:
+  looper_args: True
+  arguments:
+    "--sample_name": sample_name
+    "--genome": genome
+    "--input": data_path
+    "--single_or_paired": read_type
+  resources:
+    default:
+      file_size: "0"
+      cores: "4"
+      mem: "6000"
+      time: "2-00:00:00"
+      partition: "longq"
+    medium:
+      file_size: "3"
+      cores: "8"
+      mem: "8000"
+      time: "6-00:00:00"
+      partition: "longq"
+    high:
+      file_size: "20"
+      cores: "16"
+      mem: "12000"
+      time: "20-00:00:00"
+      partition: "longq"
+    huge:
+      file_size: "50"
+      cores: "24"
+      mem: "16000"
+      time: "50-00:00:00"
+      partition: "longq"
+
+rrbs.py:
+  looper_args: True
+  arguments:
+    "--sample_name": sample_name
+    "--genome": genome
+    "--input": data_path
+    "--single_or_paired": read_type
+  resources:
+    default:
+      file_size: "0"
+      cores: "4"
+      mem: "6000"
+      time: "2-00:00:00"
+      partition: "longq"
+    high:
+      file_size: "0"
+      cores: "4"
+      mem: "6000"
+      time: "2-00:00:00"
+      partition: "longq"
+
+biseq:
+  arguments:
+    "-l": read_length
+  resources:
+    default:
+      file_size: "0"
+      cores: "6"
+      mem: "6000"
+      time: "2-00:00:00"
+      partition: "longq"
+
+tophat:
+  arguments:
+    "-l": read_length
+  resources:
+    default:
+      file_size: "0"
+      cores: "2"
+      mem: "30000"
+      time: "10-00:00:00"
+      partition: "longq"
+
+atacseq:
+  arguments: null
+  resources:
+    default:
+      file_size: "0"
+      cores: "2"
+      mem: "30000"
+      time: "10-00:00:00"
+      partition: "longq"
+
+chipseq:
+  arguments: null
+  resources:
+    default:
+      file_size: "0"
+      cores: "2"
+      mem: "30000"
+      time: "10-00:00:00"
+      partition: "longq"
