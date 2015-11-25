@@ -1,16 +1,11 @@
-# for reference genomes
+# Reference genomes
 resources:
-	adapters: /asdasda/asdasd
+	adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
 	genomes:
 		hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
 		hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
 		mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
 		ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
-	transcriptomes:
-		hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/ucsc_hg38_ensembl_genes.gtf
-		hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/ucsc_hg19_ensembl_genes.gtf
-		mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/ucsc_mm10_ensembl_genes.gtf
-		ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/ERCC92.gtf
 	chromosome_sizes:
 		hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
 		hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
@@ -29,7 +24,7 @@ resources:
 			36: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign36mer.bed
 			50: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign50mer.bed
 
-tools:
+# tools:
 	# in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools
 	# set to 'java' or 'picard', to use the tool from your $PATH variable
 
