@@ -116,7 +116,7 @@ def process(sample, pipeline_config, args):
 			outputFastq2=sample.trimmed2 if sample.paired else None,
 			outputFastq2unpaired=sample.trimmed2Unpaired if sample.paired else None,
 			cpus=args.number_of_cores,
-			adapters=pipeline_config.adapters,
+			adapters=pipeline_config.resources.adapters,
 			log=sample.trimlog
 		)
 		pipe.call_lock(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
@@ -137,7 +137,7 @@ def process(sample, pipeline_config, args):
 			outputFastq2=sample.trimmed2 if sample.paired else None,
 			trimLog=sample.trimlog,
 			cpus=args.number_of_cores,
-			adapters=pipeline_config.adapters
+			adapters=pipeline_config.resources.adapters
 		)
 		pipe.call_lock(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
 		if not sample.paired:
