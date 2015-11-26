@@ -50,7 +50,7 @@ def arg_parser(parser):
 	Global options for pipeline.
 	"""
 	parser.add_argument(
-		"-s", "--sample-config",
+		"-y", "--sample-yaml",
 		dest="sample_config",
 		help="Yaml config file with sample attributes.",
 		type=str
