@@ -77,7 +77,7 @@ def process(sample, pipeline_config, args):
 			inputBams=sample.data_path.split(" "),  # this is a list of sample paths
 			outputBam=sample.unmapped
 		)
-		pipe.call_lock(cmd, sample.unmapped, shell=True)
+		pipe.run(cmd, sample.unmapped, shell=True)
 		sample.data_path = sample.unmapped
 
 	# Fastqc
@@ -87,7 +87,7 @@ def process(sample, pipeline_config, args):
 		outputDir=sample.paths.sample_root,
 		sampleName=sample.sample_name
 	)
-	pipe.call_lock(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
+	pipe.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
 
 	# Convert bam to fastq
 	pipe.timestamp("Converting to Fastq format")
@@ -97,7 +97,7 @@ def process(sample, pipeline_config, args):
 		outputFastq2=sample.fastq2 if sample.paired else None,
 		unpairedFastq=sample.fastqUnpaired if sample.paired else None
 	)
-	pipe.call_lock(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
+	pipe.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
 	if not sample.paired:
 		pipe.clean_add(sample.fastq, conditional=True)
 	if sample.paired:
@@ -119,7 +119,7 @@ def process(sample, pipeline_config, args):
 			adapters=pipeline_config.resources.adapters,
 			log=sample.trimlog
 		)
-		pipe.call_lock(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
 		if not sample.paired:
 			pipe.clean_add(sample.trimmed, conditional=True)
 		else:
@@ -139,7 +139,7 @@ def process(sample, pipeline_config, args):
 			cpus=args.number_of_cores,
 			adapters=pipeline_config.resources.adapters
 		)
-		pipe.call_lock(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
 		if not sample.paired:
 			pipe.clean_add(sample.trimmed, conditional=True)
 		else:
@@ -158,7 +158,7 @@ def process(sample, pipeline_config, args):
 		maxInsert=args.maxinsert,
 		cpus=args.number_of_cores
 	)
-	pipe.call_lock(cmd, sample.mapped, shell=True)
+	pipe.run(cmd, sample.mapped, shell=True)
 
 	# Filter reads
 	pipe.timestamp("Filtering reads for quality")
@@ -170,7 +170,7 @@ def process(sample, pipeline_config, args):
 		cpus=args.number_of_cores,
 		Q=pipeline_config.parameters.read_quality
 	)
-	pipe.call_lock(cmd, sample.filtered, shell=True)
+	pipe.run(cmd, sample.filtered, shell=True)
 
 	# Shift reads
 	if sample.tagmented:
@@ -180,17 +180,17 @@ def process(sample, pipeline_config, args):
 			genome=sample.genome,
 			outputBam=sample.filteredshifted
 		)
-		pipe.call_lock(cmd, sample.filteredshifted, shell=True)
+		pipe.run(cmd, sample.filteredshifted, shell=True)
 
 	# Index bams
 	pipe.timestamp("Indexing bamfiles with samtools")
 	cmd = tk.indexBam(inputBam=sample.mapped)
-	pipe.call_lock(cmd, sample.mapped + ".bai", shell=True)
+	pipe.run(cmd, sample.mapped + ".bai", shell=True)
 	cmd = tk.indexBam(inputBam=sample.filtered)
-	pipe.call_lock(cmd, sample.filtered + ".bai", shell=True)
+	pipe.run(cmd, sample.filtered + ".bai", shell=True)
 	if sample.tagmented:
 		cmd = tk.indexBam(inputBam=sample.filteredshifted)
-		pipe.call_lock(cmd, sample.filteredshifted + ".bai", shell=True)
+		pipe.run(cmd, sample.filteredshifted + ".bai", shell=True)
 
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
@@ -203,14 +203,14 @@ def process(sample, pipeline_config, args):
 		tagmented=False,  # by default make extended tracks
 		normalize=True
 	)
-	pipe.call_lock(cmd, sample.bigwig, shell=True)
+	pipe.run(cmd, sample.bigwig, shell=True)
 	cmd = tk.addTrackToHub(
 		sampleName=sample.sample_name,
 		trackURL=sample.trackURL,
 		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
 		colour=get_track_colour(sample, pipeline_config)
 	)
-	pipe.call_lock(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
+	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
 	# tk.linkToTrackHub(
 	# 	trackHubURL="/".join([prj.config["url"], prj.name, "trackHub_{0}.txt".format(sample.genome)]),
 	# 	fileName=os.path.join(prj.dirs.root, "ucsc_tracks_{0}.html".format(sample.genome)),
@@ -233,7 +233,7 @@ def process(sample, pipeline_config, args):
 		genomeWindows=getattr(pipeline_config.resources.genome_windows, sample.genome),
 		output=sample.coverage
 	)
-	pipe.call_lock(cmd, sample.coverage, shell=True)
+	pipe.run(cmd, sample.coverage, shell=True)
 
 	# Calculate NSC, RSC
 	pipe.timestamp("Assessing signal/noise in sample")
@@ -243,7 +243,7 @@ def process(sample, pipeline_config, args):
 		plot=sample.qcPlot,
 		cpus=args.number_of_cores
 	)
-	pipe.call_lock(cmd, sample.qcPlot, shell=True, nofail=True)
+	pipe.run(cmd, sample.qcPlot, shell=True, nofail=True)
 
 	# Call peaks
 	pipe.timestamp("Calling peaks with MACS2")
@@ -257,7 +257,7 @@ def process(sample, pipeline_config, args):
 		sampleName=sample.sample_name,
 		genome=sample.genome
 	)
-	pipe.call_lock(cmd, sample.peaks, shell=True)
+	pipe.run(cmd, sample.peaks, shell=True)
 
 	# # Filter peaks based on mappability regions
 	# pipe.timestamp("Filtering peaks in low mappability regions")
@@ -270,7 +270,7 @@ def process(sample, pipeline_config, args):
 	#     alignability=pipeline_config.resources["alignability"][sample.genome][closestLength],
 	#     filteredPeaks=sample.filteredPeaks
 	# )
-	# pipe.call_lock(cmd, sample.filteredPeaks, shell=True)
+	# pipe.run(cmd, sample.filteredPeaks, shell=True)
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe.timestamp("Calculating fraction of reads in peaks (FRiP)")
@@ -279,7 +279,7 @@ def process(sample, pipeline_config, args):
 		inputBed=sample.peaks,
 		output=sample.frip
 	)
-	pipe.call_lock(cmd, sample.frip, shell=True)
+	pipe.run(cmd, sample.frip, shell=True)
 
 	pipe.stop_pipeline()
 	print("Finished processing sample %s." % sample.sample_name)
