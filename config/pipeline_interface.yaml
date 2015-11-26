@@ -113,22 +113,25 @@ tophat:
       time: "10-00:00:00"
       partition: "longq"
 
-atacseq:
-  arguments: null
+atacseq.py:
+  arguments:
+    "--sample-config": sample_config
+  looper_args: True
   resources:
     default:
       file_size: "0"
-      cores: "2"
-      mem: "30000"
-      time: "10-00:00:00"
-      partition: "longq"
+      cores: "4"
+      mem: "16000"
+      time: "08:00:00"
+      partition: "shortq"
 
-chipseq:
-  arguments: null
+chipseq.py:
+  arguments:
+    "--sample-config": sample_config
   resources:
     default:
       file_size: "0"
-      cores: "2"
-      mem: "30000"
-      time: "10-00:00:00"
-      partition: "longq"
+      cores: "4"
+      mem: "16000"
+      time: "08:00:00"
+      partition: "shortq"
