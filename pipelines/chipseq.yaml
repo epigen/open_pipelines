@@ -1,107 +1,109 @@
 # Reference genomes
 resources:
-	adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
-	genomes:
-		hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
-		hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
-		mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
-		ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
-	chromosome_sizes:
-		hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
-		hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
-		mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
-	genome_windows:
-		hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
-		hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
-		mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
-	tss:
-		hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
-		hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
-		mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
-	alignability:
-		hg19:
-			24: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign24mer.bed
-			36: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign36mer.bed
-			50: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign50mer.bed
+  adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
+  genomes:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
+    ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
+  chromosome_sizes:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
+  genome_windows:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
+  tss:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
+  alignability:
+    hg19:
+      24: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign24mer.bed
+      36: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign36mer.bed
+      50: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign50mer.bed
 
 # tools:
-	# in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools
-	# set to 'java' or 'picard', to use the tool from your $PATH variable
+  # in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools
+  # set to 'java' or 'picard', to use the tool from your $PATH variable
 
 # the parameters section is intended for all parameters passed to bioinformatic tools
 parameters:
-	# which trimmer to use:
-	# choose between ["trimmomatic", "skewer"]
-	trimmer: "skewer"
-	# read quality to keep
-	read_quality: 30
-	# peak caller to use
-	# choose between ["macs2", "spp"]
-	peak_caller: "macs2"
-	# peak window width
-	peak_window_width: 1000
+  # which trimmer to use:
+  # choose between ["trimmomatic", "skewer"]
+  trimmer: "skewer"
+  # maximum allowed fragment size allowed to align
+  max_insert: 2000
+  # read quality to keep
+  read_quality: 30
+  # peak caller to use
+  # choose between ["macs2", "spp"]
+  peak_caller: "macs2"
+  # peak window width
+  peak_window_width: 1000
 
 
 # Factors considered as histones
 # Factors matching this as substring
 # will be considered as well (e.g. H3K4ME3)
 histones:
-	- "H2A"
-	- "H2B"
-	- "H3"
-	- "H4"
+  - "H2A"
+  - "H2B"
+  - "H3"
+  - "H4"
 
 # Factors considered as broad
 broadfactors:
-	- "H3K27ME1"
-	- "H3K27ME2"
-	- "H3K27ME3"
-	- "H3K36ME1"
-	- "H3K36ME2"
-	- "H3K36ME3"
-	- "H3K9ME1"
-	- "H3K9ME2"
-	- "H3K9ME3"
-	- "H3K72ME1"
-	- "H3K72ME2"
-	- "H3K72ME3"
+  - "H3K27ME1"
+  - "H3K27ME2"
+  - "H3K27ME3"
+  - "H3K36ME1"
+  - "H3K36ME2"
+  - "H3K36ME3"
+  - "H3K9ME1"
+  - "H3K9ME2"
+  - "H3K9ME3"
+  - "H3K72ME1"
+  - "H3K72ME2"
+  - "H3K72ME3"
 
 # Colours for genome browser tracks
 track_colours:
-	IGG: "153,153,153"  # grey
-	INPUT: "153,153,153"
-	H3K36ME1: "230,159,0"  # orange
-	H3K36ME2: "230,159,0"
-	H3K36ME3: "230,159,0"
-	H3K4ME3: "0,158,115"  # bluish green
-	H3K4ME1: "120,114,33"  # yellow
-	H3K14ac: "120,114,33"
-	H3K27ME1: "0,114,178"  # blue
-	H3K27ME2: "0,114,178"
-	H3K27ME3: "0,114,178"
-	H3K9ME1: "86,180,233"  # sky blue
-	H3K9ME2: "86,180,233"
-	H3K9ME3: "86,180,233"
-	H3AC: "213,94,0"  # vermillion
-	H3K9AC: "213,94,0"
-	H3K27AC: "213,94,0"
-	H3K56AC: "213,94,0"
-	H3K56AC: "213,94,0"
-	H3K79ME1: "204,121,167"  # reddish purple
-	H3K79ME2: "204,121,167"
-	H3K79ME3: "204,121,167"
-	ATAC: "0,158,115"
-	DNASE: "0,158,115"
-	colour_gradient: # Additional colours to be chosen, 10 colour gradient from red to blue
-		- "155,3,5"
-		- "140,2,18"
-		- "125,2,31"
-		- "110,2,44"
-		- "96,2,57"
-		- "81,2,70"
-		- "66,2,83"
-		- "52,2,96"
-		- "37,2,109"
-		- "22,2,122"
+  IGG: "153,153,153"  # grey
+  INPUT: "153,153,153"
+  H3K36ME1: "230,159,0"  # orange
+  H3K36ME2: "230,159,0"
+  H3K36ME3: "230,159,0"
+  H3K4ME3: "0,158,115"  # bluish green
+  H3K4ME1: "120,114,33"  # yellow
+  H3K14ac: "120,114,33"
+  H3K27ME1: "0,114,178"  # blue
+  H3K27ME2: "0,114,178"
+  H3K27ME3: "0,114,178"
+  H3K9ME1: "86,180,233"  # sky blue
+  H3K9ME2: "86,180,233"
+  H3K9ME3: "86,180,233"
+  H3AC: "213,94,0"  # vermillion
+  H3K9AC: "213,94,0"
+  H3K27AC: "213,94,0"
+  H3K56AC: "213,94,0"
+  H3K56AC: "213,94,0"
+  H3K79ME1: "204,121,167"  # reddish purple
+  H3K79ME2: "204,121,167"
+  H3K79ME3: "204,121,167"
+  ATAC: "0,158,115"
+  DNASE: "0,158,115"
+  colour_gradient: # Additional colours to be chosen, 10 colour gradient from red to blue
+    - "155,3,5"
+    - "140,2,18"
+    - "125,2,31"
+    - "110,2,44"
+    - "96,2,57"
+    - "81,2,70"
+    - "66,2,83"
+    - "52,2,96"
+    - "37,2,109"
+    - "22,2,122"
 
 defaultposition: "chr21:28,049,584-38,023,583"

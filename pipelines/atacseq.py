@@ -152,10 +152,10 @@ def process(sample, pipeline_config, args):
 		inputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
 		inputFastq2=sample.trimmed2 if sample.paired else None,
 		outputBam=sample.mapped,
-		log=sample.alnRates,
-		metrics=sample.alnMetrics,
+		log=sample.aln_rates,
+		metrics=sample.aln_metrics,
 		genomeIndex=getattr(pipeline_config.resources.genomes, sample.genome),
-		maxInsert=args.maxinsert,
+		maxInsert=pipeline_config.parameters.max_insert,
 		cpus=args.cores
 	)
 	pipe.run(cmd, sample.mapped, shell=True)
@@ -165,7 +165,7 @@ def process(sample, pipeline_config, args):
 	cmd = tk.filterReads(
 		inputBam=sample.mapped,
 		outputBam=sample.filtered,
-		metricsFile=sample.dupsMetrics,
+		metricsFile=sample.dups_metrics,
 		paired=sample.paired,
 		cpus=args.cores,
 		Q=pipeline_config.parameters.read_quality
@@ -206,7 +206,7 @@ def process(sample, pipeline_config, args):
 	pipe.run(cmd, sample.bigwig, shell=True)
 	cmd = tk.addTrackToHub(
 		sampleName=sample.sample_name,
-		trackURL=sample.trackURL,
+		trackURL=sample.track_url,
 		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
 		colour=get_track_colour(sample, pipeline_config)
 	)
