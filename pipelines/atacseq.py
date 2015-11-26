@@ -115,7 +115,7 @@ def process(sample, pipeline_config, args):
 			outputFastq1unpaired=sample.trimmed1Unpaired if sample.paired else None,
 			outputFastq2=sample.trimmed2 if sample.paired else None,
 			outputFastq2unpaired=sample.trimmed2Unpaired if sample.paired else None,
-			cpus=args.number_of_cores,
+			cpus=args.cores,
 			adapters=pipeline_config.resources.adapters,
 			log=sample.trimlog
 		)
@@ -136,7 +136,7 @@ def process(sample, pipeline_config, args):
 			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
 			outputFastq2=sample.trimmed2 if sample.paired else None,
 			trimLog=sample.trimlog,
-			cpus=args.number_of_cores,
+			cpus=args.cores,
 			adapters=pipeline_config.resources.adapters
 		)
 		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
@@ -156,7 +156,7 @@ def process(sample, pipeline_config, args):
 		metrics=sample.alnMetrics,
 		genomeIndex=getattr(pipeline_config.resources.genomes, sample.genome),
 		maxInsert=args.maxinsert,
-		cpus=args.number_of_cores
+		cpus=args.cores
 	)
 	pipe.run(cmd, sample.mapped, shell=True)
 
@@ -167,7 +167,7 @@ def process(sample, pipeline_config, args):
 		outputBam=sample.filtered,
 		metricsFile=sample.dupsMetrics,
 		paired=sample.paired,
-		cpus=args.number_of_cores,
+		cpus=args.cores,
 		Q=pipeline_config.parameters.read_quality
 	)
 	pipe.run(cmd, sample.filtered, shell=True)
@@ -241,7 +241,7 @@ def process(sample, pipeline_config, args):
 		inputBam=sample.filteredshifted,
 		output=sample.qc,
 		plot=sample.qcPlot,
-		cpus=args.number_of_cores
+		cpus=args.cores
 	)
 	pipe.run(cmd, sample.qcPlot, shell=True, nofail=True)
 
