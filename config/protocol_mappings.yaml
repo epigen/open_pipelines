@@ -28,3 +28,4 @@ SMART:  >
   rnaTopHat.py -f
 ATAC: atacseq.py
 CHIP: chipseq.py
+STARR: starrseq.py
