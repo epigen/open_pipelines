@@ -40,10 +40,10 @@
 wgbs.py:
   looper_args: True
   arguments:
-    "--sample_name": sample_name
+    "--sample-name": sample_name
     "--genome": genome
     "--input": data_path
-    "--single_or_paired": read_type
+    "--single-or-paired": read_type
   resources:
     default:
       file_size: "0"
@@ -73,10 +73,10 @@ wgbs.py:
 rrbs.py:
   looper_args: True
   arguments:
-    "--sample_name": sample_name
+    "--sample-name": sample_name
     "--genome": genome
     "--input": data_path
-    "--single_or_paired": read_type
+    "--single-or-paired": read_type
   resources:
     default:
       file_size: "0"
