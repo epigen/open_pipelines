@@ -166,7 +166,7 @@ def process(sample, pipeline_config, args):
 		log=sample.aln_rates,
 		metrics=sample.aln_metrics,
 		genomeIndex=getattr(pipeline_config.resources.genomes, sample.genome),
-		maxInsert=args.maxinsert,
+		maxInsert=pipeline_config.parameters.max_insert,
 		cpus=args.cores
 	)
 	pipe.run(cmd, sample.mapped, shell=True)

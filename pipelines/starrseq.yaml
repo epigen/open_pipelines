@@ -2,23 +2,23 @@
 resources:
   adapters: /data/groups/lab_bock/shared/resources/adapters/ilumina.fa
   genomes:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38,
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19,
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10,
-    sacCer3: /data/groups/lab_bock/shared/resources/genomes/sacCer3/indexed_bowtie2/sacCer3,
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
+    sacCer3: /data/groups/lab_bock/shared/resources/genomes/sacCer3/indexed_bowtie2/sacCer3
     ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
   chromosome_sizes:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes,
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes,
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes,
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
     sacCer3: /data/groups/lab_bock/shared/resources/genomes/sacCer3/sacCer3.chrom.sizes
   genome_windows:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed,
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed,
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
   tss:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed,
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed,
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
 
 # tools:
