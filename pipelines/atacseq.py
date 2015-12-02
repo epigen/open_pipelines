@@ -75,7 +75,7 @@ def process(sample, pipeline_config, args):
 
 	for path in sample.paths.__dict__.keys():
 		try:
-			os.makedir(path)
+			os.mkdir(path)
 		except OSError("Cannot create path: %s" % path):
 			raise
 
