@@ -72,10 +72,11 @@ def process(sample, pipeline_config, args):
 	print("Start processing ChIP-seq sample %s." % sample.name)
 
 	for path in sample.paths.__dict__.keys():
-		try:
-			os.mkdir(path)
-		except OSError("Cannot create path: %s" % path):
-			raise
+		if not os.path.exists(path):
+			try:
+				os.mkdir(path)
+			except OSError("Cannot create path: %s" % path):
+				raise
 
 	# Start Pypiper object
 	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
