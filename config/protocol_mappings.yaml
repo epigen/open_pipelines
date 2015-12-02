@@ -28,4 +28,5 @@ SMART:  >
   rnaTopHat.py -f
 ATAC: atacseq.py
 CHIP: chipseq.py
+CHIPMENTATION: chipseq.py
 STARR: starrseq.py

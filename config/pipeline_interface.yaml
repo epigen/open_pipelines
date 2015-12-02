@@ -115,36 +115,42 @@ tophat:
 
 atacseq.py:
   arguments:
-    "--sample-yaml": sample_config
+    "--sample-yaml": yaml_file
+    "-I": sample_name
+    "-G": genome
   looper_args: True
   resources:
     default:
       file_size: "0"
       cores: "4"
-      mem: "4000"
+      mem: "8000"
       time: "08:00:00"
       partition: "shortq"
 
 chipseq.py:
   arguments:
-    "--sample-yaml": sample_config
-  looper_args: True
-  resources:
-    default:
-      file_size: "0"
-      cores: "4"
-      mem: "4000"
-      time: "08:00:00"
-      partition: "shortq"
-
-starrseq.py:
-  arguments:
-    "--sample-yaml": sample_config
+    "--sample-yaml": yaml_file
+    "-I": sample_name
+    "-G": genome
   looper_args: True
   resources:
     default:
       file_size: "0"
       cores: "8"
       mem: "8000"
+      time: "1-23:00:00"
+      partition: "mediumq"
+
+starrseq.py:
+  arguments:
+    "--sample-yaml": yaml_file
+    "-I": sample_name
+    "-G": genome
+  looper_args: True
+  resources:
+    default:
+      file_size: "0"
+      cores: "8"
+      mem: "16000"
       time: "1-23:00:00"
       partition: "mediumq"

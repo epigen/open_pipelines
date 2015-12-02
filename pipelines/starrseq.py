@@ -73,6 +73,10 @@ def process(sample, pipeline_config, args):
 
 	print("Start processing STARR-seq sample %s." % sample.sample_name)
 
+	for dir in sample.paths.__dict__.keys():
+		try:
+			os.makedir(dir)
+
 	# Start Pypiper object
 	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
 

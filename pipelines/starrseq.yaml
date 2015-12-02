@@ -1,6 +1,6 @@
 # Reference genomes
 resources:
-  adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
+  adapters: /data/groups/lab_bock/shared/resources/adapters/ilumina.fa
   genomes:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38,
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19,
