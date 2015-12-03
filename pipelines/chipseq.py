@@ -207,7 +207,7 @@ def process(sample, pipeline_config, args):
 	# right now tracks are only made for bams without duplicates
 	pipe.timestamp("Making bigWig tracks from bam file")
 	cmd = tk.bamToBigWig(
-		inputBam=sample.filteredshifted,
+		inputBam=sample.filtered,
 		outputBigWig=sample.bigwig,
 		genomeSizes=getattr(pipeline_config.resources.chromosome_sizes, sample.genome),
 		genome=sample.genome,
