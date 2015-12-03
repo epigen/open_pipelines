@@ -5,11 +5,13 @@ resources:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
+    sacCer3: /data/groups/lab_bock/shared/resources/genomes/sacCer3/indexed_bowtie2/sacCer3
     ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
   chromosome_sizes:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
+    sacCer3: /data/groups/lab_bock/shared/resources/genomes/sacCer3/sacCer3.chrom.sizes
   genome_windows:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
@@ -18,11 +20,6 @@ resources:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
-  alignability:
-    hg19:
-      24: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign24mer.bed
-      36: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign36mer.bed
-      50: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign50mer.bed
 
 # tools:
   # in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools

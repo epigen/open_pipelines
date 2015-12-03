@@ -41,7 +41,7 @@ def main():
 
 	# Read in yaml configs
 	sample = AttributeDict(**yaml.load(open(args.sample_config, "r")))
-	pipeline_config = AttributeDict(**yaml.load(open(args.config_file, "r")))
+	pipeline_config = AttributeDict(**yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function
 	process(sample, pipeline_config, args)
@@ -72,6 +72,13 @@ def process(sample, pipeline_config, args):
 	"""
 
 	print("Start processing ATAC-seq sample %s." % sample.sample_name)
+
+	for path in sample.paths.__dict__.keys():
+		if not os.path.exists(path):
+			try:
+				os.mkdir(path)
+			except OSError("Cannot create path: %s" % path):
+				raise
 
 	# Start Pypiper object
 	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)

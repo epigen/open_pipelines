@@ -40,7 +40,7 @@ def main():
 
 	# Read in yaml configs
 	sample = AttributeDict(**yaml.load(open(args.sample_config, "r")))
-	pipeline_config = AttributeDict(**yaml.load(open(args.config_file, "r")))
+	pipeline_config = AttributeDict(**yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function
 	process(sample, pipeline_config, args)
@@ -70,6 +70,13 @@ def process(sample, pipeline_config, args):
 	along with a UCSC browser track.
 	"""
 	print("Start processing ChIP-seq sample %s." % sample.name)
+
+	for path in sample.paths.__dict__.keys():
+		if not os.path.exists(path):
+			try:
+				os.mkdir(path)
+			except OSError("Cannot create path: %s" % path):
+				raise
 
 	# Start Pypiper object
 	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
@@ -159,7 +166,7 @@ def process(sample, pipeline_config, args):
 		log=sample.aln_rates,
 		metrics=sample.aln_metrics,
 		genomeIndex=getattr(pipeline_config.resources.genomes, sample.genome),
-		maxInsert=args.maxinsert,
+		maxInsert=pipeline_config.parameters.max_insert,
 		cpus=args.cores
 	)
 	pipe.run(cmd, sample.mapped, shell=True)
