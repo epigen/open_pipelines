@@ -26,7 +26,13 @@ WGBSQC: >
 SMART:  >
   rnaBitSeq.py -f,
   rnaTopHat.py -f
+SMART-seq:  >
+  rnaBitSeq.py -f,
+  rnaTopHat.py -f
 ATAC: atacseq.py
+ATAC-SEQ: atacseq.py
 CHIP: chipseq.py
+CHIP-SEQ: chipseq.py
 CHIPMENTATION: chipseq.py
 STARR: starrseq.py
+STARR-SEQ: starrseq.py
