@@ -95,6 +95,17 @@ def bam2fastq(inputBam, outputFastq, outputFastq2=None, unpairedFastq=None):
     return cmd
 
 
+def fastq2bam(inputFastq, outputBam, sampleName, inputFastq2=None):
+    cmd = "java -Xmx4g -jar /cm/shared/apps/picard-tools/1.118/FastqToSam.jar"
+    cmd += " FASTQ={0}".format(inputFastq)
+    cmd += " SAMPLE_NAME={0}".format(sampleName)
+    if inputFastq2 is not None:
+        cmd += " FASTQ2={0}".format(inputFastq2)
+    cmd += " OUTPUT={0}".format(outputBam)
+
+    return cmd
+
+
 def trimmomatic(inputFastq1, outputFastq1, cpus, adapters, log,
                 inputFastq2=None, outputFastq1unpaired=None,
                 outputFastq2=None, outputFastq2unpaired=None):
