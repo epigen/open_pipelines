@@ -91,9 +91,14 @@ rrbs.py:
       time: "2-00:00:00"
       partition: "longq"
 
-biseq:
+rnaBitSeq.py:
+  looper_args: True
   arguments:
-    "-l": read_length
+    "--sample-name": sample_name
+    "--genome": transcriptome
+    "--input": data_path
+    "--single-or-paired": read_type
+
   resources:
     default:
       file_size: "0"
@@ -102,7 +107,7 @@ biseq:
       time: "2-00:00:00"
       partition: "longq"
 
-tophat:
+rnaTopHat.py:
   arguments:
     "-l": read_length
   resources:
