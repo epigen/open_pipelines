@@ -15,7 +15,7 @@
 # WGBSNM: first;second;third;(fourth, fifth)
 CORE: >
   wgbs.py,
-  rnaBitSeq.py --core-seq,
+  rnaBitSeq.py --core-seq;
   rnaTopHat.py --core-seq
 RRBS: rrbs.py
 WGBS: wgbs.py
@@ -24,10 +24,10 @@ WGBSQC: >
   wgbs.py;
   (nnm.py, pdr.py)
 SMART:  >
-  rnaBitSeq.py -f,
+  rnaBitSeq.py -f;
   rnaTopHat.py -f
 SMART-seq:  >
-  rnaBitSeq.py -f,
+  rnaBitSeq.py -f;
   rnaTopHat.py -f
 ATAC: atacseq.py
 ATAC-SEQ: atacseq.py
