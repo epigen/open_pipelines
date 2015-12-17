@@ -3,7 +3,8 @@
 # pipeline. For each pipeline, you specify two components: an arguments list,
 # and a resources list, like so:
 #
-# pipeline_name:
+# pipeline_script:
+#   name: value  # used for assessing pipeline flags (optional)
 #   arguments:
 #     "-k" : value
 #     "--key2" : value
@@ -38,6 +39,7 @@
 # attribute does not exceed the size of the input file.
 
 wgbs.py:
+  name: WGBS
   looper_args: True
   arguments:
     "--sample-name": sample_name
@@ -71,6 +73,7 @@ wgbs.py:
       partition: "longq"
 
 rrbs.py:
+  name: RRBS
   looper_args: True
   arguments:
     "--sample-name": sample_name
