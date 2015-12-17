@@ -84,13 +84,13 @@ rrbs.py:
     default:
       file_size: "0"
       cores: "4"
-      mem: "6000"
+      mem: "2500"
       time: "2-00:00:00"
       partition: "longq"
     high:
-      file_size: "0"
-      cores: "4"
-      mem: "6000"
+      file_size: "5"
+      cores: "6"
+      mem: "2500"
       time: "2-00:00:00"
       partition: "longq"
 
