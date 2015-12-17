@@ -88,9 +88,9 @@ rrbs.py:
       time: "2-00:00:00"
       partition: "longq"
     high:
-      file_size: "5"
+      file_size: "4"
       cores: "6"
-      mem: "2500"
+      mem: "2000"
       time: "2-00:00:00"
       partition: "longq"
 
