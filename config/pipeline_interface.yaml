@@ -108,7 +108,12 @@ rnaBitSeq.py:
       partition: "longq"
 
 rnaTopHat.py:
+  looper_args: True
   arguments:
+    "--sample-name": sample_name
+    "--genome": genome
+    "--input": data_path
+    "--single-or-paired": read_type
     "-l": read_length
   resources:
     default:
