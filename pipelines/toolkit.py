@@ -923,3 +923,21 @@ def getFRiP(sample):
 
     return pd.Series(readsInPeaks / mappedReads, index="FRiP")
 
+
+def metagene_plot(bams, labels, output_prefix, region="genebody", genome="hg19"):
+    import os
+
+    # write ngsplot config file to disk
+    config_file = os.path.join(os.environ['TMPDIR'], "ngsplot_config.txt")
+    with open(config_file, "w") as handle:
+        for i in range(len(bams)):
+            handle.write("\t".join([bams[i], "-1", labels[i]]) + "\n")
+
+    # build plot command
+    cmd = """ngs.plot.r -G {0} -R {1} -C {2} -O {3} -L 3000 -GO km""".format(genome, region, config_file, output_prefix)
+
+    # run command
+    os.system(cmd)
+
+    # remove config file
+    os.rm(config_file)
