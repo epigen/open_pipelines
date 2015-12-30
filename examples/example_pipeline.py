@@ -109,11 +109,9 @@ def process(args):
 	# Add pipeline commands here
 
 	# example command
-	cmd = "{0} {1} > {2}".format(
-		config["tools"]["fastqc"],
-		args.input,
-		os.path.join(args.output_parent, args.sample_name) + "_fastqc.zip")
-	pipe.run(cmd, os.path.join(args.output_parent, args.sample_name) + "_fastqc.zip")
+	output = os.path.join(args.output_parent, args.sample_name) + "_fastqc.zip"  # build path to the file produced by the command
+	cmd = " ".join([config["tools"]["fastqc"], "--noextract", args.input, ">", output])  # build command: "fastqc --noextract input > output"
+	pipe.run(cmd, output)  # run that command with pypiper, specifying the expected output file
 
 	# Terminate
 	pipe.timestamp("### Finished processing sample %s." % args.sample_name)
