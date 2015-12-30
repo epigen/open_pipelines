@@ -18,6 +18,7 @@ except:
 	from models import AttributeDict
 	import toolkit as tk
 
+
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
 __credits__ = []
@@ -31,16 +32,16 @@ __status__ = "Development"
 def main():
 	# Parse command-line arguments
 	parser = ArgumentParser(
-		prog="atacseq-pipeline",
-		description="ATAC-seq pipeline."
+		prog="chipseq-pipeline",
+		description="CHIP-seq pipeline."
 	)
-	parser = pypiper.add_pypiper_args(parser, all_args=True)
 	parser = arg_parser(parser)
+	parser = pypiper.add_pypiper_args(parser, all_args=True)
 	args = parser.parse_args()
 
 	# Read in yaml configs
-	sample = AttributeDict(**yaml.load(open(args.sample_config, "r")))
-	pipeline_config = AttributeDict(**yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
+	sample = AttributeDict(yaml.load(open(args.sample_config, "r")))
+	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function
 	process(sample, pipeline_config, args)
@@ -71,11 +72,11 @@ def process(sample, pipeline_config, args):
 	"""
 	print("Start processing ChIP-seq sample %s." % sample.name)
 
-	for path in sample.paths.__dict__.keys():
-		if not os.path.exists(path):
+	for path in ["sample_root"] + sample.paths.__dict__.keys():
+		if not os.path.exists(sample.paths[path]):
 			try:
-				os.mkdir(path)
-			except OSError("Cannot create path: %s" % path):
+				os.mkdir(sample.paths[path])
+			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
 				raise
 
 	# Start Pypiper object
