@@ -6,7 +6,7 @@ Example pipeline
 
 import sys
 import pypiper
-from pypiper import ngstk
+from pypiper.ngstk import NGSTk
 from argparse import ArgumentParser
 import os
 import yaml
@@ -108,10 +108,21 @@ def process(args):
 
 	# Add pipeline commands here
 
-	# example command
-	output = os.path.join(args.output_parent, args.sample_name) + "_fastqc.zip"  # build path to the file produced by the command
-	cmd = " ".join([config["tools"]["fastqc"], "--noextract", args.input, ">", output])  # build command: "fastqc --noextract input > output"
-	pipe.run(cmd, output)  # run that command with pypiper, specifying the expected output file
+	# Example command
+	# "fastqc --noextract -o <output_dir> <input>.bam" which produces "<input>.zip"
+	# Build command - 2 options:
+	# 1) build a command string yourself:
+	cmd = " ".join([config["tools"]["fastqc"], "--noextract", "-o", args.output_parent, args.input])
+
+	# 2) use pre-built commands from pypiper.ngstk:
+	tk = NGSTk(config["tools"])
+	cmd = tk.fastqc(args.input, args.output_parent)
+
+	# build path to the file produced by the command
+	output = os.path.join(args.output_parent, args.sample_name) + "_fastqc.zip"
+
+	# run that command with pypiper, specifying the expected output file
+	pipe.run(cmd, output)
 
 	# Terminate
 	pipe.timestamp("### Finished processing sample %s." % args.sample_name)
