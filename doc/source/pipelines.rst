@@ -9,4 +9,5 @@ Pipelines
   chipseq-pipeline.rst
   rnaseq-pipeline.rst
   rrbs-pipeline.rst
+  starrseq-pipeline.rst
   wgbs-pipeline.rst
