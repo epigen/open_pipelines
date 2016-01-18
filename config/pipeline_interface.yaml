@@ -123,7 +123,7 @@ rnaTopHat.py:
     "--genome": genome
     "--input": data_path
     "--single-or-paired": read_type
-    "-l": read_length
+    "-w": wigsum
   resources:
     default:
       file_size: "0"
