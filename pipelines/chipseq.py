@@ -446,9 +446,9 @@ def get_track_colour(sample, config):
 				elif sample.library in ["DNASE", "DNASESEQ", "DNASE-SEQ"]:
 					sample.track_colour = config["track_colours"]["DNASE"]
 				else:
-					sample.track_colour = random.sample(config["colour_gradient"], 1)[0]  # pick one randomly
+					sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
 		else:
-			sample.track_colour = random.sample(config["colour_gradient"], 1)[0]  # pick one randomly
+			sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
 
 
 if __name__ == '__main__':
