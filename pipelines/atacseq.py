@@ -242,7 +242,7 @@ def process(sample, pipeline_config, args):
 	# Count coverage genome-wide
 	pipe.timestamp("Calculating genome-wide coverage")
 	cmd = tk.genomeWideCoverage(
-		inputBam=sample.filteredshifted,
+		inputBam=sample.filtered,
 		genomeWindows=getattr(pipeline_config.resources.genome_windows, sample.genome),
 		output=sample.coverage
 	)
@@ -251,12 +251,12 @@ def process(sample, pipeline_config, args):
 	# Calculate NSC, RSC
 	pipe.timestamp("Assessing signal/noise in sample")
 	cmd = tk.peakTools(
-		inputBam=sample.filteredshifted,
+		inputBam=sample.filtered,
 		output=sample.qc,
-		plot=sample.qcPlot,
+		plot=sample.qc_plot,
 		cpus=args.cores
 	)
-	pipe.run(cmd, sample.qcPlot, shell=True, nofail=True)
+	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
 
 	# Call peaks
 	pipe.timestamp("Calling peaks with MACS2")
@@ -265,7 +265,7 @@ def process(sample, pipeline_config, args):
 		os.makedirs(sample.paths.peaks)
 
 	cmd = tk.macs2CallPeaksATACSeq(
-		treatmentBam=sample.filteredshifted,
+		treatmentBam=sample.filtered,
 		outputDir=sample.paths.peaks,
 		sampleName=sample.sample_name,
 		genome=sample.genome
@@ -288,7 +288,7 @@ def process(sample, pipeline_config, args):
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe.timestamp("Calculating fraction of reads in peaks (FRiP)")
 	cmd = tk.calculateFRiP(
-		inputBam=sample.filteredshifted,
+		inputBam=sample.filtered,
 		inputBed=sample.peaks,
 		output=sample.frip
 	)

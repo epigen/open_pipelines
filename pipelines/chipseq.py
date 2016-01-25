@@ -252,10 +252,10 @@ def process(sample, pipeline_config, args):
 	cmd = tk.peakTools(
 		inputBam=sample.filtered,
 		output=sample.qc,
-		plot=sample.qcPlot,
+		plot=sample.qc_plot,
 		cpus=args.cores
 	)
-	pipe.run(cmd, sample.qcPlot, shell=True, nofail=True)
+	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
 
 	# If sample does not have "ctrl" attribute, finish processing it.
 	if not hasattr(sample, "ctrl"):
