@@ -60,15 +60,15 @@ wgbs.py:
       time: "12-00:00:00"
       partition: "longq"
     high:
-      file_size: "20"
+      file_size: "12"
       cores: "16"
-      mem: "14000"
+      mem: "10000"
       time: "20-00:00:00"
       partition: "longq"
     huge:
-      file_size: "50"
+      file_size: "35"
       cores: "24"
-      mem: "16000"
+      mem: "8000"
       time: "50-00:00:00"
       partition: "longq"
 
