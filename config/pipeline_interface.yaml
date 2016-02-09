@@ -49,26 +49,26 @@ wgbs.py:
   resources:
     default:
       file_size: "0"
-      cores: "4"
-      mem: "12000"
-      time: "12-00:00:00"
+      cores: "8"
+      mem: "4000"
+      time: "4-00:00:00"
       partition: "longq"
     medium:
       file_size: "3"
-      cores: "8"
-      mem: "8000"
-      time: "12-00:00:00"
-      partition: "longq"
-    high:
-      file_size: "12"
       cores: "16"
       mem: "4000"
-      time: "20-00:00:00"
+      time: "6-00:00:00"
+      partition: "longq"
+    high:
+      file_size: "10"
+      cores: "24"
+      mem: "3000"
+      time: "12-00:00:00"
       partition: "longq"
     huge:
-      file_size: "35"
+      file_size: "30"
       cores: "24"
-      mem: "4000"
+      mem: "3000"
       time: "50-00:00:00"
       partition: "longq"
 
