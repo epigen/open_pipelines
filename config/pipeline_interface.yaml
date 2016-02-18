@@ -51,19 +51,19 @@ wgbs.py:
       file_size: "0"
       cores: "8"
       mem: "4000"
-      time: "4-00:00:00"
+      time: "2-00:00:00"
       partition: "longq"
     medium:
       file_size: "3"
       cores: "16"
       mem: "4000"
-      time: "6-00:00:00"
+      time: "4-00:00:00"
       partition: "longq"
     high:
       file_size: "10"
       cores: "24"
-      mem: "3000"
-      time: "12-00:00:00"
+      mem: "2500"
+      time: "8-00:00:00"
       partition: "longq"
     huge:
       file_size: "30"
