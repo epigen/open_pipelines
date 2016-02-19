@@ -39,7 +39,7 @@
 # attribute does not exceed the size of the input file.
 
 wgbs.py:
-  name: WGBS
+  name: WGBS  # Name used by pypiper so looper can find the logs
   looper_args: True
   arguments:
     "--sample-name": sample_name
@@ -50,25 +50,25 @@ wgbs.py:
     default:
       file_size: "0"
       cores: "8"
-      mem: "4000"
+      mem: "32000"
       time: "2-00:00:00"
       partition: "longq"
     medium:
       file_size: "3"
       cores: "16"
-      mem: "4000"
+      mem: "64000"
       time: "4-00:00:00"
       partition: "longq"
     high:
       file_size: "10"
       cores: "24"
-      mem: "2500"
+      mem: "64000"
       time: "8-00:00:00"
       partition: "longq"
     huge:
       file_size: "30"
       cores: "24"
-      mem: "3000"
+      mem: "64000"
       time: "50-00:00:00"
       partition: "longq"
 
@@ -84,19 +84,19 @@ rrbs.py:
     default:
       file_size: "0"
       cores: "4"
-      mem: "4000"
+      mem: "16000"
       time: "1-00:00:00"
       partition: "longq"
     medium:
       file_size: "2"
       cores: "4"
-      mem: "4000"
+      mem: "16000"
       time: "1-12:00:00"
       partition: "longq"
     high:
       file_size: "4"
       cores: "6"
-      mem: "4000"
+      mem: "16000"
       time: "2-00:00:00"
       partition: "longq"
 
@@ -112,7 +112,7 @@ rnaBitSeq.py:
     default:
       file_size: "0"
       cores: "6"
-      mem: "6000"
+      mem: "36000"
       time: "2-00:00:00"
       partition: "longq"
 
@@ -128,7 +128,7 @@ rnaTopHat.py:
     default:
       file_size: "0"
       cores: "2"
-      mem: "30000"
+      mem: "60000"
       time: "10-00:00:00"
       partition: "longq"
 
@@ -142,7 +142,7 @@ atacseq.py:
     default:
       file_size: "0"
       cores: "4"
-      mem: "8000"
+      mem: "32000"
       time: "08:00:00"
       partition: "shortq"
 
@@ -156,7 +156,7 @@ chipseq.py:
     default:
       file_size: "0"
       cores: "8"
-      mem: "8000"
+      mem: "64000"
       time: "1-23:00:00"
       partition: "mediumq"
 
@@ -170,6 +170,6 @@ starrseq.py:
     default:
       file_size: "0"
       cores: "8"
-      mem: "16000"
+      mem: "128000" # 128gb is a lot!
       time: "1-23:00:00"
       partition: "mediumq"
