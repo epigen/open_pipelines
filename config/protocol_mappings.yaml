@@ -36,3 +36,4 @@ CHIP-SEQ: chipseq.py
 CHIPMENTATION: chipseq.py
 STARR: starrseq.py
 STARR-SEQ: starrseq.py
+ChIA-PET: chiapet.py

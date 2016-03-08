@@ -173,3 +173,19 @@ starrseq.py:
       mem: "16000"
       time: "1-23:00:00"
       partition: "mediumq"
+
+chiapet.py:
+  name: ChIA-PET
+  looper_args: True
+  arguments:
+    "--sample-name": sample_name
+    "--genome": genome
+    "--input": data_path
+    "--single-or-paired": read_type
+  resources:
+    default:
+      file_size: "0"
+      cores: "4"
+      mem: "12000"
+      time: "12-00:00:00"
+      partition: "longq"
