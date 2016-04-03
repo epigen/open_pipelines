@@ -509,13 +509,13 @@ def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, no
     cmds.append(cmd)
 
     # remove tmp files
-    cmd += "if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transientFile)
+    cmd = "if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transientFile)
     cmds.append(cmd)
     if normalize:
-        cmd += "if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transientFile)
+        cmd = "if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transientFile)
         cmds.append(cmd)
 
-    cmd += "chmod 755 {0}".format(outputBigWig)
+    cmd = "chmod 755 {0}".format(outputBigWig)
     cmds.append(cmd)
 
     return cmds
