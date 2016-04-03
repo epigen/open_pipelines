@@ -425,7 +425,7 @@ def get_track_colour(sample, config):
 		return "0,0,0"
 	else:
 		if hasattr(sample, "ip"):
-			if sample.ip in config["track_colours"].keys():
+			if sample.ip in config["track_colours"].__dict__.keys():
 				sample.track_colour = config["track_colours"][sample.ip]
 			else:
 				if sample.library in ["ATAC", "ATACSEQ", "ATAC-SEQ"]:
