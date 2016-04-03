@@ -426,16 +426,16 @@ def get_track_colour(sample, config):
 	else:
 		if hasattr(sample, "ip"):
 			if sample.ip in config["track_colours"].__dict__.keys():
-				sample.track_colour = config["track_colours"][sample.ip]
+				sample.track_colour = config["track_colours"][sample.ip.upper()]
 			else:
 				if sample.library in ["ATAC", "ATACSEQ", "ATAC-SEQ"]:
 					sample.track_colour = config["track_colours"]["ATAC"]
 				elif sample.library in ["DNASE", "DNASESEQ", "DNASE-SEQ"]:
 					sample.track_colour = config["track_colours"]["DNASE"]
 				else:
-					sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
+					sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
 		else:
-			sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
+			sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
 
 
 if __name__ == '__main__':
