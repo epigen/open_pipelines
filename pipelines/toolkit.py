@@ -485,36 +485,38 @@ def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, no
     import os
     import re
 
-    # TODO:
-    # addjust fragment length dependent on read size and real fragment size
-    # (right now it asssumes 50bp reads with 180bp fragments)
-
     cmds = list()
 
     transientFile = os.path.abspath(re.sub("\.bigWig", "", outputBigWig))
 
-    cmd1 = "bedtools bamtobed -i {0} |".format(inputBam)
+    cmd = """
+    bedtools bamtobed -i {0} |""".format(inputBam)
     if not tagmented:
-        cmd1 += " bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genomeSizes)
-        cmd1 += " fix_bedfile_genome_boundaries.py {0} |".format(genome)
-    cmd1 += " genomeCoverageBed {0}-bg -g {1} -i stdin > {2}.cov".format(
-            "-5 " if tagmented else "",
-            genomeSizes,
-            transientFile
+        cmd += " bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genomeSizes)
+        cmd += " fix_bedfile_genome_boundaries.py {0} |".format(genome)
+    cmd += " genomeCoverageBed {0}-bg -g {1} -i stdin > {2}.cov".format(
+        "-5 " if tagmented else "",
+        genomeSizes,
+        transientFile
     )
-    cmds.append(cmd1)
+    cmds.append(cmd)
 
     if normalize:
-        cmds.append("""awk 'NR==FNR{{sum+= $4; next}}{{ $4 = ($4 / sum) * 1000000; print}}' {0}.cov {0}.cov > {0}.normalized.cov""".format(transientFile))
+        cmd = "awk 'NR==FNR{{sum+= $4; next}}{{ $4 = ($4 / sum) * 1000000; print}}' {0}.cov {0}.cov > {0}.normalized.cov".format(transientFile)
+        cmds.append(cmd)
 
-    cmds.append("bedGraphToBigWig {0}{1}.cov {2} {3}".format(transientFile, ".normalized" if normalize else "", genomeSizes, outputBigWig))
+    cmd = "bedGraphToBigWig {0}{1}.cov {2} {3}".format(transientFile, ".normalized" if normalize else "", genomeSizes, outputBigWig)
+    cmds.append(cmd)
 
     # remove tmp files
-    cmds.append("if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transientFile))
+    cmd = "if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transientFile)
+    cmds.append(cmd)
     if normalize:
-        cmds.append("if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transientFile))
+        cmd = "if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transientFile)
+        cmds.append(cmd)
 
-    cmds.append("chmod 755 {0}".format(outputBigWig))
+    cmd = "chmod 755 {0}".format(outputBigWig)
+    cmds.append(cmd)
 
     return cmds
 

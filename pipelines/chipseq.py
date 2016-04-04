@@ -184,25 +184,12 @@ def process(sample, pipeline_config, args):
 	)
 	pipe.run(cmd, sample.filtered, shell=True)
 
-	# Shift reads
-	if sample.tagmented:
-		pipe.timestamp("Shifting reads of tagmented sample")
-		cmd = tk.shiftReads(
-			inputBam=sample.filtered,
-			genome=sample.genome,
-			outputBam=sample.filteredshifted
-		)
-		pipe.run(cmd, sample.filteredshifted, shell=True)
-
 	# Index bams
 	pipe.timestamp("Indexing bamfiles with samtools")
 	cmd = tk.indexBam(inputBam=sample.mapped)
 	pipe.run(cmd, sample.mapped + ".bai", shell=True)
 	cmd = tk.indexBam(inputBam=sample.filtered)
 	pipe.run(cmd, sample.filtered + ".bai", shell=True)
-	if sample.tagmented:
-		cmd = tk.indexBam(inputBam=sample.filteredshifted)
-		pipe.run(cmd, sample.filteredshifted + ".bai", shell=True)
 
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
@@ -241,7 +228,7 @@ def process(sample, pipeline_config, args):
 	# Count coverage genome-wide
 	pipe.timestamp("Calculating genome-wide coverage")
 	cmd = tk.genomeWideCoverage(
-		inputBam=sample.filteredshifted,
+		inputBam=sample.filtered,
 		genomeWindows=getattr(pipeline_config.resources.genome_windows, sample.genome),
 		output=sample.coverage
 	)
@@ -438,17 +425,17 @@ def get_track_colour(sample, config):
 		return "0,0,0"
 	else:
 		if hasattr(sample, "ip"):
-			if sample.ip in config["track_colours"].keys():
-				sample.track_colour = config["track_colours"][sample.ip]
+			if sample.ip in config["track_colours"].__dict__.keys():
+				sample.track_colour = config["track_colours"][sample.ip.upper()]
 			else:
 				if sample.library in ["ATAC", "ATACSEQ", "ATAC-SEQ"]:
 					sample.track_colour = config["track_colours"]["ATAC"]
 				elif sample.library in ["DNASE", "DNASESEQ", "DNASE-SEQ"]:
 					sample.track_colour = config["track_colours"]["DNASE"]
 				else:
-					sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
+					sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
 		else:
-			sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
+			sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
 
 
 if __name__ == '__main__':
