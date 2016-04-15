@@ -2,6 +2,8 @@
 Pipelines
 =========================
 
+(Section to be moved to an independent repo)
+
 .. toctree::
   :maxdepth: 2
 
