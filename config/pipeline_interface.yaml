@@ -107,6 +107,7 @@ rnaBitSeq.py:
     "--genome": transcriptome
     "--input": data_path
     "--single-or-paired": read_type
+    "--ercc-mix": ERCC_spikein
 
   resources:
     default:
