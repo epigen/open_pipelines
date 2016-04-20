@@ -17,6 +17,7 @@ CORE: >
   wgbs.py,
   rnaBitSeq.py --core-seq;
   rnaTopHat.py --core-seq
+RNA-seq: rnaTopHat.py
 RRBS: rrbs.py
 WGBS: wgbs.py
 EG: wgbs.py
