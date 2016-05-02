@@ -1,259 +1,183 @@
 #!/usr/bin/env python
 
 """
-Quant-seq pipeline
+QUANT-seq pipeline
 """
 
-from argparse import ArgumentParser
-import os
 import sys
-from . import toolkit as tk
-import cPickle as pickle
+from argparse import ArgumentParser
+import yaml
 import pypiper
+import os
+
+try:
+	from pipelines.models import AttributeDict
+	from pipelines import toolkit as tk
+except:
+	sys.path.append(os.path.join(os.path.dirname(__file__), "pipelines"))
+	from models import AttributeDict
+	import toolkit as tk
 
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
 __credits__ = []
 __license__ = "GPL2"
-__version__ = "0.1"
+__version__ = "0.2"
 __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
 def main():
-    # Parse command-line arguments
-    parser = ArgumentParser(description="Quant-seq pipeline.")
-    parser = mainArgParser(parser)
-    args = parser.parse_args()
-    # save pickle
-    samplePickle = args.samplePickle
+	# Parse command-line arguments
+	parser = ArgumentParser(
+		prog="quantseq-pipeline",
+		description="QUANT-seq pipeline."
+	)
+	parser = arg_parser(parser)
+	parser = pypiper.add_pypiper_args(parser, all_args=True)
+	args = parser.parse_args()
 
-    # Read in objects
-    prj, sample, args = pickle.load(open(args.samplePickle, "rb"))
+	# Read in yaml configs
+	sample = AttributeDict(yaml.load(open(args.sample_config, "r")))
+	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
-    # Start main function
-    process(args, prj, sample)
+	# Start main function
+	process(sample, pipeline_config, args)
 
-    # Remove pickle
-    if not args.dry_run:
-        os.system("rm %s" % samplePickle)
-
-    # Exit
-    print("Finished and exiting.")
-
-    sys.exit(0)
+	# # Remove sample config
+	# if not args.dry_run:
+	# 	os.system("rm %s" % args.sample_config)
 
 
-def mainArgParser(parser):
-    """
-    Global options for pipeline.
-    """
-    # Project
-    parser.add_argument(
-        dest="samplePickle",
-        help="Pickle with tuple of: (pipelines.Project, pipelines.Sample, argparse.ArgumentParser).",
-        type=str
-    )
-    return parser
+def arg_parser(parser):
+	"""
+	Global options for pipeline.
+	"""
+	parser.add_argument(
+		"-y", "--sample-yaml",
+		dest="sample_config",
+		help="Yaml config file with sample attributes.",
+		type=str
+	)
+	return parser
 
 
-def process(args, prj, sample):
-    """
-    This takes unmapped Bam files and merges them if needed, assesses raw read quality,
-    trims reads, aligns, marks and removes duplicates and indexes files.
-    Transcript quantifications follows.
-    """
-    print("Start processing Quant-seq sample %s." % sample.name)
+def process(sample, pipeline_config, args):
+	"""
+	This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
+	and removed, indexed, shifted Bam files along with a UCSC browser track.
+	Peaks are called and filtered.
+	"""
 
-    # Start Pypiper object
-    pipe = pypiper.PipelineManager(name = "quantseq", outfolder = sample.dirs.sampleRoot, args = args)
+	print("Start processing QUANT-seq sample %s." % sample.sample_name)
 
-    # if more than one technical replicate, merge bams
-    if type(sample.unmappedBam) == list:
-        pipe.timestamp("Merging bam files from replicates")
-        cmd = tk.mergeBams(
-            inputBams=sample.unmappedBam,  # this is a list of sample paths
-            outputBam=sample.unmapped
-        )
-        pipe.call_lock(cmd, sample.unmapped, shell=True)
-        sample.unmappedBam = sample.unmapped
+	for path in ["sample_root"] + sample.paths.__dict__.keys():
+		if not os.path.exists(sample.paths[path]):
+			try:
+				os.mkdir(sample.paths[path])
+			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
+				raise
 
-    # Fastqc
-    pipe.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastqc(
-        inputBam=sample.unmappedBam,
-        outputDir=sample.dirs.sampleRoot,
-        sampleName=sample.name
-    )
-    pipe.call_lock(cmd, os.path.join(sample.dirs.sampleRoot, sample.name + "_fastqc.zip"), shell=True)
+	# Start Pypiper object
+	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
 
-    # Convert bam to fastq
-    pipe.timestamp("Converting to Fastq format")
-    cmd = tk.bam2fastq(
-        inputBam=sample.unmappedBam,
-        outputFastq=sample.fastq1 if sample.paired else sample.fastq,
-        outputFastq2=sample.fastq2 if sample.paired else None,
-        unpairedFastq=sample.fastqUnpaired if sample.paired else None
-    )
-    pipe.call_lock(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
-    if not sample.paired:
-        pipe.clean_add(sample.fastq, conditional=True)
-    if sample.paired:
-        pipe.clean_add(sample.fastq1, conditional=True)
-        pipe.clean_add(sample.fastq2, conditional=True)
-        pipe.clean_add(sample.fastqUnpaired, conditional=True)
+	# Merge Bam files if more than one technical replicate
+	if len(sample.data_path.split(" ")) > 1:
+		pipe.timestamp("Merging bam files from replicates")
+		cmd = tk.mergeBams(
+			inputBams=sample.data_path.split(" "),  # this is a list of sample paths
+			outputBam=sample.unmapped
+		)
+		pipe.run(cmd, sample.unmapped, shell=True)
+		sample.data_path = sample.unmapped
 
-    # Trim reads
-    pipe.timestamp("Trimming adapters from sample")
-    # Use of trimmomatic is enforced in this pipeline regardless of args.trimmer
-    cmd = trimmomatic(
-        inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-        inputFastq2=sample.fastq2 if sample.paired else None,
-        outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-        outputFastq1unpaired=sample.trimmed1Unpaired if sample.paired else None,
-        outputFastq2=sample.trimmed2 if sample.paired else None,
-        outputFastq2unpaired=sample.trimmed2Unpaired if sample.paired else None,
-        cpus=args.cpus,
-        adapters=prj.config["adapters"],
-        log=sample.trimlog
-    )
-    pipe.call_lock(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
-    if not sample.paired:
-        pipe.clean_add(sample.trimmed, conditional=True)
-    else:
-        pipe.clean_add(sample.trimmed1, conditional=True)
-        pipe.clean_add(sample.trimmed1Unpaired, conditional=True)
-        pipe.clean_add(sample.trimmed2, conditional=True)
-        pipe.clean_add(sample.trimmed2Unpaired, conditional=True)
+	# Fastqc
+	pipe.timestamp("Measuring sample quality with Fastqc")
+	cmd = tk.fastqc(
+		inputBam=sample.data_path,
+		outputDir=sample.paths.sample_root,
+		sampleName=sample.sample_name
+	)
+	pipe.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
 
-    # Map
-    pipe.timestamp("Mapping sample with Tophat")
-    cmd = tk.topHatMap(
-        inputFastq=sample.trimmed1 if sample.paired else sample.trimmed,
-        outDir=sample.dirs.mapped,
-        genome=prj.config["annotations"]["genomes"][sample.genome],
-        transcriptome=prj.config["annotations"]["transcriptomes"][sample.genome],
-        cpus=args.cpus
-    )
-    pipe.call_lock(cmd, sample.mapped, shell=True)
-    pipe.clean_add(sample.mapped, conditional=True)
+	# Convert bam to fastq
+	pipe.timestamp("Converting to Fastq format")
+	cmd = tk.bam2fastq(
+		inputBam=sample.data_path,
+		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
+		outputFastq2=sample.fastq2 if sample.paired else None,
+		unpairedFastq=sample.fastqUnpaired if sample.paired else None
+	)
+	pipe.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
+	if not sample.paired:
+		pipe.clean_add(sample.fastq, conditional=True)
+	if sample.paired:
+		pipe.clean_add(sample.fastq1, conditional=True)
+		pipe.clean_add(sample.fastq2, conditional=True)
+		pipe.clean_add(sample.fastqUnpaired, conditional=True)
 
-    pipe.timestamp("Mapping erccs with Bowtie2")
-    cmd = tk.bowtie2Map(
-        inputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-        inputFastq2=sample.trimmed1 if sample.paired else None,
-        outputBam=sample.erccMapped,
-        log=sample.erccAlnRates,
-        metrics=sample.erccAlnMetrics,
-        genomeIndex=prj.config["annotations"]["genomes"]["ercc"],
-        maxInsert=args.maxinsert,
-        cpus=args.cpus
-    )
-    pipe.call_lock(cmd, sample.erccMapped, shell=True)
-    pipe.clean_add(sample.erccMapped, conditional=True)
+	# Trim reads
+	pipe.timestamp("Trimming adapters from sample")
+	if pipeline_config.parameters.trimmer == "trimmomatic":
+		cmd = tk.trimmomatic(
+			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
+			inputFastq2=sample.fastq2 if sample.paired else None,
+			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			outputFastq1unpaired=sample.trimmed1Unpaired if sample.paired else None,
+			outputFastq2=sample.trimmed2 if sample.paired else None,
+			outputFastq2unpaired=sample.trimmed2Unpaired if sample.paired else None,
+			cpus=args.cores,
+			adapters=pipeline_config.resources.adapters,
+			log=sample.trimlog
+		)
+		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		if not sample.paired:
+			pipe.clean_add(sample.trimmed, conditional=True)
+		else:
+			pipe.clean_add(sample.trimmed1, conditional=True)
+			pipe.clean_add(sample.trimmed1Unpaired, conditional=True)
+			pipe.clean_add(sample.trimmed2, conditional=True)
+			pipe.clean_add(sample.trimmed2Unpaired, conditional=True)
 
-    # Filter reads
-    pipe.timestamp("Filtering reads")
-    cmd = tk.filterReads(
-        inputBam=sample.mapped,
-        outputBam=sample.filtered,
-        metricsFile=sample.dupsMetrics,
-        paired=sample.paired,
-        cpus=args.cpus,
-        Q=args.quality
-    )
-    pipe.call_lock(cmd, sample.filtered, shell=True)
+	elif pipeline_config.parameters.trimmer == "skewer":
+		cmd = tk.skewer(
+			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
+			inputFastq2=sample.fastq2 if sample.paired else None,
+			outputPrefix=os.path.join(sample.paths.unmapped, sample.sample_name),
+			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			outputFastq2=sample.trimmed2 if sample.paired else None,
+			trimLog=sample.trimlog,
+			cpus=args.cores,
+			adapters=pipeline_config.resources.adapters
+		)
+		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		if not sample.paired:
+			pipe.clean_add(sample.trimmed, conditional=True)
+		else:
+			pipe.clean_add(sample.trimmed1, conditional=True)
+			pipe.clean_add(sample.trimmed2, conditional=True)
 
-    pipe.timestamp("Filtering ERCC reads")
-    cmd = tk.filterReads(
-        inputBam=sample.erccMapped,
-        outputBam=sample.erccFiltered,
-        metricsFile=sample.erccDupsMetrics,
-        paired=sample.paired,
-        cpus=args.cpus,
-        Q=args.quality
-    )
-    pipe.call_lock(cmd, sample.erccFiltered, shell=True)
+	# With kallisto from unmapped reads
+	pipe.timestamp("Quantifying read counts with kallisto")
+	cmd = tk.kallisto(
+		inputFastq=sample.trimmed1 if sample.paired else sample.trimmed,
+		inputFastq2=sample.trimmed1 if sample.paired else None,
+		outputDir=sample.paths.quant,
+		outputBam=sample.pseudomapped,
+		transcriptomeIndex=pipeline_config["resources"]["genome_index"][sample.genome],
+		cpus=args.cpus
+	)
+	pipe.call_lock(cmd, sample.kallistoQuant, shell=True, nofail=True)
 
-    # Sort and index
-    pipe.timestamp("Sorting and indexing reads")
-    cmd = tk.sortIndexBam(
-        inputBam=sample.filtered,
-        outputBam=sample.filtered
-    )
-    pipe.call_lock(cmd, lock_name="sample.filtered", shell=True)
-
-    pipe.timestamp("Sorting and indexing ERCC reads")
-    cmd = tk.sortIndexBam(
-        inputBam=sample.erccFiltered,
-        outputBam=sample.erccFiltered
-    )
-    pipe.call_lock(cmd, lock_name="sample.erccFiltered", shell=True)
-
-    # Quantify Transcripts
-    # With HTseq-count from alignments
-    pipe.timestamp("Quantify sample transcripts with htseq-count")
-    cmd = tk.htSeqCount(
-        inputBam=sample.filtered,
-        gtf=prj.config["annotations"]["transcriptomes"][sample.genome],
-        output=sample.quant
-    )
-    pipe.call_lock(cmd, sample.quant, shell=True)
-
-    pipe.timestamp("Quantify ERCC transcripts with htseq-count")
-    cmd = tk.htSeqCount(
-        inputBam=sample.erccFiltered,
-        gtf=prj.config["annotations"]["transcriptomes"]["ercc"],
-        output=sample.erccQuant
-    )
-    pipe.call_lock(cmd, sample.erccQuant, shell=True, nofail=True)
-
-    # With kallisto from unmapped reads
-    pipe.timestamp("Quantifying read counts with kallisto")
-    cmd = tk.kallisto(
-        inputFastq=sample.trimmed1 if sample.paired else sample.trimmed,
-        inputFastq2=sample.trimmed1 if sample.paired else None,
-        outputDir=sample.dirs.quant,
-        outputBam=sample.pseudomapped,
-        transcriptomeIndex=prj.config["annotations"]["kallistoindex"][sample.genome],
-        cpus=args.cpus
-    )
-    pipe.call_lock(cmd, sample.kallistoQuant, shell=True, nofail=True)
-
-    pipe.stop_pipeline()
-    print("Finished processing sample %s." % sample.name)
-
-
-def trimmomatic(inputFastq1, outputFastq1, cpus, adapters, log,
-                inputFastq2=None, outputFastq1unpaired=None,
-                outputFastq2=None, outputFastq2unpaired=None):
-
-    PE = False if inputFastq2 is None else True
-    pe = "PE" if PE else "SE"
-
-    cmd = "java -Xmx4g -jar `which trimmomatic-0.32.jar`"
-    cmd += " {0} -threads {1} -trimlog {2} {3}".format(pe, cpus, log, inputFastq1)
-    if PE:
-        cmd += " {0}".format(inputFastq2)
-    cmd += " {0}".format(outputFastq1)
-    if PE:
-        cmd += " {0} {1} {2}".format(outputFastq1unpaired, outputFastq2, outputFastq2unpaired)
-    cmd += " ILLUMINACLIP:{0}:1:40:15:8:true".format(adapters)
-    cmd += " HEADCROP:12"
-    cmd += " TRAILING:3"
-    cmd += " SLIDINGWINDOW:4:10"
-    cmd += " MINLEN:36"
-
-    return cmd
+	pipe.stop_pipeline()
+	print("Finished processing sample %s." % sample.sample_name)
 
 
 if __name__ == '__main__':
-
-    try:
-        main()
-        sys.exit(0)
-    except KeyboardInterrupt:
-        print("Program canceled by user!")
-        sys.exit(1)
+	try:
+		sys.exit(main())
+	except KeyboardInterrupt:
+		print("Program canceled by user!")
+		sys.exit(1)
