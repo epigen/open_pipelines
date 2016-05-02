@@ -226,3 +226,19 @@ chiapet.py:
       mem: "12000"
       time: "12-00:00:00"
       partition: "longq"
+
+quantseq.py:
+  name: QUANT-SEQ
+  looper_args: True
+  arguments:
+    "--sample-name": sample_name
+    "--genome": genome
+    "--input": data_path
+    "--single-or-paired": read_type
+  resources:
+    default:
+      file_size: "0"
+      cores: "4"
+      mem: "12000"
+      time: "12-00:00:00"
+      partition: "longq"

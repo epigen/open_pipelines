@@ -9,7 +9,7 @@ import os
 import sys
 from . import toolkit as tk
 import cPickle as pickle
-from pypiper import Pypiper
+import pypiper
 
 
 __author__ = "Andre Rendeiro"
@@ -68,7 +68,7 @@ def process(args, prj, sample):
     print("Start processing Quant-seq sample %s." % sample.name)
 
     # Start Pypiper object
-    pipe = Pypiper("pipe", sample.dirs.sampleRoot, args=args)
+    pipe = pypiper.PipelineManager(name = "quantseq", outfolder = sample.dirs.sampleRoot, args = args)
 
     # if more than one technical replicate, merge bams
     if type(sample.unmappedBam) == list:
@@ -250,6 +250,7 @@ def trimmomatic(inputFastq1, outputFastq1, cpus, adapters, log,
 
 
 if __name__ == '__main__':
+
     try:
         main()
         sys.exit(0)

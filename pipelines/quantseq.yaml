@@ -1,0 +1,13 @@
+resources:
+  # paths to reference genomes, adapter files, and other required shared data
+  resources: /data/groups/lab_bock/shared/resources
+  genomes: /data/groups/lab_bock/shared/resources/genomes/
+
+tools:
+  # paths to required tools
+  python: python
+  java: java
+  perl: perl
+
+parameters:
+  # parameters passed to bioinformatic tools, subclassed by tool
