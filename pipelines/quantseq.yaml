@@ -1,13 +1,18 @@
+# Reference genomes
 resources:
-  # paths to reference genomes, adapter files, and other required shared data
-  resources: /data/groups/lab_bock/shared/resources
-  genomes: /data/groups/lab_bock/shared/resources/genomes/
+  adapters: /data/groups/lab_bock/shared/resources/adapters/illumina.fa
+  genome_index:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_kallisto/hg38_kallisto_index.idx
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_kallisto/hg19_kallisto_index.idx
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_kallisto/mm10_kallisto_index.idx
+    ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_kallisto/ERCC92_kallisto_index.idx
 
-tools:
-  # paths to required tools
-  python: python
-  java: java
-  perl: perl
+# tools:
+  # in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools
+  # set to 'java' or 'picard', to use the tool from your $PATH variable
 
+# the parameters section is intended for all parameters passed to bioinformatic tools
 parameters:
-  # parameters passed to bioinformatic tools, subclassed by tool
+  # which trimmer to use:
+  # choose between ["trimmomatic", "skewer"]
+  trimmer: "skewer"
