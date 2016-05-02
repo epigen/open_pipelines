@@ -166,10 +166,10 @@ def process(sample, pipeline_config, args):
 		inputFastq2=sample.trimmed1 if sample.paired else None,
 		outputDir=sample.paths.quant,
 		outputBam=sample.pseudomapped,
-		transcriptomeIndex=pipeline_config["resources"]["genome_index"][sample.genome],
-		cpus=args.cpus
+		transcriptomeIndex=pipeline_config["resources"]["genome_index"][sample.transcriptome],
+		cpus=args.cores
 	)
-	pipe.call_lock(cmd, sample.kallistoQuant, shell=True, nofail=True)
+	pipe.run(cmd, sample.kallistoQuant, shell=True, nofail=True)
 
 	pipe.stop_pipeline()
 	print("Finished processing sample %s." % sample.sample_name)

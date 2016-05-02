@@ -561,15 +561,13 @@ def htSeqCount(inputBam, gtf, output):
     return [cmd1, cmd2, cmd3]
 
 
-def kallisto(inputFastq, outputDir, outputBam, transcriptomeIndex, cpus, inputFastq2=None, size=180, b=200):
-    cmd1 = "kallisto quant --bias --pseudobam -b {0} -l {1} -i {2} -o {3} -t {4}".format(b, size, transcriptomeIndex, outputDir, cpus)
+def kallisto(inputFastq, outputDir, outputBam, transcriptomeIndex, cpus, inputFastq2=None, size=180, b=0):
+    cmd1 = "kallisto quant -b {0} -l {1} -i {2} -o {3} -t {4}".format(b, size, transcriptomeIndex, outputDir, cpus)
 
     if inputFastq2 is None:
         cmd1 += " --single {0}".format(inputFastq)
     else:
         cmd1 += " {0} {1}".format(inputFastq, inputFastq2)
-
-    cmd1 += " | samtools view -Sb - > {0}".format(outputBam)
 
     cmd2 = "kallisto h5dump -o {0} {0}/abundance.h5".format(outputDir)
 
