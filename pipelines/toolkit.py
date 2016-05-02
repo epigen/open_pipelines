@@ -167,7 +167,7 @@ def skewer(inputFastq1, outputPrefix, outputFastq1, trimLog, cpus, adapters, inp
 def bowtie2Map(inputFastq1, outputBam, log, metrics, genomeIndex, maxInsert, cpus, inputFastq2=None):
     import re
 
-    outputBam = re.sub("\.bam$", "", outputBam)
+    tempBam = re.sub("\.bam$", "", outputBam)
     # Admits 2000bp-long fragments (--maxins option)
     cmd = "bowtie2 --very-sensitive -p {0}".format(cpus)
     cmd += " -x {0}".format(genomeIndex)
@@ -178,7 +178,7 @@ def bowtie2Map(inputFastq1, outputBam, log, metrics, genomeIndex, maxInsert, cpu
         cmd += " --maxins {0}".format(maxInsert)
         cmd += " -1 {0}".format(inputFastq1)
         cmd += " -2 {0}".format(inputFastq2)
-    cmd += " 2> {0} | samtools view -S -b - | samtools sort - {1}".format(log, outputBam)
+    cmd += " 2> {0} | samtools view -S -b - | samtools sort -T {1} - -o {2}".format(log, tempBam, outputBam)
 
     return cmd
 
