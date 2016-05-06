@@ -9,15 +9,8 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 import os
-
-try:
-	from pipelines.models import AttributeDict
-	from pipelines import toolkit as tk
-except:
-	sys.path.append(os.path.join(os.path.dirname(__file__), "pipelines"))
-	from models import AttributeDict
-	import toolkit as tk
-
+from looper.models import AttributeDict
+from pipelines import toolkit as tk
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"

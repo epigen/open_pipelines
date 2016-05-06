@@ -34,13 +34,6 @@ pipeline_configs = get_static("pipelines", condition="'yaml' in x")
 
 # scripts to be added to the $PATH
 scripts = get_static("pipelines/tools", condition="'.' in x")
-scripts += get_static("scripts", condition="'.' in x")
-
-
-# temporarily copy looper to the pipelines package
-# this is just for installation purposes
-shutil.copy("looper.py", "pipelines/looper.py")
-
 
 version = open("VERSION").read().strip()
 
@@ -64,16 +57,10 @@ setup(
 	install_requires=["pyyaml", "pandas"],
 	entry_points={
 		"console_scripts": [
-			'looper = pipelines.looper:main',
 			'atacseq_pipeline = pipelines.atacseq:main',
 			'chipseq_pipeline = pipelines.chipseq:main',
-			'cpgseq_pipeline = pipelines.cpgseq:main',
-			'interactions_pipeline = pipelines.interactions:main',
 			'quantseq_pipeline = pipelines.quantseq:main',
-			'rrbs_pipeline = pipelines.rrbs:main',
-			'rnaTopHat_pipeline = pipelines.rnaTopHat:main',
-			'rnaBitSeq_pipeline = pipelines.rnaBitSeq:main',
-			'wgbs_pipeline = pipelines.wgbs:main'
+			'starrseq_pipeline = pipelines.starrseq:main'
 		],
 	},
 	scripts=scripts,
@@ -83,6 +70,3 @@ setup(
 	include_package_data=True,
 	**extra
 )
-
-# remove the copied looper
-os.remove("pipelines/looper.py")
