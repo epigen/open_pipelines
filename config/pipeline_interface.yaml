@@ -108,7 +108,8 @@ rnaBitSeq.py:
     "--input": data_path
     "--single-or-paired": read_type
     "--ercc-mix": ERCC_spikein
-
+  optional_arguments:
+    "--input2": read2_val
   resources:
     default:
       file_size: "0"
@@ -124,6 +125,7 @@ rnaTopHat.py:
     "--genome": genome
     "--input": data_path
     "--single-or-paired": read_type
+  optional_arguments:
     "-w": wigsum
   resources:
     default:

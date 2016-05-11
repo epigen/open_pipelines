@@ -10,8 +10,12 @@ import yaml
 import pypiper
 import os
 from looper.models import AttributeDict
+
+
 from pipelines import toolkit as tk
 
+from chipseq_models import ChIPseqSample
+import pandas as _pd
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
@@ -34,7 +38,11 @@ def main():
 	args = parser.parse_args()
 
 	# Read in yaml configs
-	sample = AttributeDict(yaml.load(open(args.sample_config, "r")))
+	sample_temp = AttributeDict(yaml.load(open(args.sample_config, "r")))
+	sample_series = _pd.Series(sample_temp.__dict__)
+	sample = ChIPseqSample(sample_series)
+	sample.set_file_paths()
+
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function
