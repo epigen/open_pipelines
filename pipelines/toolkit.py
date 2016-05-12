@@ -493,7 +493,8 @@ def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, no
     bedtools bamtobed -i {0} |""".format(inputBam)
     if not tagmented:
         cmd += " bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genomeSizes)
-        cmd += " fix_bedfile_genome_boundaries.py {0} |".format(genome)
+        cmd += " " + os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools/")
+        cmd += "fix_bedfile_genome_boundaries.py {0} |".format(genome)
     cmd += " genomeCoverageBed {0}-bg -g {1} -i stdin > {2}.cov".format(
         "-5 " if tagmented else "",
         genomeSizes,
@@ -711,7 +712,7 @@ def tssAnalysis(inputBam, tssFile, plotsDir, windowWidth, fragmentsize, genome,
                 n_clusters, strand_specific, duplicates):
     import os
 
-    cmd = "python {0}/lib/tss_analysis.py {1} {2} {3}".format(
+    cmd = "python {0}/tools/tss_analysis.py {1} {2} {3}".format(
         os.path.abspath(os.path.dirname(os.path.realpath(__file__))),
         inputBam, tssFile, plotsDir
     )

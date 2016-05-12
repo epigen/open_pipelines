@@ -29,9 +29,11 @@ class ChIPseqSample(Sample):
 		# Get type of factor
 		# TODO: get config file specifying broad/narrow factors
 		# e.g. self.broad = True if self.ip in self.prj.config["broadfactors"] else False
-		self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
-		self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
-
+		try:
+			self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
+			self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
+		except:
+			pass
 		self.make_sample_dirs()
 
 	def __repr__(self):

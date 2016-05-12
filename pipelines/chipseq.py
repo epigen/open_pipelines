@@ -63,6 +63,13 @@ def arg_parser(parser):
 		help="Yaml config file with sample attributes.",
 		type=str
 	)
+	parser.add_argument(
+		"-p", "--peak-caller",
+		dest="peak_caller",
+		help="Peak caller algorithm.",
+		default="macs2",
+		type=str
+	)
 	return parser
 
 
@@ -82,7 +89,7 @@ def process(sample, pipeline_config, args):
 				raise
 
 	# Start Pypiper object
-	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
+	pipe = pypiper.PipelineManager("chipseq", sample.paths.sample_root, args=args)
 
 	# Merge Bam files if more than one technical replicate
 	if len(sample.data_path.split(" ")) > 1:
@@ -205,13 +212,15 @@ def process(sample, pipeline_config, args):
 		normalize=True
 	)
 	pipe.run(cmd, sample.bigwig, shell=True)
-	cmd = tk.addTrackToHub(
-		sampleName=sample.sample_name,
-		trackURL=sample.track_url,
-		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
-		colour=get_track_colour(sample, pipeline_config)
-	)
-	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
+# NS: This block and all track-hub code should be factored out into a post-run 
+# script; plus, sample has no track_url attribute.
+#	cmd = tk.addTrackToHub(
+#		sampleName=sample.sample_name,
+#		trackURL=sample.track_url,
+#		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
+#		colour=get_track_colour(sample, pipeline_config)
+#	)
+#	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
 	# tk.linkToTrackHub(
 	# 	trackHubURL="/".join([prj.config["url"], prj.name, "trackHub_{0}.txt".format(sample.genome)]),
 	# 	fileName=os.path.join(prj.dirs.root, "ucsc_tracks_{0}.html".format(sample.genome)),
@@ -237,32 +246,37 @@ def process(sample, pipeline_config, args):
 	pipe.run(cmd, sample.coverage, shell=True)
 
 	# Calculate NSC, RSC
-	pipe.timestamp("Assessing signal/noise in sample")
-	cmd = tk.peakTools(
-		inputBam=sample.filtered,
-		output=sample.qc,
-		plot=sample.qc_plot,
-		cpus=args.cores
-	)
-	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
+# run_spp.R is nowhere to be found.
+#	pipe.timestamp("Assessing signal/noise in sample")
+#	cmd = tk.peakTools(
+#		inputBam=sample.filtered,
+#		output=sample.qc,
+#		plot=sample.qc_plot,
+#		cpus=args.cores
+#	)
+#	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
 
 	# If sample does not have "ctrl" attribute, finish processing it.
-	if not hasattr(sample, "ctrl"):
+	if not hasattr(sample, "compare_sample"):
+		pipe.stop_pipeline()
 		print("Finished processing sample %s." % sample.name)
 		return
+
+
+	pipe.wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
 
 	if args.peak_caller == "macs2":
 		pipe.timestamp("Calling peaks with MACS2")
 		# make dir for output (macs fails if it does not exist)
-		if not os.path.exists(sample.dirs.peaks):
-			os.makedirs(sample.dirs.peaks)
+		if not os.path.exists(sample.paths.peaks):
+			os.makedirs(sample.paths.peaks)
 
 		# For point-source factors use default settings
 		# For broad factors use broad settings
 		cmd = tk.macs2CallPeaks(
 			treatmentBam=sample.filtered,
-			controlBam=sample.ctrl.filtered,
-			outputDir=sample.dirs.peaks,
+			controlBam=sample.filtered.replace(sample.name, sample.compare_sample),
+			outputDir=sample.paths.peaks,
 			sampleName=sample.name,
 			genome=sample.genome,
 			broad=True if sample.broad else False
@@ -272,19 +286,19 @@ def process(sample, pipeline_config, args):
 		pipe.timestamp("Ploting MACS2 model")
 		cmd = tk.macs2PlotModel(
 			sampleName=sample.name,
-			outputDir=os.path.join(sample.dirs.peaks, sample.name)
+			outputDir=os.path.join(sample.paths.peaks, sample.name)
 		)
-		pipe.run(cmd, os.path.join(sample.dirs.peaks, sample.name, sample.name + "_model.pdf"), shell=True)
+		pipe.run(cmd, os.path.join(sample.paths.peaks, sample.name, sample.name + "_model.pdf"), shell=True, nofail=True)
 	elif args.peak_caller == "spp":
 		pipe.timestamp("Calling peaks with spp")
 		# For point-source factors use default settings
 		# For broad factors use broad settings
 		cmd = tk.sppCallPeaks(
 			treatmentBam=sample.filtered,
-			controlBam=sample.ctrl.filtered,
+			controlBam=sample.filtered.replace(sample.name, sample.compare_sample),
 			treatmentName=sample.name,
-			controlName=sample.ctrl.sampleName,
-			outputDir=os.path.join(sample.dirs.peaks, sample.name),
+			controlName=sample.compare_sample,
+			outputDir=os.path.join(sample.paths.peaks, sample.name),
 			broad=True if sample.broad else False,
 			cpus=args.cpus
 		)
@@ -309,6 +323,14 @@ def process(sample, pipeline_config, args):
 		#     cpus=args.cpus
 		# )
 		# pipe.run(cmd, shell=True)
+
+
+	# Everything down here fails for various reasons, usually bad paths
+	# hard coded into the toolkit functions, which are too difficult to fix
+	# without a major revamp of the toolkit :(
+
+	pipe.stop_pipeline()
+	return
 
 	# Find motifs
 	pipe.timestamp("Finding motifs")
@@ -390,7 +412,7 @@ def process(sample, pipeline_config, args):
 	pipe.run(cmd, shell=True, nofail=True)
 
 	# Plot enrichment around TSSs
-	pipe.timestamp("Ploting enrichment around TSSs")
+	pipe.timestamp("Plotting enrichment around TSSs")
 	cmd = tk.tssAnalysis(
 		inputBam=sample.filtered,
 		tssFile=getattr(pipeline_config.resources.tss, sample.genome),
