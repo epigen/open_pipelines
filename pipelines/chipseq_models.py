@@ -21,7 +21,7 @@ class ChIPseqSample(Sample):
 	"""
 	def __init__(self, series):
 
-		# Passed series must either be a pd.Series or a daugther class
+		# Passed series must either be a pd.Series or a daughter class
 		if not isinstance(series, _pd.Series):
 			raise TypeError("Provided object is not a pandas Series.")
 		super(ChIPseqSample, self).__init__(series)
@@ -29,6 +29,9 @@ class ChIPseqSample(Sample):
 		# Get type of factor
 		# TODO: get config file specifying broad/narrow factors
 		# e.g. self.broad = True if self.ip in self.prj.config["broadfactors"] else False
+		# NS: I wrapped this in a try block because this makes it require that
+		# 'ip' be defined, which may not be the case (like for Input samples)
+
 		try:
 			self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
 			self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
@@ -67,7 +70,7 @@ class ChIPseqSample(Sample):
 		self.trimmed2Unpaired = _os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
 
 		# Mapped: mapped, duplicates marked, removed, reads shifted
-		self.paths.mapped = _os.path.join(self.paths.sample_root, "mapped")
+		self.paths.mapped = _os.path.join(self.paths.sample_root, "mapped_"+self.genome)
 		self.mapped = _os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.bam")
 		self.filtered = _os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.filtered.bam")
 
@@ -75,7 +78,7 @@ class ChIPseqSample(Sample):
 		self.frip = _os.path.join(self.paths.sample_root, self.sample_name + "_FRiP.txt")
 
 		# Coverage: read coverage in windows genome-wide
-		self.paths.coverage = _os.path.join(self.paths.sample_root, "coverage")
+		self.paths.coverage = _os.path.join(self.paths.sample_root, "coverage_" + self.genome)
 		self.coverage = _os.path.join(self.paths.coverage, self.sample_name + ".cov")
 
 		self.insertplot = _os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
@@ -85,7 +88,7 @@ class ChIPseqSample(Sample):
 		self.qc_plot = _os.path.join(self.paths.sample_root, self.sample_name + "_qc.pdf")
 
 		# Peaks: peaks called and derivate files
-		self.paths.peaks = _os.path.join(self.paths.sample_root, "peaks")
+		self.paths.peaks = _os.path.join(self.paths.sample_root, "peaks_"+self.genome)
 		self.peaks = _os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
 		self.peaks_motif_centered = _os.path.join(self.paths.peaks, self.sample_name + "_peaks.motif_centered.bed")
 		self.peaks_motif_annotated = _os.path.join(self.paths.peaks, self.sample_name + "_peaks._motif_annotated.bed")

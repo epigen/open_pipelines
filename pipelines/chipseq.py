@@ -38,11 +38,13 @@ def main():
 	args = parser.parse_args()
 
 	# Read in yaml configs
+
 	sample_temp = AttributeDict(yaml.load(open(args.sample_config, "r")))
 	sample_series = _pd.Series(sample_temp.__dict__)
 	sample = ChIPseqSample(sample_series)
 	sample.set_file_paths()
 
+	# TODO: The pipeline config should be automatically handled by Pypiper.
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function
@@ -89,6 +91,8 @@ def process(sample, pipeline_config, args):
 				raise
 
 	# Start Pypiper object
+	# Best practice is to name the pipeline with the name of the script;
+	# or put the name in the pipeline interface.
 	pipe = pypiper.PipelineManager("chipseq", sample.paths.sample_root, args=args)
 
 	# Merge Bam files if more than one technical replicate
