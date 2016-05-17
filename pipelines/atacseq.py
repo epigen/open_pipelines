@@ -9,9 +9,11 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 import os
-from looper.models import AttributeDict
-from pipelines import toolkit as tk
+import pandas as pd
 
+from looper.models import AttributeDict, Sample
+
+from pipelines import toolkit as tk
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
@@ -21,6 +23,103 @@ __version__ = "0.2"
 __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
+
+
+class ATACseqSample(Sample):
+	"""
+	Class to model ATAC-seq samples based on the ChIPseqSample class.
+
+	:param series: Pandas `Series` object.
+	:type series: pandas.Series
+	"""
+	def __init__(self, series):
+
+		# Use pd.Series object to have all sample attributes
+		if not isinstance(series, pd.Series):
+			raise TypeError("Provided object is not a pandas Series.")
+		super(ATACseqSample, self).__init__(series)
+
+		self.tagmented = True
+
+		self.make_sample_dirs()
+
+	def __repr__(self):
+		return "ATAC-seq sample '%s'" % self.sample_name
+
+	def set_file_paths(self):
+		"""
+		Sets the paths of all files for this sample.
+		"""
+		# Inherit paths from Sample by running Sample's set_file_paths()
+		super(ATACseqSample, self).set_file_paths()
+
+		# Files in the root of the sample dir
+		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
+		self.trimlog = os.path.join(self.paths.sample_root, self.sample_name + ".trimlog.txt")
+		self.aln_rates = os.path.join(self.paths.sample_root, self.sample_name + ".aln_rates.txt")
+		self.aln_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".aln_metrics.txt")
+		self.dups_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".dups_metrics.txt")
+
+		# Unmapped: merged bam, fastq, trimmed fastq
+		self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
+		self.unmapped = os.path.join(self.paths.unmapped, self.sample_name + ".bam")
+		self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
+		self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
+		self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
+		self.fastqUnpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
+		self.trimmed = os.path.join(self.paths.unmapped, self.sample_name + ".trimmed.fastq")
+		self.trimmed1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
+		self.trimmed2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
+		self.trimmed1Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
+		self.trimmed2Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+
+		# Mapped: mapped, duplicates marked, removed, reads shifted
+		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
+		self.mapped = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.bam")
+		self.filtered = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.filtered.bam")
+		# this will create additional bam files with reads shifted
+		self.filteredshifted = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.filtered.shifted.bam")
+
+		# Files in the root of the sample dir
+		self.frip = os.path.join(self.paths.sample_root, self.name + "_FRiP.txt")
+
+		# Mapped: mapped, duplicates marked, removed, reads shifted
+		# this will create additional bam files with reads shifted
+		self.filteredshifted = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.filtered.shifted.bam")
+
+		# Coverage: read coverage in windows genome-wide
+		self.paths.coverage = os.path.join(self.paths.sample_root, "coverage")
+		self.coverage = os.path.join(self.paths.coverage, self.name + ".cov")
+
+		self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
+		self.insertdata = os.path.join(self.paths.sample_root, self.name + "_insertLengths.csv")
+		self.qc = os.path.join(self.paths.sample_root, self.name + "_qc.tsv")
+		self.qc_plot = os.path.join(self.paths.sample_root, self.name + "_qc.pdf")
+
+		# Peaks: peaks called and derivate files
+		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
+		self.peaks = os.path.join(self.paths.peaks, self.name + "_peaks.narrowPeak")
+		self.filteredPeaks = os.path.join(self.paths.peaks, self.name + "_peaks.filtered.bed")
+
+
+class DNaseSample(ATACseqSample):
+	"""
+	Class to model DNase-seq samples based on the ChIPseqSample class.
+
+	:param series: Pandas `Series` object.
+	:type series: pandas.Series
+	"""
+	def __init__(self, series):
+
+		# Use pd.Series object to have all sample attributes
+		if not isinstance(series, pd.Series):
+			raise TypeError("Provided object is not a pandas Series.")
+		super(DNaseSample, self).__init__(series)
+
+		super(DNaseSample, self).set_file_paths()
+
+	def __repr__(self):
+		return "DNase-seq sample '%s'" % self.sample_name
 
 
 def main():
@@ -34,7 +133,15 @@ def main():
 	args = parser.parse_args()
 
 	# Read in yaml configs
-	sample = AttributeDict(yaml.load(open(args.sample_config, "r")))
+	series = pd.Series(yaml.load(open(args.sample_config, "r")))
+	# Create Sample object
+	if series["library"] != "DNase-seq":
+		sample = ATACseqSample(series)
+	else:
+		sample = DNaseSample(series)
+	# Set file paths
+	sample.set_file_paths()
+
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function

@@ -9,13 +9,12 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 import os
-from looper.models import AttributeDict
+import pandas as pd
 
+from looper.models import AttributeDict, Sample
 
 from pipelines import toolkit as tk
 
-from chipseq_models import ChIPseqSample
-import pandas as _pd
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
@@ -27,21 +26,140 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
+class ChIPseqSample(Sample):
+	"""
+	Class to model ChIP-seq samples based on the generic Sample class (itself a pandas.Series).
+
+	:param series: Pandas `Series` object.
+	:type series: pandas.Series
+
+	:Example:
+
+	from pipelines import Project, SampleSheet, ChIPseqSample
+	prj = Project("ngs")
+	sheet = SampleSheet("/projects/example/sheet.csv", prj)
+	s1 = ChIPseqSample(sheet.ix[0])
+	"""
+	def __init__(self, series):
+
+		# Passed series must either be a pd.Series or a daughter class
+		if not isinstance(series, pd.Series):
+			raise TypeError("Provided object is not a pandas Series.")
+		super(ChIPseqSample, self).__init__(series)
+
+		self.tagmented = False
+
+		# Get type of factor
+		# TODO: get config file specifying broad/narrow factors
+		# e.g. self.broad = True if self.ip in self.prj.config["broadfactors"] else False
+		# NS: I wrapped this in a try block because this makes it require that
+		# 'ip' be defined, which may not be the case (like for Input samples)
+
+		try:
+			self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
+			self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
+		except:
+			pass
+		self.make_sample_dirs()
+
+	def __repr__(self):
+		return "ChIP-seq sample '%s'" % self.sample_name
+
+	def set_file_paths(self):
+		"""
+		Sets the paths of all files for this sample.
+		"""
+		# Inherit paths from Sample by running Sample's set_file_paths()
+		super(ChIPseqSample, self).set_file_paths()
+
+		# Files in the root of the sample dir
+		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
+		self.trimlog = os.path.join(self.paths.sample_root, self.sample_name + ".trimlog.txt")
+		self.aln_rates = os.path.join(self.paths.sample_root, self.sample_name + ".aln_rates.txt")
+		self.aln_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".aln_metrics.txt")
+		self.dups_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".dups_metrics.txt")
+
+		# Unmapped: merged bam, fastq, trimmed fastq
+		self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
+		self.unmapped = os.path.join(self.paths.unmapped, self.sample_name + ".bam")
+		self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
+		self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
+		self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
+		self.fastqUnpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
+		self.trimmed = os.path.join(self.paths.unmapped, self.sample_name + ".trimmed.fastq")
+		self.trimmed1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
+		self.trimmed2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
+		self.trimmed1Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
+		self.trimmed2Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+
+		# Mapped: mapped, duplicates marked, removed, reads shifted
+		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped_"+self.genome)
+		self.mapped = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.bam")
+		self.filtered = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.filtered.bam")
+
+		# Files in the root of the sample dir
+		self.frip = os.path.join(self.paths.sample_root, self.sample_name + "_FRiP.txt")
+
+		# Coverage: read coverage in windows genome-wide
+		self.paths.coverage = os.path.join(self.paths.sample_root, "coverage_" + self.genome)
+		self.coverage = os.path.join(self.paths.coverage, self.sample_name + ".cov")
+
+		self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
+		self.insertdata = os.path.join(self.paths.sample_root, self.name + "_insertLengths.csv")
+
+		self.qc = os.path.join(self.paths.sample_root, self.sample_name + "_qc.tsv")
+		self.qc_plot = os.path.join(self.paths.sample_root, self.sample_name + "_qc.pdf")
+
+		# Peaks: peaks called and derivate files
+		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks_"+self.genome)
+		self.peaks = os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
+		self.peaks_motif_centered = os.path.join(self.paths.peaks, self.sample_name + "_peaks.motif_centered.bed")
+		self.peaks_motif_annotated = os.path.join(self.paths.peaks, self.sample_name + "_peaks._motif_annotated.bed")
+
+		# Motifs
+		self.paths.motifs = os.path.join(self.paths.sample_root, "motifs")
+
+
+class ChIPmentation(ChIPseqSample):
+	"""
+	Class to model ChIPmentation samples based on the ChIPseqSample class.
+
+	:param series: Pandas `Series` object.
+	:type series: pandas.Series
+	"""
+	def __init__(self, series):
+
+		# Use _pd.Series object to have all sample attributes
+		if not isinstance(series, pd.Series):
+			raise TypeError("Provided object is not a pandas Series.")
+		super(ChIPmentation, self).__init__(series)
+
+		self.tagmented = True
+
+		super(ChIPmentation, self).set_file_paths()
+
+	def __repr__(self):
+		return "ChIPmentation sample '%s'" % self.sample_name
+
+
 def main():
 	# Parse command-line arguments
 	parser = ArgumentParser(
 		prog="chipseq-pipeline",
-		description="CHIP-seq pipeline."
+		description="ChIP-seq pipeline."
 	)
 	parser = arg_parser(parser)
 	parser = pypiper.add_pypiper_args(parser, all_args=True)
 	args = parser.parse_args()
 
 	# Read in yaml configs
-
-	sample_temp = AttributeDict(yaml.load(open(args.sample_config, "r")))
-	sample_series = _pd.Series(sample_temp.__dict__)
-	sample = ChIPseqSample(sample_series)
+	series = pd.Series(yaml.load(open(args.sample_config, "r")))
+	# Create Sample object
+	if series["library"] != "ChIPmentation":
+		sample = ChIPseqSample(series)
+	else:
+		sample = ChIPmentation(series)
+	# Set file paths
 	sample.set_file_paths()
 
 	# TODO: The pipeline config should be automatically handled by Pypiper.

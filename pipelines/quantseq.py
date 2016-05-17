@@ -9,7 +9,10 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 import os
-from looper.models import AttributeDict
+import pandas as pd
+
+from looper.models import AttributeDict, Sample
+
 from pipelines import toolkit as tk
 
 
@@ -23,6 +26,62 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
+class QuantseqSample(Sample):
+	"""
+	Class to model Quant-seq samples based on the generic Sample class (itself a pandas.Series).
+
+	:param series: Pandas `Series` object.
+	:type series: pandas.Series
+
+	:Example:
+
+	from pipelines import Project, SampleSheet, QuantseqSample
+	prj = Project("ngs")
+	sheet = SampleSheet("/projects/example/sheet.csv", prj)
+	s1 = QuantseqSample(sheet.ix[0])
+	"""
+	def __init__(self, series):
+
+		# Passed series must either be a pd.Series or a daugther class
+		if not isinstance(series, pd.Series):
+			raise TypeError("Provided object is not a pandas Series.")
+		super(QuantseqSample, self).__init__(series)
+
+	def __repr__(self):
+		return "Quant-seq sample '%s'" % self.sample_name
+
+	def set_file_paths(self):
+		"""
+		Sets the paths of all files for this sample.
+		"""
+		# Inherit paths from Sample by running Sample's set_file_paths()
+		super(QuantseqSample, self).set_file_paths()
+
+		# Files in the root of the sample dir
+		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
+		self.trimlog = os.path.join(self.paths.sample_root, self.sample_name + ".trimlog.txt")
+
+		# Unmapped: merged bam, fastq, trimmed fastq
+		self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
+		self.unmapped = os.path.join(self.paths.unmapped, self.sample_name + ".bam")
+		self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
+		self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
+		self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
+		self.fastqUnpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
+		self.trimmed = os.path.join(self.paths.unmapped, self.sample_name + ".trimmed.fastq")
+		self.trimmed1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
+		self.trimmed2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
+		self.trimmed1Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
+		self.trimmed2Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+
+		# kallisto pseudoalignments
+		self.pseudomapped = os.path.join(self.paths.mapped, self.name + ".pseudoalignment.bam")
+
+		# RNA quantification
+		self.paths.quant = os.path.join(self.paths.sample_root, "quantification")
+		self.kallistoQuant = os.path.join(self.paths.quant, "abundance.tsv")
+
+
 def main():
 	# Parse command-line arguments
 	parser = ArgumentParser(
@@ -33,8 +92,11 @@ def main():
 	parser = pypiper.add_pypiper_args(parser, all_args=True)
 	args = parser.parse_args()
 
-	# Read in yaml configs
-	sample = AttributeDict(yaml.load(open(args.sample_config, "r")))
+	# Read in yaml config and create Sample object
+	sample = QuantseqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
+	# Set file paths
+	sample.set_file_paths()
+
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function
