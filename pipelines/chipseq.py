@@ -40,6 +40,8 @@ class ChIPseqSample(Sample):
 	sheet = SampleSheet("/projects/example/sheet.csv", prj)
 	s1 = ChIPseqSample(sheet.ix[0])
 	"""
+	__library__ = "ChIP-seq"
+
 	def __init__(self, series):
 
 		# Passed series must either be a pd.Series or a daughter class
@@ -127,6 +129,8 @@ class ChIPmentation(ChIPseqSample):
 	:param series: Pandas `Series` object.
 	:type series: pandas.Series
 	"""
+	__library__ = "ChIPmentation"
+
 	def __init__(self, series):
 
 		# Use _pd.Series object to have all sample attributes

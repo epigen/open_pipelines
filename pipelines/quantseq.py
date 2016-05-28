@@ -40,6 +40,8 @@ class QuantseqSample(Sample):
 	sheet = SampleSheet("/projects/example/sheet.csv", prj)
 	s1 = QuantseqSample(sheet.ix[0])
 	"""
+	__library__ = "Quant-seq"
+
 	def __init__(self, series):
 
 		# Passed series must either be a pd.Series or a daugther class

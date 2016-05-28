@@ -32,6 +32,8 @@ class STARRseqSample(Sample):
 	:param series: Pandas `Series` object.
 	:type series: pandas.Series
 	"""
+	__library__ = "STARR-seq"
+
 	def __init__(self, series):
 
 		# Use pd.Series object to have all sample attributes
