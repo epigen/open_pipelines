@@ -77,6 +77,7 @@ class QuantseqSample(Sample):
 		self.trimmed2Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
 
 		# kallisto pseudoalignments
+		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
 		self.pseudomapped = os.path.join(self.paths.mapped, self.name + ".pseudoalignment.bam")
 
 		# RNA quantification

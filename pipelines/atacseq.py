@@ -120,10 +120,11 @@ class DNaseSample(ATACseqSample):
 			raise TypeError("Provided object is not a pandas Series.")
 		super(DNaseSample, self).__init__(series)
 
-		super(DNaseSample, self).set_file_paths()
-
 	def __repr__(self):
 		return "DNase-seq sample '%s'" % self.sample_name
+
+	def set_file_paths(self):
+		super(DNaseSample, self).set_file_paths()
 
 
 def main():
@@ -145,6 +146,7 @@ def main():
 		sample = DNaseSample(series)
 	# Set file paths
 	sample.set_file_paths()
+	sample.make_sample_dirs()
 
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
