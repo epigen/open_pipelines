@@ -29,4 +29,4 @@ Add the location of the cloned repository to your looper [project configuration]
 # Developing pipelines
 
 If you plan to create a new pipeline or develop existing pipelines, clone this repo to your personal space, where you do the development.
-You can tell looper about which pipelines are available through the looper [pipeline interface configuration](http://looper.readthedocs.io/en/latest/inputs.html#pipeline-interface-yaml) file.
+You can tell looper about which pipelines are available through the [pipeline interface configuration](http://looper.readthedocs.io/en/latest/inputs.html#pipeline-interface-yaml) file.
