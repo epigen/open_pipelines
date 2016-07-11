@@ -4,12 +4,13 @@ Note! Documentation is under heavy work still.
 
 # Usage
 
-The pipelines use the [`looper`](https://github.com/epigen/looper/) and [`pypiper`](https://github.com/epigen/pypiper/) programs to manage the submission of runs and execution of commands.
+Prerequisites: These pipelines use [pypiper](https://github.com/epigen/pypiper) to run a pipeline for a single sample, and [looper](https://github.com/epigen/looper) to handle multi-samples job submission for a project. You can do a user-specific install of both like this:
 
 ```
-pip install https://github.com/epigen/pypiper/zipball/master
-pip install https://github.com/epigen/looper/zipball/master
+pip install --user https://github.com/epigen/pypiper/zipball/master
+pip install --user https://github.com/epigen/looper/zipball/master
 ```
+
 
 ### Option 1 (install this package)
 
