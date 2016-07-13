@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-ATAC-seq pipeline
+STARR-seq pipeline
 """
 
 import sys
@@ -19,41 +19,41 @@ __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
 __credits__ = []
 __license__ = "GPL2"
-__version__ = "0.2"
+__version__ = "0.1"
 __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
-class ATACseqSample(Sample):
+class STARRseqSample(Sample):
 	"""
-	Class to model ATAC-seq samples based on the ChIPseqSample class.
+	Class to model STARR-seq samples based on the ChIPseqSample class.
 
 	:param series: Pandas `Series` object.
 	:type series: pandas.Series
 	"""
-	__library__ = "ATAC-seq"
+	__library__ = "STARR-seq"
 
 	def __init__(self, series):
 
 		# Use pd.Series object to have all sample attributes
 		if not isinstance(series, pd.Series):
 			raise TypeError("Provided object is not a pandas Series.")
-		super(ATACseqSample, self).__init__(series)
+		super(STARRseqSample, self).__init__(series)
 
-		self.tagmented = True
+		self.tagmented = False
 
 		self.make_sample_dirs()
 
 	def __repr__(self):
-		return "ATAC-seq sample '%s'" % self.sample_name
+		return "STARR-seq sample '%s'" % self.sample_name
 
 	def set_file_paths(self):
 		"""
 		Sets the paths of all files for this sample.
 		"""
 		# Inherit paths from Sample by running Sample's set_file_paths()
-		super(ATACseqSample, self).set_file_paths()
+		super(STARRseqSample, self).set_file_paths()
 
 		# Files in the root of the sample dir
 		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
@@ -104,64 +104,20 @@ class ATACseqSample(Sample):
 		self.filteredPeaks = os.path.join(self.paths.peaks, self.name + "_peaks.filtered.bed")
 
 
-class DNaseSample(ATACseqSample):
-	"""
-	Class to model DNase-seq samples based on the ChIPseqSample class.
-
-	:param series: Pandas `Series` object.
-	:type series: pandas.Series
-	"""
-	__library__ = "DNase-seq"
-
-	def __init__(self, series):
-
-		# Use pd.Series object to have all sample attributes
-		if not isinstance(series, pd.Series):
-			raise TypeError("Provided object is not a pandas Series.")
-		super(DNaseSample, self).__init__(series)
-
-	def __repr__(self):
-		return "DNase-seq sample '%s'" % self.sample_name
-
-	def set_file_paths(self):
-		super(DNaseSample, self).set_file_paths()
-
-
 def main():
 	# Parse command-line arguments
 	parser = ArgumentParser(
-		prog="atacseq-pipeline",
-		description="ATAC-seq pipeline."
+		prog="starrseq-pipeline",
+		description="STARR-seq pipeline."
 	)
 	parser = arg_parser(parser)
 	parser = pypiper.add_pypiper_args(parser, all_args=True)
 	args = parser.parse_args()
 
-	# Read in yaml configs
-	series = pd.Series(yaml.load(open(args.sample_config, "r")))
-	# Create Sample object
-	if series["library"] != "DNase-seq":
-		sample = ATACseqSample(series)
-	else:
-		sample = DNaseSample(series)
-
-	# Check if merged
-	if len(sample.data_path.split(" ")) > 1:
-		sample.merged = True
-	else:
-		sample.merged = False
-	sample.prj = AttributeDict(sample.prj)
-	sample.paths = AttributeDict(sample.paths.__dict__)
-
-	# Shorthand for read_type
-	if sample.read_type == "paired":
-		sample.paired = True
-	else:
-		sample.paired = False
-
+	# Read in yaml config and create Sample object
+	sample = STARRseqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
 	# Set file paths
 	sample.set_file_paths()
-	sample.make_sample_dirs()
 
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
@@ -189,11 +145,11 @@ def arg_parser(parser):
 def process(sample, pipeline_config, args):
 	"""
 	This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
-	and removed, indexed, shifted Bam files along with a UCSC browser track.
+	and removed, indexed Bam files along with a UCSC browser track.
 	Peaks are called and filtered.
 	"""
 
-	print("Start processing ATAC-seq sample %s." % sample.sample_name)
+	print("Start processing STARR-seq sample %s." % sample.sample_name)
 
 	for path in ["sample_root"] + sample.paths.__dict__.keys():
 		if not os.path.exists(sample.paths[path]):
@@ -203,7 +159,7 @@ def process(sample, pipeline_config, args):
 				raise
 
 	# Start Pypiper object
-	pipe = pypiper.PipelineManager("atacseq", sample.paths.sample_root, args=args)
+	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
 
 	# Merge Bam files if more than one technical replicate
 	if len(sample.data_path.split(" ")) > 1:
@@ -307,29 +263,12 @@ def process(sample, pipeline_config, args):
 	)
 	pipe.run(cmd, sample.filtered, shell=True)
 
-	# Shift reads
-	if sample.tagmented:
-		pipe.timestamp("Shifting reads of tagmented sample")
-		cmd = tk.shiftReads(
-			inputBam=sample.filtered,
-			genome=sample.genome,
-			outputBam=sample.filteredshifted
-		)
-		pipe.run(cmd, sample.filteredshifted, shell=True)
-
 	# Index bams
 	pipe.timestamp("Indexing bamfiles with samtools")
 	cmd = tk.indexBam(inputBam=sample.mapped)
 	pipe.run(cmd, sample.mapped + ".bai", shell=True)
 	cmd = tk.indexBam(inputBam=sample.filtered)
 	pipe.run(cmd, sample.filtered + ".bai", shell=True)
-	if sample.tagmented:
-		cmd = tk.indexBam(inputBam=sample.filteredshifted)
-		pipe.run(cmd, sample.filteredshifted + ".bai", shell=True)
-
-	track_dir = os.path.dirname(sample.bigwig)
-	if not os.path.exists(track_dir):
-		os.makedirs(track_dir)
 
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
@@ -433,18 +372,7 @@ def get_track_colour(sample, config):
 	if not hasattr(config, "track_colours"):
 		return "0,0,0"
 	else:
-		if hasattr(sample, "ip"):
-			if sample.ip in config["track_colours"].__dict__.keys():
-				sample.track_colour = config["track_colours"][sample.ip]
-			else:
-				if sample.library in ["ATAC", "ATACSEQ", "ATAC-SEQ"]:
-					sample.track_colour = config["track_colours"]["ATAC"]
-				elif sample.library in ["DNASE", "DNASESEQ", "DNASE-SEQ"]:
-					sample.track_colour = config["track_colours"]["DNASE"]
-				else:
-					sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
-		else:
-			sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
+		sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
 
 
 if __name__ == '__main__':

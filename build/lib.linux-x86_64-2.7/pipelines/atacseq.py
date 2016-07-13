@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-ChIP-seq pipeline
+ATAC-seq pipeline
 """
 
 import sys
@@ -15,7 +15,6 @@ from looper.models import AttributeDict, Sample
 
 from pipelines import toolkit as tk
 
-
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
 __credits__ = []
@@ -26,51 +25,35 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
-class ChIPseqSample(Sample):
+class ATACseqSample(Sample):
 	"""
-	Class to model ChIP-seq samples based on the generic Sample class (itself a pandas.Series).
+	Class to model ATAC-seq samples based on the ChIPseqSample class.
 
 	:param series: Pandas `Series` object.
 	:type series: pandas.Series
-
-	:Example:
-
-	from pipelines import Project, SampleSheet, ChIPseqSample
-	prj = Project("ngs")
-	sheet = SampleSheet("/projects/example/sheet.csv", prj)
-	s1 = ChIPseqSample(sheet.ix[0])
 	"""
-	__library__ = "ChIP-seq"
+	__library__ = "ATAC-seq"
 
 	def __init__(self, series):
-		# Passed series must either be a pd.Series or a daughter class
+
+		# Use pd.Series object to have all sample attributes
 		if not isinstance(series, pd.Series):
 			raise TypeError("Provided object is not a pandas Series.")
-		super(ChIPseqSample, self).__init__(series)
+		super(ATACseqSample, self).__init__(series)
 
-		self.tagmented = False
+		self.tagmented = True
 
-		# Get type of factor
-		# TODO: get config file specifying broad/narrow factors
-		# e.g. self.broad = True if self.ip in self.prj.config["broadfactors"] else False
-		# NS: I wrapped this in a try block because this makes it require that
-		# 'ip' be defined, which may not be the case (like for Input samples)
-
-		try:
-			self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
-			self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
-		except:
-			pass
+		self.make_sample_dirs()
 
 	def __repr__(self):
-		return "ChIP-seq sample '%s'" % self.sample_name
+		return "ATAC-seq sample '%s'" % self.sample_name
 
 	def set_file_paths(self):
 		"""
 		Sets the paths of all files for this sample.
 		"""
 		# Inherit paths from Sample by running Sample's set_file_paths()
-		super(ChIPseqSample, self).set_file_paths()
+		super(ATACseqSample, self).set_file_paths()
 
 		# Files in the root of the sample dir
 		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
@@ -96,59 +79,58 @@ class ChIPseqSample(Sample):
 		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
 		self.mapped = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.bam")
 		self.filtered = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.filtered.bam")
+		# this will create additional bam files with reads shifted
+		self.filteredshifted = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.filtered.shifted.bam")
 
 		# Files in the root of the sample dir
-		self.frip = os.path.join(self.paths.sample_root, self.sample_name + "_FRiP.txt")
+		self.frip = os.path.join(self.paths.sample_root, self.name + "_FRiP.txt")
+
+		# Mapped: mapped, duplicates marked, removed, reads shifted
+		# this will create additional bam files with reads shifted
+		self.filteredshifted = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.filtered.shifted.bam")
 
 		# Coverage: read coverage in windows genome-wide
 		self.paths.coverage = os.path.join(self.paths.sample_root, "coverage")
-		self.coverage = os.path.join(self.paths.coverage, self.sample_name + ".cov")
+		self.coverage = os.path.join(self.paths.coverage, self.name + ".cov")
 
 		self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
 		self.insertdata = os.path.join(self.paths.sample_root, self.name + "_insertLengths.csv")
-
-		self.qc = os.path.join(self.paths.sample_root, self.sample_name + "_qc.tsv")
-		self.qc_plot = os.path.join(self.paths.sample_root, self.sample_name + "_qc.pdf")
+		self.qc = os.path.join(self.paths.sample_root, self.name + "_qc.tsv")
+		self.qc_plot = os.path.join(self.paths.sample_root, self.name + "_qc.pdf")
 
 		# Peaks: peaks called and derivate files
 		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
-		self.peaks = os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
-		self.peaks_motif_centered = os.path.join(self.paths.peaks, self.sample_name + "_peaks.motif_centered.bed")
-		self.peaks_motif_annotated = os.path.join(self.paths.peaks, self.sample_name + "_peaks._motif_annotated.bed")
-
-		# Motifs
-		self.paths.motifs = os.path.join(self.paths.sample_root, "motifs")
+		self.peaks = os.path.join(self.paths.peaks, self.name + "_peaks.narrowPeak")
+		self.filteredPeaks = os.path.join(self.paths.peaks, self.name + "_peaks.filtered.bed")
 
 
-class ChIPmentation(ChIPseqSample):
+class DNaseSample(ATACseqSample):
 	"""
-	Class to model ChIPmentation samples based on the ChIPseqSample class.
+	Class to model DNase-seq samples based on the ChIPseqSample class.
 
 	:param series: Pandas `Series` object.
 	:type series: pandas.Series
 	"""
-	__library__ = "ChIPmentation"
+	__library__ = "DNase-seq"
 
 	def __init__(self, series):
-		# Use _pd.Series object to have all sample attributes
+
+		# Use pd.Series object to have all sample attributes
 		if not isinstance(series, pd.Series):
 			raise TypeError("Provided object is not a pandas Series.")
-		super(ChIPmentation, self).__init__(series)
+		super(DNaseSample, self).__init__(series)
 
-		self.tagmented = True
+		super(DNaseSample, self).set_file_paths()
 
 	def __repr__(self):
-		return "ChIPmentation sample '%s'" % self.sample_name
-
-	def set_file_paths(self):
-		super(ChIPmentation, self).set_file_paths()
+		return "DNase-seq sample '%s'" % self.sample_name
 
 
 def main():
 	# Parse command-line arguments
 	parser = ArgumentParser(
-		prog="chipseq-pipeline",
-		description="ChIP-seq pipeline."
+		prog="atacseq-pipeline",
+		description="ATAC-seq pipeline."
 	)
 	parser = arg_parser(parser)
 	parser = pypiper.add_pypiper_args(parser, all_args=True)
@@ -157,30 +139,13 @@ def main():
 	# Read in yaml configs
 	series = pd.Series(yaml.load(open(args.sample_config, "r")))
 	# Create Sample object
-	if series["library"] != "ChIPmentation":
-		sample = ChIPseqSample(series)
+	if series["library"] != "DNase-seq":
+		sample = ATACseqSample(series)
 	else:
-		sample = ChIPmentation(series)
-
-	# Check if merged
-	if len(sample.data_path.split(" ")) > 1:
-		sample.merged = True
-	else:
-		sample.merged = False
-	sample.prj = AttributeDict(sample.prj)
-	sample.paths = AttributeDict(sample.paths.__dict__)
-
-	# Shorthand for read_type
-	if sample.read_type == "paired":
-		sample.paired = True
-	else:
-		sample.paired = False
-
+		sample = DNaseSample(series)
 	# Set file paths
 	sample.set_file_paths()
-	sample.make_sample_dirs()
 
-	# TODO: The pipeline config should be automatically handled by Pypiper.
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
 
 	# Start main function
@@ -188,7 +153,7 @@ def main():
 
 	# # Remove sample config
 	# if not args.dry_run:
-	#   os.system("rm %s" % args.sample_config)
+	# 	os.system("rm %s" % args.sample_config)
 
 
 def arg_parser(parser):
@@ -201,23 +166,17 @@ def arg_parser(parser):
 		help="Yaml config file with sample attributes.",
 		type=str
 	)
-	parser.add_argument(
-		"-p", "--peak-caller",
-		dest="peak_caller",
-		help="Peak caller algorithm.",
-		default="macs2",
-		type=str
-	)
 	return parser
 
 
 def process(sample, pipeline_config, args):
 	"""
 	This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
-	and removed, indexed (and shifted if necessary) Bam files
-	along with a UCSC browser track.
+	and removed, indexed, shifted Bam files along with a UCSC browser track.
+	Peaks are called and filtered.
 	"""
-	print("Start processing ChIP-seq sample %s." % sample.name)
+
+	print("Start processing ATAC-seq sample %s." % sample.sample_name)
 
 	for path in ["sample_root"] + sample.paths.__dict__.keys():
 		if not os.path.exists(sample.paths[path]):
@@ -227,9 +186,7 @@ def process(sample, pipeline_config, args):
 				raise
 
 	# Start Pypiper object
-	# Best practice is to name the pipeline with the name of the script;
-	# or put the name in the pipeline interface.
-	pipe = pypiper.PipelineManager("chipseq", sample.paths.sample_root, args=args)
+	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
 
 	# Merge Bam files if more than one technical replicate
 	if len(sample.data_path.split(" ")) > 1:
@@ -333,16 +290,25 @@ def process(sample, pipeline_config, args):
 	)
 	pipe.run(cmd, sample.filtered, shell=True)
 
+	# Shift reads
+	if sample.tagmented:
+		pipe.timestamp("Shifting reads of tagmented sample")
+		cmd = tk.shiftReads(
+			inputBam=sample.filtered,
+			genome=sample.genome,
+			outputBam=sample.filteredshifted
+		)
+		pipe.run(cmd, sample.filteredshifted, shell=True)
+
 	# Index bams
 	pipe.timestamp("Indexing bamfiles with samtools")
 	cmd = tk.indexBam(inputBam=sample.mapped)
 	pipe.run(cmd, sample.mapped + ".bai", shell=True)
 	cmd = tk.indexBam(inputBam=sample.filtered)
 	pipe.run(cmd, sample.filtered + ".bai", shell=True)
-
-	track_dir = os.path.dirname(sample.bigwig)
-	if not os.path.exists(track_dir):
-		os.makedirs(track_dir)
+	if sample.tagmented:
+		cmd = tk.indexBam(inputBam=sample.filteredshifted)
+		pipe.run(cmd, sample.filteredshifted + ".bai", shell=True)
 
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
@@ -356,15 +322,13 @@ def process(sample, pipeline_config, args):
 		normalize=True
 	)
 	pipe.run(cmd, sample.bigwig, shell=True)
-	# NS: This block and all track-hub code should be factored out into a post-run
-	# script; plus, sample has no track_url attribute.
-	#	cmd = tk.addTrackToHub(
-	#		sampleName=sample.sample_name,
-	#		trackURL=sample.track_url,
-	#		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
-	#		colour=get_track_colour(sample, pipeline_config)
-	#	)
-	#	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
+	cmd = tk.addTrackToHub(
+		sampleName=sample.sample_name,
+		trackURL=sample.track_url,
+		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
+		colour=get_track_colour(sample, pipeline_config)
+	)
+	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
 	# tk.linkToTrackHub(
 	# 	trackHubURL="/".join([prj.config["url"], prj.name, "trackHub_{0}.txt".format(sample.genome)]),
 	# 	fileName=os.path.join(prj.dirs.root, "ucsc_tracks_{0}.html".format(sample.genome)),
@@ -390,183 +354,41 @@ def process(sample, pipeline_config, args):
 	pipe.run(cmd, sample.coverage, shell=True)
 
 	# Calculate NSC, RSC
-	# run_spp.R is nowhere to be found.
-	#	pipe.timestamp("Assessing signal/noise in sample")
-	#	cmd = tk.peakTools(
-	#		inputBam=sample.filtered,
-	#		output=sample.qc,
-	#		plot=sample.qc_plot,
-	#		cpus=args.cores
-	#	)
-	#	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
-
-	# If sample does not have "ctrl" attribute, finish processing it.
-	if not hasattr(sample, "compare_sample"):
-		pipe.stop_pipeline()
-		print("Finished processing sample %s." % sample.name)
-		return
-
-	pipe.wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
-
-	if args.peak_caller == "macs2":
-		pipe.timestamp("Calling peaks with MACS2")
-		# make dir for output (macs fails if it does not exist)
-		if not os.path.exists(sample.paths.peaks):
-			os.makedirs(sample.paths.peaks)
-
-		# For point-source factors use default settings
-		# For broad factors use broad settings
-		cmd = tk.macs2CallPeaks(
-			treatmentBam=sample.filtered,
-			controlBam=sample.filtered.replace(sample.name, sample.compare_sample),
-			outputDir=sample.paths.peaks,
-			sampleName=sample.name,
-			genome=sample.genome,
-			broad=True if sample.broad else False
-		)
-		pipe.run(cmd, sample.peaks, shell=True)
-
-		pipe.timestamp("Ploting MACS2 model")
-		cmd = tk.macs2PlotModel(
-			sampleName=sample.name,
-			outputDir=os.path.join(sample.paths.peaks, sample.name)
-		)
-		pipe.run(cmd, os.path.join(sample.paths.peaks, sample.name, sample.name + "_model.pdf"), shell=True, nofail=True)
-	elif args.peak_caller == "spp":
-		pipe.timestamp("Calling peaks with spp")
-		# For point-source factors use default settings
-		# For broad factors use broad settings
-		cmd = tk.sppCallPeaks(
-			treatmentBam=sample.filtered,
-			controlBam=sample.filtered.replace(sample.name, sample.compare_sample),
-			treatmentName=sample.name,
-			controlName=sample.compare_sample,
-			outputDir=os.path.join(sample.paths.peaks, sample.name),
-			broad=True if sample.broad else False,
-			cpus=args.cpus
-		)
-		pipe.run(cmd, sample.peaks, shell=True)
-	elif args.peak_caller == "zinba":
-		raise NotImplementedError("Calling peaks with Zinba is not yet implemented.")
-		# pipe.timestamp("Calling peaks with Zinba")
-		# cmd = tk.bamToBed(
-		#     inputBam=sample.filtered,
-		#     outputBed=os.path.join(sample.dirs.peaks, sample.name + ".bed"),
-		# )
-		# pipe.run(cmd, os.path.join(sample.dirs.peaks, sample.name + ".bed"), shell=True)
-		# cmd = tk.bamToBed(
-		#     inputBam=sample.ctrl.filtered,
-		#     outputBed=os.path.join(sample.dirs.peaks, control.sampleName + ".bed"),
-		# )
-		# pipe.run(cmd, os.path.join(sample.dirs.peaks, control.sampleName + ".bed"), shell=True)
-		# cmd = tk.zinbaCallPeaks(
-		#     treatmentBed=os.path.join(sample.dirs.peaks, sample.name + ".bed"),
-		#     controlBed=os.path.join(sample.dirs.peaks, control.sampleName + ".bed"),
-		#     tagmented=sample.tagmented,
-		#     cpus=args.cpus
-		# )
-		# pipe.run(cmd, shell=True)
-
-	# Everything down here fails for various reasons, usually bad paths
-	# hard coded into the toolkit functions, which are too difficult to fix
-	# without a major revamp of the toolkit :(
-
-	pipe.stop_pipeline()
-	return
-
-	# Find motifs
-	pipe.timestamp("Finding motifs")
-	if not sample.histone:
-		# For TFs, find the "self" motif
-		cmd = tk.homerFindMotifs(
-			peakFile=sample.peaks,
-			genome=sample.genome,
-			outputDir=sample.paths.motifs,
-			size="50",
-			length="8,10,12,14,16",
-			n_motifs=8
-		)
-		pipe.run(cmd, os.path.join(sample.paths.motifs, "homerResults", "motif1.motif"), shell=True)
-		# For TFs, find co-binding motifs (broader region)
-		cmd = tk.homerFindMotifs(
-			peakFile=sample.peaks,
-			genome=sample.genome,
-			outputDir=sample.paths.motifs + "_cobinders",
-			size="200",
-			length="8,10,12,14,16",
-			n_motifs=12
-		)
-		pipe.run(cmd, os.path.join(sample.paths.motifs + "_cobinders", "homerResults", "motif1.motif"), shell=True)
-	else:
-		# For histones, use a broader region to find motifs
-		cmd = tk.homerFindMotifs(
-			peakFile=sample.peaks,
-			genome=sample.genome,
-			outputDir=sample.paths.motifs,
-			size="1000",
-			length="8,10,12,14,16",
-			n_motifs=20
-		)
-		pipe.run(cmd, os.path.join(sample.paths.motifs, "homerResults", "motif1.motif"), shell=True)
-
-	# Center peaks on motifs
-	pipe.timestamp("Centering peak in motifs")
-	# TODO:
-	# right now this assumes peaks were called with MACS2
-	# figure a way of magetting the peak files withough using the peak_caller option
-	# for that would imply taht option would be required when selecting this stage
-	cmd = tk.centerPeaksOnMotifs(
-		peakFile=sample.peaks,
-		genome=sample.genome,
-		windowWidth=pipeline_config.parameters.peak_window_width,
-		motifFile=os.path.join(sample.paths.motifs, "homerResults", "motif1.motif"),
-		outputBed=sample.peaks_motif_centered
-	)
-	pipe.run(cmd, sample.peaks_motif_centered, shell=True)
-
-	# Annotate peaks with motif info
-	pipe.timestamp("Annotating peaks with motif info")
-	# TODO:
-	# right now this assumes peaks were called with MACS2
-	# figure a way of getting the peak files withough using the peak_caller option
-	# for that would imply taht option would be required when selecting this stage
-	cmd = tk.AnnotatePeaks(
-		peakFile=sample.peaks,
-		genome=sample.genome,
-		motifFile=os.path.join(sample.paths.motifs, "homerResults", "motif1.motif"),
-		outputBed=sample.peaksMotifAnnotated
-	)
-	pipe.run(cmd, sample.peaksMotifAnnotated, shell=True)
-
-	# Plot enrichment at peaks centered on motifs
-	pipe.timestamp("Ploting enrichment at peaks centered on motifs")
-	cmd = tk.peakAnalysis(
+	pipe.timestamp("Assessing signal/noise in sample")
+	cmd = tk.peakTools(
 		inputBam=sample.filtered,
-		peakFile=sample.peaks_motif_centered,
-		plotsDir=sample.paths.sample_root,
-		windowWidth=pipeline_config.parameters.peak_window_width,
-		fragmentsize=1 if sample.tagmented else sample.read_length,
-		genome=sample.genome,
-		n_clusters=5,
-		strand_specific=True,
-		duplicates=True
+		output=sample.qc,
+		plot=sample.qc_plot,
+		cpus=args.cores
 	)
-	pipe.run(cmd, shell=True, nofail=True)
+	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
 
-	# Plot enrichment around TSSs
-	pipe.timestamp("Plotting enrichment around TSSs")
-	cmd = tk.tssAnalysis(
-		inputBam=sample.filtered,
-		tssFile=getattr(pipeline_config.resources.tss, sample.genome),
-		plotsDir=sample.paths.sample_root,
-		windowWidth=pipeline_config.parameters.peak_window_width,
-		fragmentsize=1 if sample.tagmented else sample.read_length,
-		genome=sample.genome,
-		n_clusters=5,
-		strand_specific=True,
-		duplicates=True
+	# Call peaks
+	pipe.timestamp("Calling peaks with MACS2")
+	# make dir for output (macs fails if it does not exist)
+	if not os.path.exists(sample.paths.peaks):
+		os.makedirs(sample.paths.peaks)
+
+	cmd = tk.macs2CallPeaksATACSeq(
+		treatmentBam=sample.filtered,
+		outputDir=sample.paths.peaks,
+		sampleName=sample.sample_name,
+		genome=sample.genome
 	)
-	pipe.run(cmd, shell=True, nofail=True)
+	pipe.run(cmd, sample.peaks, shell=True)
+
+	# # Filter peaks based on mappability regions
+	# pipe.timestamp("Filtering peaks in low mappability regions")
+
+	# # get closest read length of sample to available mappability read lengths
+	# closestLength = min(pipeline_config.resources["alignability"][sample.genome].keys(), key=lambda x:abs(x - sample.readLength))
+
+	# cmd = tk.filterPeaksMappability(
+	#     peaks=sample.peaks,
+	#     alignability=pipeline_config.resources["alignability"][sample.genome][closestLength],
+	#     filteredPeaks=sample.filteredPeaks
+	# )
+	# pipe.run(cmd, sample.filteredPeaks, shell=True)
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe.timestamp("Calculating fraction of reads in peaks (FRiP)")
@@ -578,7 +400,7 @@ def process(sample, pipeline_config, args):
 	pipe.run(cmd, sample.frip, shell=True)
 
 	pipe.stop_pipeline()
-	print("Finished processing sample %s." % sample.name)
+	print("Finished processing sample %s." % sample.sample_name)
 
 
 def get_track_colour(sample, config):
@@ -592,16 +414,16 @@ def get_track_colour(sample, config):
 	else:
 		if hasattr(sample, "ip"):
 			if sample.ip in config["track_colours"].__dict__.keys():
-				sample.track_colour = config["track_colours"][sample.ip.upper()]
+				sample.track_colour = config["track_colours"][sample.ip]
 			else:
 				if sample.library in ["ATAC", "ATACSEQ", "ATAC-SEQ"]:
 					sample.track_colour = config["track_colours"]["ATAC"]
 				elif sample.library in ["DNASE", "DNASESEQ", "DNASE-SEQ"]:
 					sample.track_colour = config["track_colours"]["DNASE"]
 				else:
-					sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
+					sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
 		else:
-			sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
+			sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
 
 
 if __name__ == '__main__':

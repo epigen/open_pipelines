@@ -43,6 +43,7 @@ class ChIPseqSample(Sample):
 	__library__ = "ChIP-seq"
 
 	def __init__(self, series):
+
 		# Passed series must either be a pd.Series or a daughter class
 		if not isinstance(series, pd.Series):
 			raise TypeError("Provided object is not a pandas Series.")
@@ -61,6 +62,7 @@ class ChIPseqSample(Sample):
 			self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
 		except:
 			pass
+		self.make_sample_dirs()
 
 	def __repr__(self):
 		return "ChIP-seq sample '%s'" % self.sample_name
@@ -93,7 +95,7 @@ class ChIPseqSample(Sample):
 		self.trimmed2Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
 
 		# Mapped: mapped, duplicates marked, removed, reads shifted
-		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
+		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped_"+self.genome)
 		self.mapped = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.bam")
 		self.filtered = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.filtered.bam")
 
@@ -101,7 +103,7 @@ class ChIPseqSample(Sample):
 		self.frip = os.path.join(self.paths.sample_root, self.sample_name + "_FRiP.txt")
 
 		# Coverage: read coverage in windows genome-wide
-		self.paths.coverage = os.path.join(self.paths.sample_root, "coverage")
+		self.paths.coverage = os.path.join(self.paths.sample_root, "coverage_" + self.genome)
 		self.coverage = os.path.join(self.paths.coverage, self.sample_name + ".cov")
 
 		self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
@@ -111,7 +113,7 @@ class ChIPseqSample(Sample):
 		self.qc_plot = os.path.join(self.paths.sample_root, self.sample_name + "_qc.pdf")
 
 		# Peaks: peaks called and derivate files
-		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
+		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks_"+self.genome)
 		self.peaks = os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
 		self.peaks_motif_centered = os.path.join(self.paths.peaks, self.sample_name + "_peaks.motif_centered.bed")
 		self.peaks_motif_annotated = os.path.join(self.paths.peaks, self.sample_name + "_peaks._motif_annotated.bed")
@@ -130,6 +132,7 @@ class ChIPmentation(ChIPseqSample):
 	__library__ = "ChIPmentation"
 
 	def __init__(self, series):
+
 		# Use _pd.Series object to have all sample attributes
 		if not isinstance(series, pd.Series):
 			raise TypeError("Provided object is not a pandas Series.")
@@ -137,11 +140,10 @@ class ChIPmentation(ChIPseqSample):
 
 		self.tagmented = True
 
+		super(ChIPmentation, self).set_file_paths()
+
 	def __repr__(self):
 		return "ChIPmentation sample '%s'" % self.sample_name
-
-	def set_file_paths(self):
-		super(ChIPmentation, self).set_file_paths()
 
 
 def main():
@@ -161,24 +163,8 @@ def main():
 		sample = ChIPseqSample(series)
 	else:
 		sample = ChIPmentation(series)
-
-	# Check if merged
-	if len(sample.data_path.split(" ")) > 1:
-		sample.merged = True
-	else:
-		sample.merged = False
-	sample.prj = AttributeDict(sample.prj)
-	sample.paths = AttributeDict(sample.paths.__dict__)
-
-	# Shorthand for read_type
-	if sample.read_type == "paired":
-		sample.paired = True
-	else:
-		sample.paired = False
-
 	# Set file paths
 	sample.set_file_paths()
-	sample.make_sample_dirs()
 
 	# TODO: The pipeline config should be automatically handled by Pypiper.
 	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
@@ -340,10 +326,6 @@ def process(sample, pipeline_config, args):
 	cmd = tk.indexBam(inputBam=sample.filtered)
 	pipe.run(cmd, sample.filtered + ".bai", shell=True)
 
-	track_dir = os.path.dirname(sample.bigwig)
-	if not os.path.exists(track_dir):
-		os.makedirs(track_dir)
-
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
 	pipe.timestamp("Making bigWig tracks from bam file")
@@ -356,15 +338,15 @@ def process(sample, pipeline_config, args):
 		normalize=True
 	)
 	pipe.run(cmd, sample.bigwig, shell=True)
-	# NS: This block and all track-hub code should be factored out into a post-run
-	# script; plus, sample has no track_url attribute.
-	#	cmd = tk.addTrackToHub(
-	#		sampleName=sample.sample_name,
-	#		trackURL=sample.track_url,
-	#		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
-	#		colour=get_track_colour(sample, pipeline_config)
-	#	)
-	#	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
+# NS: This block and all track-hub code should be factored out into a post-run 
+# script; plus, sample has no track_url attribute.
+#	cmd = tk.addTrackToHub(
+#		sampleName=sample.sample_name,
+#		trackURL=sample.track_url,
+#		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
+#		colour=get_track_colour(sample, pipeline_config)
+#	)
+#	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
 	# tk.linkToTrackHub(
 	# 	trackHubURL="/".join([prj.config["url"], prj.name, "trackHub_{0}.txt".format(sample.genome)]),
 	# 	fileName=os.path.join(prj.dirs.root, "ucsc_tracks_{0}.html".format(sample.genome)),
@@ -390,21 +372,22 @@ def process(sample, pipeline_config, args):
 	pipe.run(cmd, sample.coverage, shell=True)
 
 	# Calculate NSC, RSC
-	# run_spp.R is nowhere to be found.
-	#	pipe.timestamp("Assessing signal/noise in sample")
-	#	cmd = tk.peakTools(
-	#		inputBam=sample.filtered,
-	#		output=sample.qc,
-	#		plot=sample.qc_plot,
-	#		cpus=args.cores
-	#	)
-	#	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
+# run_spp.R is nowhere to be found.
+#	pipe.timestamp("Assessing signal/noise in sample")
+#	cmd = tk.peakTools(
+#		inputBam=sample.filtered,
+#		output=sample.qc,
+#		plot=sample.qc_plot,
+#		cpus=args.cores
+#	)
+#	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
 
 	# If sample does not have "ctrl" attribute, finish processing it.
 	if not hasattr(sample, "compare_sample"):
 		pipe.stop_pipeline()
 		print("Finished processing sample %s." % sample.name)
 		return
+
 
 	pipe.wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
 
@@ -466,6 +449,7 @@ def process(sample, pipeline_config, args):
 		#     cpus=args.cpus
 		# )
 		# pipe.run(cmd, shell=True)
+
 
 	# Everything down here fails for various reasons, usually bad paths
 	# hard coded into the toolkit functions, which are too difficult to fix

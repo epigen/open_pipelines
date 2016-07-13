@@ -270,11 +270,14 @@ def filterReads(inputBam, outputBam, metricsFile, paired=False, cpus=16, Q=30):
 
 
 def shiftReads(inputBam, genome, outputBam):
+    import re
+
+    outputBam = re.sub("\.bam$", "", outputBam)
 
     cmd = "samtools view -h {0} |".format(inputBam)
     cmd += " shift_reads.py {0} |".format(genome)
     cmd += " samtools view -S -b - |"
-    cmd += " samtools sort -o {0} - ".format(outputBam)
+    cmd += " samtools sort - {0}".format(outputBam)
 
     return cmd
 
