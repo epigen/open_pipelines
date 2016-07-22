@@ -4,16 +4,15 @@
 QUANT-seq pipeline
 """
 
+import os
 import sys
 from argparse import ArgumentParser
 import yaml
 import pypiper
-import os
-import pandas as pd
-
+from pypiper.ngstk import NGSTk
 from looper.models import AttributeDict, Sample
 
-from pipelines import toolkit as tk
+import pandas as pd
 
 
 __author__ = "Andre Rendeiro"
@@ -69,12 +68,12 @@ class QuantseqSample(Sample):
 		self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
 		self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
 		self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
-		self.fastqUnpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
+		self.fastq_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
 		self.trimmed = os.path.join(self.paths.unmapped, self.sample_name + ".trimmed.fastq")
 		self.trimmed1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
 		self.trimmed2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
-		self.trimmed1Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
-		self.trimmed2Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+		self.trimmed1_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
+		self.trimmed2_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
 
 		# kallisto pseudoalignments
 		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
@@ -82,7 +81,7 @@ class QuantseqSample(Sample):
 
 		# RNA quantification
 		self.paths.quant = os.path.join(self.paths.sample_root, "quantification")
-		self.kallistoQuant = os.path.join(self.paths.quant, "abundance.tsv")
+		self.kallisto_quant = os.path.join(self.paths.quant, "abundance.tsv")
 
 
 def main():
@@ -97,17 +96,32 @@ def main():
 
 	# Read in yaml config and create Sample object
 	sample = QuantseqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
+
+	# Check if merged
+	if len(sample.data_path.split(" ")) > 1:
+		sample.merged = True
+	else:
+		sample.merged = False
+	sample.prj = AttributeDict(sample.prj)
+	sample.paths = AttributeDict(sample.paths.__dict__)
+
+	# Shorthand for read_type
+	if sample.read_type == "paired":
+		sample.paired = True
+	else:
+		sample.paired = False
+
 	# Set file paths
 	sample.set_file_paths()
+	sample.make_sample_dirs()
 
-	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
+	# Start Pypiper object
+	# Best practice is to name the pipeline with the name of the script;
+	# or put the name in the pipeline interface.
+	pipe_manager = pypiper.PipelineManager(name="chipseq", outfolder=sample.paths.sample_root, args=args)
 
 	# Start main function
-	process(sample, pipeline_config, args)
-
-	# # Remove sample config
-	# if not args.dry_run:
-	# 	os.system("rm %s" % args.sample_config)
+	process(sample, pipe_manager, args)
 
 
 def arg_parser(parser):
@@ -123,7 +137,7 @@ def arg_parser(parser):
 	return parser
 
 
-def process(sample, pipeline_config, args):
+def process(sample, pipe_manager, args):
 	"""
 	This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
 	and removed, indexed, shifted Bam files along with a UCSC browser track.
@@ -139,68 +153,68 @@ def process(sample, pipeline_config, args):
 			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
 				raise
 
-	# Start Pypiper object
-	pipe = pypiper.PipelineManager("pipe", sample.paths.sample_root, args=args)
+	# Create NGSTk instance
+	tk = NGSTk(pm=pipe_manager)
 
 	# Merge Bam files if more than one technical replicate
 	if len(sample.data_path.split(" ")) > 1:
-		pipe.timestamp("Merging bam files from replicates")
+		pipe_manager.timestamp("Merging bam files from replicates")
 		cmd = tk.mergeBams(
 			inputBams=sample.data_path.split(" "),  # this is a list of sample paths
 			outputBam=sample.unmapped
 		)
-		pipe.run(cmd, sample.unmapped, shell=True)
+		pipe_manager.run(cmd, sample.unmapped, shell=True)
 		sample.data_path = sample.unmapped
 
 	# Fastqc
-	pipe.timestamp("Measuring sample quality with Fastqc")
+	pipe_manager.timestamp("Measuring sample quality with Fastqc")
 	cmd = tk.fastqc(
 		inputBam=sample.data_path,
 		outputDir=sample.paths.sample_root,
 		sampleName=sample.sample_name
 	)
-	pipe.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
+	pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
 
 	# Convert bam to fastq
-	pipe.timestamp("Converting to Fastq format")
+	pipe_manager.timestamp("Converting to Fastq format")
 	cmd = tk.bam2fastq(
 		inputBam=sample.data_path,
 		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
 		outputFastq2=sample.fastq2 if sample.paired else None,
-		unpairedFastq=sample.fastqUnpaired if sample.paired else None
+		unpairedFastq=sample.fastq_unpaired if sample.paired else None
 	)
-	pipe.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
+	pipe_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
 	if not sample.paired:
-		pipe.clean_add(sample.fastq, conditional=True)
+		pipe_manager.clean_add(sample.fastq, conditional=True)
 	if sample.paired:
-		pipe.clean_add(sample.fastq1, conditional=True)
-		pipe.clean_add(sample.fastq2, conditional=True)
-		pipe.clean_add(sample.fastqUnpaired, conditional=True)
+		pipe_manager.clean_add(sample.fastq1, conditional=True)
+		pipe_manager.clean_add(sample.fastq2, conditional=True)
+		pipe_manager.clean_add(sample.fastq_unpaired, conditional=True)
 
 	# Trim reads
-	pipe.timestamp("Trimming adapters from sample")
-	if pipeline_config.parameters.trimmer == "trimmomatic":
+	pipe_manager.timestamp("Trimming adapters from sample")
+	if pipe_manager.parameters.trimmer == "trimmomatic":
 		cmd = tk.trimmomatic(
 			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
 			inputFastq2=sample.fastq2 if sample.paired else None,
 			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			outputFastq1unpaired=sample.trimmed1Unpaired if sample.paired else None,
+			outputFastq1unpaired=sample.trimmed1_unpaired if sample.paired else None,
 			outputFastq2=sample.trimmed2 if sample.paired else None,
-			outputFastq2unpaired=sample.trimmed2Unpaired if sample.paired else None,
+			outputFastq2unpaired=sample.trimmed2_unpaired if sample.paired else None,
 			cpus=args.cores,
-			adapters=pipeline_config.resources.adapters,
+			adapters=pipe_manager.resources.adapters,
 			log=sample.trimlog
 		)
-		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		pipe_manager.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
 		if not sample.paired:
-			pipe.clean_add(sample.trimmed, conditional=True)
+			pipe_manager.clean_add(sample.trimmed, conditional=True)
 		else:
-			pipe.clean_add(sample.trimmed1, conditional=True)
-			pipe.clean_add(sample.trimmed1Unpaired, conditional=True)
-			pipe.clean_add(sample.trimmed2, conditional=True)
-			pipe.clean_add(sample.trimmed2Unpaired, conditional=True)
+			pipe_manager.clean_add(sample.trimmed1, conditional=True)
+			pipe_manager.clean_add(sample.trimmed1_unpaired, conditional=True)
+			pipe_manager.clean_add(sample.trimmed2, conditional=True)
+			pipe_manager.clean_add(sample.trimmed2_unpaired, conditional=True)
 
-	elif pipeline_config.parameters.trimmer == "skewer":
+	elif pipe_manager.parameters.trimmer == "skewer":
 		cmd = tk.skewer(
 			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
 			inputFastq2=sample.fastq2 if sample.paired else None,
@@ -209,29 +223,29 @@ def process(sample, pipeline_config, args):
 			outputFastq2=sample.trimmed2 if sample.paired else None,
 			trimLog=sample.trimlog,
 			cpus=args.cores,
-			adapters=pipeline_config.resources.adapters
+			adapters=pipe_manager.resources.adapters
 		)
-		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		pipe_manager.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
 		if not sample.paired:
-			pipe.clean_add(sample.trimmed, conditional=True)
+			pipe_manager.clean_add(sample.trimmed, conditional=True)
 		else:
-			pipe.clean_add(sample.trimmed1, conditional=True)
-			pipe.clean_add(sample.trimmed2, conditional=True)
+			pipe_manager.clean_add(sample.trimmed1, conditional=True)
+			pipe_manager.clean_add(sample.trimmed2, conditional=True)
 
 	# With kallisto from unmapped reads
-	pipe.timestamp("Quantifying read counts with kallisto")
+	pipe_manager.timestamp("Quantifying read counts with kallisto")
 	cmd = tk.kallisto(
 		inputFastq=sample.trimmed1 if sample.paired else sample.trimmed,
 		inputFastq2=sample.trimmed1 if sample.paired else None,
 		outputDir=sample.paths.quant,
 		outputBam=sample.pseudomapped,
-		transcriptomeIndex=pipeline_config["resources"]["genome_index"][sample.transcriptome],
+		transcriptomeIndex=pipe_manager.resources.genome_index[sample.transcriptome],
 		cpus=args.cores
 	)
-	pipe.run(cmd, sample.kallistoQuant, shell=True, nofail=True)
+	pipe_manager.run(cmd, sample.kallisto_quant, shell=True, nofail=True)
 
-	pipe.stop_pipeline()
 	print("Finished processing sample %s." % sample.sample_name)
+	pipe_manager.stop_pipeline()
 
 
 if __name__ == '__main__':

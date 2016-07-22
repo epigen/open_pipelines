@@ -24,9 +24,21 @@ resources:
       36: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign36mer.bed
       50: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign50mer.bed
 
-# tools:
+tools:
   # in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools
   # set to 'java' or 'picard', to use the tool from your $PATH variable
+  fastqc: fastqc
+  java: java
+  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  samtools: samtools
+  sambamba: sambamba
+  trimmomatic: trimmomatic
+  skewer: skewer
+  bedtools: bedtools
+  macs2: macs2
+  # optional:
+  Rscript: Rscript
+  spp: /home/arendeiro/.local/bin/run_spp.R
 
 # the parameters section is intended for all parameters passed to bioinformatic tools
 parameters:

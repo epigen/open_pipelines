@@ -7,9 +7,18 @@ resources:
     mm10_cdna: /data/groups/lab_bock/shared/resources/genomes/mm10_cdna/indexed_kallisto/mm10_kallisto_index.idx
     ercc_cdna: /data/groups/lab_bock/shared/resources/genomes/ERCC92_cdna/indexed_kallisto/ERCC92_kallisto_index.idx
 
-# tools:
+tools:
   # in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools
   # set to 'java' or 'picard', to use the tool from your $PATH variable
+  fastqc: fastqc
+  java: java
+  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  samtools: samtools
+  sambamba: sambamba
+  trimmomatic: trimmomatic
+  skewer: skewer
+  bedtools: bedtools
+  kallisto: kallisto
 
 # the parameters section is intended for all parameters passed to bioinformatic tools
 parameters:

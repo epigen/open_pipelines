@@ -4,16 +4,16 @@
 ATAC-seq pipeline
 """
 
+import os
 import sys
 from argparse import ArgumentParser
 import yaml
 import pypiper
-import os
-import pandas as pd
-
+from pypiper.ngstk import NGSTk
 from looper.models import AttributeDict, Sample
 
-from pipelines import toolkit as tk
+import pandas as pd
+
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
@@ -163,14 +163,13 @@ def main():
 	sample.set_file_paths()
 	sample.make_sample_dirs()
 
-	pipeline_config = AttributeDict(yaml.load(open(os.path.join(os.path.dirname(__file__), args.config_file), "r")))
+	# Start Pypiper object
+	# Best practice is to name the pipeline with the name of the script;
+	# or put the name in the pipeline interface.
+	pipe_manager = pypiper.PipelineManager(name="atacseq", outfolder=sample.paths.sample_root, args=args)
 
 	# Start main function
-	process(sample, pipeline_config, args)
-
-	# # Remove sample config
-	# if not args.dry_run:
-	# 	os.system("rm %s" % args.sample_config)
+	process(sample, pipe_manager, args)
 
 
 def arg_parser(parser):
@@ -186,7 +185,7 @@ def arg_parser(parser):
 	return parser
 
 
-def process(sample, pipeline_config, args):
+def process(sample, pipe_manager, args):
 	"""
 	This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
 	and removed, indexed, shifted Bam files along with a UCSC browser track.
@@ -202,47 +201,47 @@ def process(sample, pipeline_config, args):
 			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
 				raise
 
-	# Start Pypiper object
-	pipe = pypiper.PipelineManager("atacseq", sample.paths.sample_root, args=args)
+	# Create NGSTk instance
+	tk = NGSTk(pm=pipe_manager)
 
 	# Merge Bam files if more than one technical replicate
 	if len(sample.data_path.split(" ")) > 1:
-		pipe.timestamp("Merging bam files from replicates")
+		pipe_manager.timestamp("Merging bam files from replicates")
 		cmd = tk.mergeBams(
 			inputBams=sample.data_path.split(" "),  # this is a list of sample paths
 			outputBam=sample.unmapped
 		)
-		pipe.run(cmd, sample.unmapped, shell=True)
+		pipe_manager.run(cmd, sample.unmapped, shell=True)
 		sample.data_path = sample.unmapped
 
 	# Fastqc
-	pipe.timestamp("Measuring sample quality with Fastqc")
+	pipe_manager.timestamp("Measuring sample quality with Fastqc")
 	cmd = tk.fastqc(
 		inputBam=sample.data_path,
 		outputDir=sample.paths.sample_root,
 		sampleName=sample.sample_name
 	)
-	pipe.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
+	pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
 
 	# Convert bam to fastq
-	pipe.timestamp("Converting to Fastq format")
+	pipe_manager.timestamp("Converting to Fastq format")
 	cmd = tk.bam2fastq(
 		inputBam=sample.data_path,
 		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
 		outputFastq2=sample.fastq2 if sample.paired else None,
 		unpairedFastq=sample.fastqUnpaired if sample.paired else None
 	)
-	pipe.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
+	pipe_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
 	if not sample.paired:
-		pipe.clean_add(sample.fastq, conditional=True)
+		pipe_manager.clean_add(sample.fastq, conditional=True)
 	if sample.paired:
-		pipe.clean_add(sample.fastq1, conditional=True)
-		pipe.clean_add(sample.fastq2, conditional=True)
-		pipe.clean_add(sample.fastqUnpaired, conditional=True)
+		pipe_manager.clean_add(sample.fastq1, conditional=True)
+		pipe_manager.clean_add(sample.fastq2, conditional=True)
+		pipe_manager.clean_add(sample.fastqUnpaired, conditional=True)
 
 	# Trim reads
-	pipe.timestamp("Trimming adapters from sample")
-	if pipeline_config.parameters.trimmer == "trimmomatic":
+	pipe_manager.timestamp("Trimming adapters from sample")
+	if pipe_manager.config.parameters.trimmer == "trimmomatic":
 		cmd = tk.trimmomatic(
 			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
 			inputFastq2=sample.fastq2 if sample.paired else None,
@@ -251,19 +250,19 @@ def process(sample, pipeline_config, args):
 			outputFastq2=sample.trimmed2 if sample.paired else None,
 			outputFastq2unpaired=sample.trimmed2Unpaired if sample.paired else None,
 			cpus=args.cores,
-			adapters=pipeline_config.resources.adapters,
+			adapters=pipe_manager.config.resources.adapters,
 			log=sample.trimlog
 		)
-		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		pipe_manager.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
 		if not sample.paired:
-			pipe.clean_add(sample.trimmed, conditional=True)
+			pipe_manager.clean_add(sample.trimmed, conditional=True)
 		else:
-			pipe.clean_add(sample.trimmed1, conditional=True)
-			pipe.clean_add(sample.trimmed1Unpaired, conditional=True)
-			pipe.clean_add(sample.trimmed2, conditional=True)
-			pipe.clean_add(sample.trimmed2Unpaired, conditional=True)
+			pipe_manager.clean_add(sample.trimmed1, conditional=True)
+			pipe_manager.clean_add(sample.trimmed1Unpaired, conditional=True)
+			pipe_manager.clean_add(sample.trimmed2, conditional=True)
+			pipe_manager.clean_add(sample.trimmed2Unpaired, conditional=True)
 
-	elif pipeline_config.parameters.trimmer == "skewer":
+	elif pipe_manager.config.parameters.trimmer == "skewer":
 		cmd = tk.skewer(
 			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
 			inputFastq2=sample.fastq2 if sample.paired else None,
@@ -272,60 +271,60 @@ def process(sample, pipeline_config, args):
 			outputFastq2=sample.trimmed2 if sample.paired else None,
 			trimLog=sample.trimlog,
 			cpus=args.cores,
-			adapters=pipeline_config.resources.adapters
+			adapters=pipe_manager.config.resources.adapters
 		)
-		pipe.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
+		pipe_manager.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
 		if not sample.paired:
-			pipe.clean_add(sample.trimmed, conditional=True)
+			pipe_manager.clean_add(sample.trimmed, conditional=True)
 		else:
-			pipe.clean_add(sample.trimmed1, conditional=True)
-			pipe.clean_add(sample.trimmed2, conditional=True)
+			pipe_manager.clean_add(sample.trimmed1, conditional=True)
+			pipe_manager.clean_add(sample.trimmed2, conditional=True)
 
 	# Map
-	pipe.timestamp("Mapping reads with Bowtie2")
+	pipe_manager.timestamp("Mapping reads with Bowtie2")
 	cmd = tk.bowtie2Map(
 		inputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
 		inputFastq2=sample.trimmed2 if sample.paired else None,
 		outputBam=sample.mapped,
 		log=sample.aln_rates,
 		metrics=sample.aln_metrics,
-		genomeIndex=getattr(pipeline_config.resources.genomes, sample.genome),
-		maxInsert=pipeline_config.parameters.max_insert,
+		genomeIndex=getattr(pipe_manager.config.resources.genomes, sample.genome),
+		maxInsert=pipe_manager.config.parameters.max_insert,
 		cpus=args.cores
 	)
-	pipe.run(cmd, sample.mapped, shell=True)
+	pipe_manager.run(cmd, sample.mapped, shell=True)
 
 	# Filter reads
-	pipe.timestamp("Filtering reads for quality")
+	pipe_manager.timestamp("Filtering reads for quality")
 	cmd = tk.filterReads(
 		inputBam=sample.mapped,
 		outputBam=sample.filtered,
 		metricsFile=sample.dups_metrics,
 		paired=sample.paired,
 		cpus=args.cores,
-		Q=pipeline_config.parameters.read_quality
+		Q=pipe_manager.config.parameters.read_quality
 	)
-	pipe.run(cmd, sample.filtered, shell=True)
+	pipe_manager.run(cmd, sample.filtered, shell=True)
 
 	# Shift reads
 	if sample.tagmented:
-		pipe.timestamp("Shifting reads of tagmented sample")
+		pipe_manager.timestamp("Shifting reads of tagmented sample")
 		cmd = tk.shiftReads(
 			inputBam=sample.filtered,
 			genome=sample.genome,
 			outputBam=sample.filteredshifted
 		)
-		pipe.run(cmd, sample.filteredshifted, shell=True)
+		pipe_manager.run(cmd, sample.filteredshifted, shell=True)
 
 	# Index bams
-	pipe.timestamp("Indexing bamfiles with samtools")
+	pipe_manager.timestamp("Indexing bamfiles with samtools")
 	cmd = tk.indexBam(inputBam=sample.mapped)
-	pipe.run(cmd, sample.mapped + ".bai", shell=True)
+	pipe_manager.run(cmd, sample.mapped + ".bai", shell=True)
 	cmd = tk.indexBam(inputBam=sample.filtered)
-	pipe.run(cmd, sample.filtered + ".bai", shell=True)
+	pipe_manager.run(cmd, sample.filtered + ".bai", shell=True)
 	if sample.tagmented:
 		cmd = tk.indexBam(inputBam=sample.filteredshifted)
-		pipe.run(cmd, sample.filteredshifted + ".bai", shell=True)
+		pipe_manager.run(cmd, sample.filteredshifted + ".bai", shell=True)
 
 	track_dir = os.path.dirname(sample.bigwig)
 	if not os.path.exists(track_dir):
@@ -333,59 +332,47 @@ def process(sample, pipeline_config, args):
 
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
-	pipe.timestamp("Making bigWig tracks from bam file")
+	pipe_manager.timestamp("Making bigWig tracks from bam file")
 	cmd = tk.bamToBigWig(
 		inputBam=sample.filtered,
 		outputBigWig=sample.bigwig,
-		genomeSizes=getattr(pipeline_config.resources.chromosome_sizes, sample.genome),
+		genomeSizes=getattr(pipe_manager.config.resources.chromosome_sizes, sample.genome),
 		genome=sample.genome,
 		tagmented=False,  # by default make extended tracks
 		normalize=True
 	)
-	pipe.run(cmd, sample.bigwig, shell=True)
-	cmd = tk.addTrackToHub(
-		sampleName=sample.sample_name,
-		trackURL=sample.track_url,
-		trackHub=os.path.join(os.path.dirname(sample.bigwig), "trackHub_{0}.txt".format(sample.genome)),
-		colour=get_track_colour(sample, pipeline_config)
-	)
-	pipe.run(cmd, lock_name=sample.sample_name + "addToTrackHub", shell=True)
-	# tk.linkToTrackHub(
-	# 	trackHubURL="/".join([prj.config["url"], prj.name, "trackHub_{0}.txt".format(sample.genome)]),
-	# 	fileName=os.path.join(prj.dirs.root, "ucsc_tracks_{0}.html".format(sample.genome)),
-	# 	genome=sample.genome
-	# )
+	pipe_manager.run(cmd, sample.bigwig, shell=True)
 
 	# Plot fragment distribution
 	if sample.paired and not os.path.exists(sample.insertplot):
-		pipe.timestamp("Plotting insert size distribution")
-		tk.plotInsertSizesFit(
+		pipe_manager.timestamp("Plotting insert size distribution")
+		tk.plot_atacseq_insert_sizes(
 			bam=sample.filtered,
 			plot=sample.insertplot,
-			outputCSV=sample.insertdata
+			output_csv=sample.insertdata
 		)
 
 	# Count coverage genome-wide
-	pipe.timestamp("Calculating genome-wide coverage")
+	pipe_manager.timestamp("Calculating genome-wide coverage")
 	cmd = tk.genomeWideCoverage(
 		inputBam=sample.filtered,
-		genomeWindows=getattr(pipeline_config.resources.genome_windows, sample.genome),
+		genomeWindows=getattr(pipe_manager.config.resources.genome_windows, sample.genome),
 		output=sample.coverage
 	)
-	pipe.run(cmd, sample.coverage, shell=True)
+	pipe_manager.run(cmd, sample.coverage, shell=True)
 
 	# Calculate NSC, RSC
-	pipe.timestamp("Assessing signal/noise in sample")
+	pipe_manager.timestamp("Assessing signal/noise in sample")
 	cmd = tk.peakTools(
 		inputBam=sample.filtered,
 		output=sample.qc,
 		plot=sample.qc_plot,
 		cpus=args.cores
 	)
-	pipe.run(cmd, sample.qc_plot, shell=True, nofail=True)
+	pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
 
 	# Call peaks
-	pipe.timestamp("Calling peaks with MACS2")
+	pipe_manager.timestamp("Calling peaks with MACS2")
 	# make dir for output (macs fails if it does not exist)
 	if not os.path.exists(sample.paths.peaks):
 		os.makedirs(sample.paths.peaks)
@@ -396,55 +383,19 @@ def process(sample, pipeline_config, args):
 		sampleName=sample.sample_name,
 		genome=sample.genome
 	)
-	pipe.run(cmd, sample.peaks, shell=True)
-
-	# # Filter peaks based on mappability regions
-	# pipe.timestamp("Filtering peaks in low mappability regions")
-
-	# # get closest read length of sample to available mappability read lengths
-	# closestLength = min(pipeline_config.resources["alignability"][sample.genome].keys(), key=lambda x:abs(x - sample.readLength))
-
-	# cmd = tk.filterPeaksMappability(
-	#     peaks=sample.peaks,
-	#     alignability=pipeline_config.resources["alignability"][sample.genome][closestLength],
-	#     filteredPeaks=sample.filteredPeaks
-	# )
-	# pipe.run(cmd, sample.filteredPeaks, shell=True)
+	pipe_manager.run(cmd, sample.peaks, shell=True)
 
 	# Calculate fraction of reads in peaks (FRiP)
-	pipe.timestamp("Calculating fraction of reads in peaks (FRiP)")
+	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
 	cmd = tk.calculateFRiP(
 		inputBam=sample.filtered,
 		inputBed=sample.peaks,
 		output=sample.frip
 	)
-	pipe.run(cmd, sample.frip, shell=True)
+	pipe_manager.run(cmd, sample.frip, shell=True)
 
-	pipe.stop_pipeline()
+	pipe_manager.stop_pipeline()
 	print("Finished processing sample %s." % sample.sample_name)
-
-
-def get_track_colour(sample, config):
-	"""
-	Get a colour for a genome browser track based on the IP.
-	"""
-	import random
-
-	if not hasattr(config, "track_colours"):
-		return "0,0,0"
-	else:
-		if hasattr(sample, "ip"):
-			if sample.ip in config["track_colours"].__dict__.keys():
-				sample.track_colour = config["track_colours"][sample.ip]
-			else:
-				if sample.library in ["ATAC", "ATACSEQ", "ATAC-SEQ"]:
-					sample.track_colour = config["track_colours"]["ATAC"]
-				elif sample.library in ["DNASE", "DNASESEQ", "DNASE-SEQ"]:
-					sample.track_colour = config["track_colours"]["DNASE"]
-				else:
-					sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
-		else:
-			sample.track_colour = random.sample(config["track_colours"], 1)[0]  # pick one randomly
 
 
 if __name__ == '__main__':
