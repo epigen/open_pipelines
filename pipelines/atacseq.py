@@ -217,9 +217,9 @@ def process(sample, pipe_manager, args):
 	# Fastqc
 	pipe_manager.timestamp("Measuring sample quality with Fastqc")
 	cmd = tk.fastqc_rename(
-		inputBam=sample.data_path,
-		outputDir=sample.paths.sample_root,
-		sampleName=sample.sample_name
+		input_bam=sample.data_path,
+		output_dir=sample.paths.sample_root,
+		sample_name=sample.sample_name
 	)
 	pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
 
