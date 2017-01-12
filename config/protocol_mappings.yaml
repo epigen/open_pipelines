@@ -41,3 +41,4 @@ STARR: starrseq.py
 STARR-SEQ: starrseq.py
 ChIA-PET: chiapet.py
 QUANT-SEQ: quantseq.py
+Amplicon: amplicon_simple.py

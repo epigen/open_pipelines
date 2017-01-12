@@ -244,3 +244,18 @@ quantseq.py:
       mem: "12000"
       time: "12-00:00:00"
       partition: "longq"
+
+amplicon_simple.py:
+  arguments:
+    "-n": sample_name
+    "-i": data_path
+    "-a": amplicon
+    "-g": guide_rna
+  looper_args: True
+  resources:
+    default:
+      file_size: "0"
+      cores: "1"
+      mem: "8000"
+      time: "6:00:00"
+      partition: "shortq"
