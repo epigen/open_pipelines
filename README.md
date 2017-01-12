@@ -1,33 +1,44 @@
 # Pipelines
 
-Note! Documentation is under heavy work still.
+Documentation is in  [/doc](doc) subfolder, managed by sphinx.
 
-# Usage
+This repository contains pipelines for processing NGS data and associated scripts used by them (in the [/pipelines/tools](pipelines/tools) subdirectory).
+It also has several accompanying scripts that use the same infrastructure to do other processing for projects.
 
-Prerequisites: These pipelines use [pypiper](https://github.com/epigen/pypiper) to run a pipeline for a single sample, and [looper](https://github.com/epigen/looper) to handle multi-samples job submission for a project. You can do a user-specific install of both like this:
+Pipelines here are configured to work with [`looper`](https://github.com/epigen/looper/) and use [`pypiper`](https://github.com/epigen/pypiper/) (see the corresponding repositories).
 
-```
-pip install --user https://github.com/epigen/pypiper/zipball/master
-pip install --user https://github.com/epigen/looper/zipball/master
-```
+# Installing
+1. Install [`looper`](https://github.com/epigen/looper/) and [`pypiper`](https://github.com/epigen/pypiper/): 
+  - `pip install https://github.com/epigen/looper/zipball/master`
+  - `pip install https://github.com/epigen/pypiper/zipball/master`
+2. Clone this repository:
+  - `git clone git@github.com:epigen/open_pipelines.git`
+3. Produce a config file (it just has a bunch of paths).
+4. Go!
+
+If you are just _using a pipeline_ in a project, and you are not _developing the pipeline_, you should treat this cloned repo as read-only, frozen code, which should reside in a shared project workspace. There should be only one clone for the project, to avoid running data under changing pipeline versions (you should not pull any pipeline updates unless you plan to re-run the whole thing).
 
 
-### Option 1 (install this package)
+# Running pipelines
+
+We use `Looper` to run pipelines. This just requires a yaml format config file passed as an argument, which contains all the settings required.
+
+This can, for example, submit each job to SLURM (or SGE, or run them locally).
 
 ```bash
-pip install https://github.com/epigen/open_pipelines/zipball/master
-
+looper run metadata/config.yaml
 ```
 
-### Option 2 (clone the repository)
+### Running on test data
 
-```bash
-git clone git@github.com:epigen/pipelines.git
-```
+Small example data for several pipeline types is available in the [microtest repository](https://github.com/epigen/microtest/)
 
-Add the location of the cloned repository to your looper [project configuration](http://looper.readthedocs.io/en/latest/inputs.html#project-config-file) file.
+
+# Post-pipeline processing
+
+Once a pipeline has been run (or is running), you can do some post-processing on the results. 
+`Looper` has a command to do this: `looper summarize`, which collects statistics produced by the pipelines for all submitted samples.
+
 
 # Developing pipelines
-
-If you plan to create a new pipeline or develop existing pipelines, clone this repo to your personal space, where you do the development.
-You can tell looper about which pipelines are available through the [pipeline interface configuration](http://looper.readthedocs.io/en/latest/inputs.html#pipeline-interface-yaml) file.
+If you plan to create a new pipeline or develop existing pipelines, consider cloning this repo to your personal space, where you do the development. Push changes from there. Use this personal repo to run any tests or whatever, but consider making sure a project is run from a different (frozen) clone, to ensure uniform results.
