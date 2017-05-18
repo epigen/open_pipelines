@@ -68,12 +68,12 @@ class ATACseqSample(Sample):
 		self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
 		self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
 		self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
-		self.fastqUnpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
+		self.fastq_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
 		self.trimmed = os.path.join(self.paths.unmapped, self.sample_name + ".trimmed.fastq")
 		self.trimmed1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
 		self.trimmed2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
-		self.trimmed1Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
-		self.trimmed2Unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+		self.trimmed1_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
+		self.trimmed2_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
 
 		# Mapped: mapped, duplicates marked, removed, reads shifted
 		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
@@ -95,6 +95,7 @@ class ATACseqSample(Sample):
 
 		self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
 		self.insertdata = os.path.join(self.paths.sample_root, self.name + "_insertLengths.csv")
+		self.mitochondrial_stats = os.path.join(self.paths.sample_root, self.name + "_mitochondrial_stats.tsv")
 		self.qc = os.path.join(self.paths.sample_root, self.name + "_qc.tsv")
 		self.qc_plot = os.path.join(self.paths.sample_root, self.name + "_qc.pdf")
 
@@ -127,6 +128,143 @@ class DNaseSample(ATACseqSample):
 		super(DNaseSample, self).set_file_paths()
 
 
+def report_dict(pipe, stats_dict):
+	for key, value in stats_dict.items():
+		pipe.report_result(key, value)
+
+
+def parse_fastqc(fastqc_zip, prefix=""):
+	"""
+	"""
+	import StringIO
+	import zipfile
+	import re
+
+	try:
+		zfile = zipfile.ZipFile(fastqc_zip)
+		content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
+	except:
+		return {prefix + "total": pd.np.nan, "poor_quality": pd.np.nan, "seq_len": pd.np.nan, "gc_perc": pd.np.nan}
+	try:
+		line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
+		total = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
+		poor_quality = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "Sequence length	" in content[i]][0]
+		seq_len = re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip())
+		line = [i for i in range(len(content)) if "%GC" in content[i]][0]
+		gc_perc = re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip())
+		return {prefix + "total": total, prefix + "poor_quality": poor_quality, prefix + "seq_len": seq_len, prefix + "gc_perc": gc_perc}
+	except IndexError:
+		return {prefix + "total": pd.np.nan, prefix + "poor_quality": pd.np.nan, prefix + "seq_len": pd.np.nan, prefix + "gc_perc": pd.np.nan}
+
+
+def parse_trim_stats(stats_file, prefix=""):
+	"""
+	:param stats_file: sambamba output file with duplicate statistics.
+	:type stats_file: str
+	:param prefix: A string to be used as prefix to the output dictionary keys.
+	:type stats_file: str
+	"""
+	import re
+	try:
+		with open(stats_file) as handle:
+			content = handle.readlines()  # list of strings per line
+	except:
+		return {prefix + "total": pd.np.nan, "surviving": pd.np.nan, "short": pd.np.nan, "empty": pd.np.nan, prefix + "trimmed": pd.np.nan, prefix + "untrimmed": pd.np.nan}
+
+	try:
+		line = [i for i in range(len(content)) if "reads processed; of these:" in content[i]][0]
+		total = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "reads available; of these:" in content[i]][0]
+		surviving = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "short reads filtered out after trimming by size control" in content[i]][0]
+		short = re.sub(" \(.*", "", content[line]).strip()
+		line = [i for i in range(len(content)) if "empty reads filtered out after trimming by size control" in content[i]][0]
+		empty = re.sub(" \(.*", "", content[line]).strip()
+		line = [i for i in range(len(content)) if "trimmed reads available after processing" in content[i]][0]
+		trimmed = re.sub(" \(.*", "", content[line]).strip()
+		line = [i for i in range(len(content)) if "untrimmed reads available after processing" in content[i]][0]
+		untrimmed = re.sub(" \(.*", "", content[line]).strip()
+		return {prefix + "total": total, prefix + "surviving": surviving, prefix + "short": short, prefix + "empty": empty, prefix + "trimmed": trimmed, prefix + "untrimmed": untrimmed}
+	except IndexError:
+		return {prefix + "total": pd.np.nan, prefix + "surviving": pd.np.nan, prefix + "short": pd.np.nan, prefix + "empty": pd.np.nan, prefix + "trimmed": pd.np.nan, prefix + "untrimmed": pd.np.nan}
+
+
+def parse_duplicate_stats(stats_file, prefix=""):
+	"""
+	Parses sambamba markdup output, returns series with values.
+
+	:param stats_file: sambamba output file with duplicate statistics.
+	:type stats_file: str
+	:param prefix: A string to be used as prefix to the output dictionary keys.
+	:type stats_file: str
+	"""
+	import re
+	try:
+		with open(stats_file) as handle:
+			content = handle.readlines()  # list of strings per line
+	except:
+		return {"single_ends": pd.np.nan, "paired_ends": pd.np.nan, "duplicates": pd.np.nan}
+
+	try:
+		line = [i for i in range(len(content)) if "single ends (among them " in content[i]][0]
+		single_ends = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
+		paired_ends = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
+		line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
+		duplicates = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
+		return {prefix + "single_ends": single_ends, prefix + "paired_ends": paired_ends, prefix + "duplicates": duplicates}
+	except IndexError:
+		return {prefix + "single_ends": pd.np.nan, prefix + "paired_ends": pd.np.nan, prefix + "duplicates": pd.np.nan}
+
+
+def parse_peak_number(peak_file):
+	from subprocess import check_output
+	try:
+		return {"peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
+	except:
+		return {"peaks": pd.np.nan}
+
+
+def parse_FRiP(frip_file, total_reads):
+	"""
+	Calculates the fraction of reads in peaks for a given sample.
+
+	:param frip_file: A sting path to a file with the FRiP output.
+	:type frip_file: str
+	:param total_reads: A Sample object with the "peaks" attribute.
+	:type total_reads: int
+	"""
+	import re
+	try:
+		with open(frip_file, "r") as handle:
+			content = handle.readlines()
+	except:
+		return pd.np.nan
+
+	if content[0].strip() == "":
+		return pd.np.nan
+
+	reads_in_peaks = int(re.sub("\D", "", content[0]))
+
+	return {"frip": reads_in_peaks / float(total_reads)}
+
+
+def parse_nsc_rsc(nsc_rsc_file):
+	"""
+	Parses the values of NSC and RSC from a stats file.
+
+	:param nsc_rsc_file: A sting path to a file with the NSC and RSC output (generally a tsv file).
+	:type nsc_rsc_file: str
+	"""
+	try:
+		nsc_rsc = pd.read_csv(nsc_rsc_file, header=None, sep="\t")
+		return {"NSC": nsc_rsc[8].squeeze(), "RSC": nsc_rsc[9].squeeze()}
+	except:
+		return {"NSC": pd.np.nan, "RSC": pd.np.nan}
+
+
 def main():
 	# Parse command-line arguments
 	parser = ArgumentParser(
@@ -134,7 +272,7 @@ def main():
 		description="ATAC-seq pipeline."
 	)
 	parser = arg_parser(parser)
-	parser = pypiper.add_pypiper_args(parser, all_args=True)
+	parser = pypiper.add_pypiper_args(parser, groups=["all"])
 	args = parser.parse_args()
 
 	# Read in yaml configs
@@ -167,6 +305,7 @@ def main():
 	# Best practice is to name the pipeline with the name of the script;
 	# or put the name in the pipeline interface.
 	pipe_manager = pypiper.PipelineManager(name="atacseq", outfolder=sample.paths.sample_root, args=args)
+	pipe_manager.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
 
 	# Start main function
 	process(sample, pipe_manager, args)
@@ -207,9 +346,9 @@ def process(sample, pipe_manager, args):
 	# Merge Bam files if more than one technical replicate
 	if len(sample.data_path.split(" ")) > 1:
 		pipe_manager.timestamp("Merging bam files from replicates")
-		cmd = tk.mergeBams(
-			inputBams=sample.data_path.split(" "),  # this is a list of sample paths
-			outputBam=sample.unmapped
+		cmd = tk.merge_bams(
+			input_bams=sample.data_path.split(" "),  # this is a list of sample paths
+			merged_bam=sample.unmapped
 		)
 		pipe_manager.run(cmd, sample.unmapped, shell=True)
 		sample.data_path = sample.unmapped
@@ -222,6 +361,7 @@ def process(sample, pipe_manager, args):
 		sample_name=sample.sample_name
 	)
 	pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
+	report_dict(pipe_manager, parse_fastqc(os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), prefix="fastqc_"))
 
 	# Convert bam to fastq
 	pipe_manager.timestamp("Converting to Fastq format")
@@ -229,7 +369,7 @@ def process(sample, pipe_manager, args):
 		inputBam=sample.data_path,
 		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
 		outputFastq2=sample.fastq2 if sample.paired else None,
-		unpairedFastq=sample.fastqUnpaired if sample.paired else None
+		unpairedFastq=sample.fastq_unpaired if sample.paired else None
 	)
 	pipe_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
 	if not sample.paired:
@@ -237,7 +377,7 @@ def process(sample, pipe_manager, args):
 	if sample.paired:
 		pipe_manager.clean_add(sample.fastq1, conditional=True)
 		pipe_manager.clean_add(sample.fastq2, conditional=True)
-		pipe_manager.clean_add(sample.fastqUnpaired, conditional=True)
+		pipe_manager.clean_add(sample.fastq_unpaired, conditional=True)
 
 	# Trim reads
 	pipe_manager.timestamp("Trimming adapters from sample")
@@ -246,9 +386,9 @@ def process(sample, pipe_manager, args):
 			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
 			inputFastq2=sample.fastq2 if sample.paired else None,
 			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			outputFastq1unpaired=sample.trimmed1Unpaired if sample.paired else None,
+			outputFastq1unpaired=sample.trimmed1_unpaired if sample.paired else None,
 			outputFastq2=sample.trimmed2 if sample.paired else None,
-			outputFastq2unpaired=sample.trimmed2Unpaired if sample.paired else None,
+			outputFastq2unpaired=sample.trimmed2_unpaired if sample.paired else None,
 			cpus=args.cores,
 			adapters=pipe_manager.config.resources.adapters,
 			log=sample.trimlog
@@ -258,9 +398,9 @@ def process(sample, pipe_manager, args):
 			pipe_manager.clean_add(sample.trimmed, conditional=True)
 		else:
 			pipe_manager.clean_add(sample.trimmed1, conditional=True)
-			pipe_manager.clean_add(sample.trimmed1Unpaired, conditional=True)
+			pipe_manager.clean_add(sample.trimmed1_unpaired, conditional=True)
 			pipe_manager.clean_add(sample.trimmed2, conditional=True)
-			pipe_manager.clean_add(sample.trimmed2Unpaired, conditional=True)
+			pipe_manager.clean_add(sample.trimmed2_unpaired, conditional=True)
 
 	elif pipe_manager.config.parameters.trimmer == "skewer":
 		cmd = tk.skewer(
@@ -280,6 +420,8 @@ def process(sample, pipe_manager, args):
 			pipe_manager.clean_add(sample.trimmed1, conditional=True)
 			pipe_manager.clean_add(sample.trimmed2, conditional=True)
 
+		report_dict(pipe_manager, parse_trim_stats(sample.trimlog, prefix="trim_"))
+
 	# Map
 	pipe_manager.timestamp("Mapping reads with Bowtie2")
 	cmd = tk.bowtie2Map(
@@ -294,6 +436,16 @@ def process(sample, pipe_manager, args):
 	)
 	pipe_manager.run(cmd, sample.mapped, shell=True)
 
+	# Get mitochondrial reads
+	pipe_manager.timestamp("Getting mitochondrial stats")
+	cmd = tk.get_mitochondrial_reads(
+		bam_file=sample.mapped,
+		output=sample.mitochondrial_stats,
+		cpus=args.cores
+	)
+	pipe_manager.run(cmd, sample.mitochondrial_stats, shell=True, nofail=True)
+	report_dict(pipe_manager, parse_duplicate_stats(sample.mitochondrial_stats, prefix="MT_"))
+
 	# Filter reads
 	pipe_manager.timestamp("Filtering reads for quality")
 	cmd = tk.filterReads(
@@ -305,6 +457,7 @@ def process(sample, pipe_manager, args):
 		Q=pipe_manager.config.parameters.read_quality
 	)
 	pipe_manager.run(cmd, sample.filtered, shell=True)
+	report_dict(pipe_manager, parse_duplicate_stats(sample.dups_metrics))
 
 	# Shift reads
 	if sample.tagmented:
@@ -370,6 +523,7 @@ def process(sample, pipe_manager, args):
 		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
+	report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
 
 	# Call peaks
 	pipe_manager.timestamp("Calling peaks with MACS2")
@@ -384,15 +538,21 @@ def process(sample, pipe_manager, args):
 		genome=sample.genome
 	)
 	pipe_manager.run(cmd, sample.peaks, shell=True)
+	report_dict(pipe_manager, parse_peak_number(sample.peaks))
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
-	cmd = tk.calculateFRiP(
+	cmd = tk.calculate_FRiP(
 		inputBam=sample.filtered,
 		inputBed=sample.peaks,
-		output=sample.frip
+		output=sample.frip,
+		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.frip, shell=True)
+	total = float(pipe_manager.stats_dict["single_ends"]) + (float(pipe_manager.stats_dict["paired_ends"]) / 2.)
+	report_dict(pipe_manager, parse_FRiP(sample.frip, total))
+
+	print(pipe_manager.stats_dict)
 
 	pipe_manager.stop_pipeline()
 	print("Finished processing sample %s." % sample.sample_name)

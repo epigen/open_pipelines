@@ -5,15 +5,18 @@ resources:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
+    mm9: /data/prod/ngs_resources/genomes/mm9/forBowtie2/mm9
     ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
   chromosome_sizes:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
+    mm9: /data/prod/ngs_resources/genomes/mm9/mm9_chromlength.txt
   genome_windows:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
+    mm9: /data/groups/lab_bock/shared/resources/genomes/mm9/mm9_genomeWindows_1kb.bed
   tss:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
@@ -34,11 +37,11 @@ tools:
   sambamba: sambamba
   trimmomatic: trimmomatic
   skewer: skewer
-  bedtools: bedtools
+  bedtools: /cm/shared/apps/bedtools/2.20.1/bedtools
   macs2: macs2
   # optional:
-  Rscript: Rscript
-  spp: /home/arendeiro/.local/bin/run_spp.R
+  # Rscript: Rscript
+  # spp: /home/arendeiro/.local/bin/run_spp.R
 
 # the parameters section is intended for all parameters passed to bioinformatic tools
 parameters:

@@ -141,6 +141,8 @@ atacseq.py:
     "-I": sample_name
     "-G": genome
   looper_args: True
+  required_input_files: [data_path]
+  ngs_input_files: [data_path]
   resources:
     default:
       file_size: "0"
@@ -167,6 +169,8 @@ chipseq.py:
     "-I": sample_name
     "-G": genome
   looper_args: True
+  required_input_files: [data_path]
+  ngs_input_files: [data_path]
   resources:
     default:
       file_size: "0"
@@ -259,3 +263,23 @@ amplicon_simple.py:
       mem: "8000"
       time: "6:00:00"
       partition: "shortq"
+
+dropseq.py:
+  arguments:
+    "--sample-yaml": yaml_file
+    "-I": sample_name
+    "-G": genome
+  looper_args: True
+  resources:
+    default:
+      file_size: "0"
+      cores: "8"
+      mem: "60000"
+      time: "1-12:00:00"
+      partition: "mediumq"
+    high:
+      file_size: "4"
+      cores: "8"
+      mem: "80000"
+      time: "3-12:00:00"
+      partition: "longq"

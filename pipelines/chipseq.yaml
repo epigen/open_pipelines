@@ -31,7 +31,7 @@ tools:
   sambamba: sambamba
   trimmomatic: trimmomatic
   skewer: skewer
-  bedtools: bedtools
+  bedtools: /cm/shared/apps/bedtools/2.20.1/bedtools
   macs2: macs2
   # optional:
   Rscript: Rscript

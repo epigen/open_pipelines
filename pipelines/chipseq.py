@@ -144,6 +144,143 @@ class ChIPmentation(ChIPseqSample):
 		super(ChIPmentation, self).set_file_paths()
 
 
+def report_dict(pipe, stats_dict):
+	for key, value in stats_dict.items():
+		pipe.report_result(key, value)
+
+
+def parse_fastqc(fastqc_zip, prefix=""):
+	"""
+	"""
+	import StringIO
+	import zipfile
+	import re
+
+	try:
+		zfile = zipfile.ZipFile(fastqc_zip)
+		content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
+	except:
+		return {prefix + "total": pd.np.nan, "poor_quality": pd.np.nan, "seq_len": pd.np.nan, "gc_perc": pd.np.nan}
+	try:
+		line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
+		total = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
+		poor_quality = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "Sequence length	" in content[i]][0]
+		seq_len = re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip())
+		line = [i for i in range(len(content)) if "%GC" in content[i]][0]
+		gc_perc = re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip())
+		return {prefix + "total": total, prefix + "poor_quality": poor_quality, prefix + "seq_len": seq_len, prefix + "gc_perc": gc_perc}
+	except IndexError:
+		return {prefix + "total": pd.np.nan, prefix + "poor_quality": pd.np.nan, prefix + "seq_len": pd.np.nan, prefix + "gc_perc": pd.np.nan}
+
+
+def parse_trim_stats(stats_file, prefix=""):
+	"""
+	:param stats_file: sambamba output file with duplicate statistics.
+	:type stats_file: str
+	:param prefix: A string to be used as prefix to the output dictionary keys.
+	:type stats_file: str
+	"""
+	import re
+	try:
+		with open(stats_file) as handle:
+			content = handle.readlines()  # list of strings per line
+	except:
+		return {prefix + "total": pd.np.nan, "surviving": pd.np.nan, "short": pd.np.nan, "empty": pd.np.nan, prefix + "trimmed": pd.np.nan, prefix + "untrimmed": pd.np.nan}
+
+	try:
+		line = [i for i in range(len(content)) if "reads processed; of these:" in content[i]][0]
+		total = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "reads available; of these:" in content[i]][0]
+		surviving = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if "short reads filtered out after trimming by size control" in content[i]][0]
+		short = re.sub(" \(.*", "", content[line]).strip()
+		line = [i for i in range(len(content)) if "empty reads filtered out after trimming by size control" in content[i]][0]
+		empty = re.sub(" \(.*", "", content[line]).strip()
+		line = [i for i in range(len(content)) if "trimmed reads available after processing" in content[i]][0]
+		trimmed = re.sub(" \(.*", "", content[line]).strip()
+		line = [i for i in range(len(content)) if "untrimmed reads available after processing" in content[i]][0]
+		untrimmed = re.sub(" \(.*", "", content[line]).strip()
+		return {prefix + "total": total, prefix + "surviving": surviving, prefix + "short": short, prefix + "empty": empty, prefix + "trimmed": trimmed, prefix + "untrimmed": untrimmed}
+	except IndexError:
+		return {prefix + "total": pd.np.nan, prefix + "surviving": pd.np.nan, prefix + "short": pd.np.nan, prefix + "empty": pd.np.nan, prefix + "trimmed": pd.np.nan, prefix + "untrimmed": pd.np.nan}
+
+
+def parse_duplicate_stats(stats_file, prefix=""):
+	"""
+	Parses sambamba markdup output, returns series with values.
+
+	:param stats_file: sambamba output file with duplicate statistics.
+	:type stats_file: str
+	:param prefix: A string to be used as prefix to the output dictionary keys.
+	:type stats_file: str
+	"""
+	import re
+	try:
+		with open(stats_file) as handle:
+			content = handle.readlines()  # list of strings per line
+	except:
+		return {"single_ends": pd.np.nan, "paired_ends": pd.np.nan, "duplicates": pd.np.nan}
+
+	try:
+		line = [i for i in range(len(content)) if "single ends (among them " in content[i]][0]
+		single_ends = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
+		paired_ends = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
+		line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
+		duplicates = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
+		return {prefix + "single_ends": single_ends, prefix + "paired_ends": paired_ends, prefix + "duplicates": duplicates}
+	except IndexError:
+		return {prefix + "single_ends": pd.np.nan, prefix + "paired_ends": pd.np.nan, prefix + "duplicates": pd.np.nan}
+
+
+def parse_peak_number(peak_file):
+	from subprocess import check_output
+	try:
+		return {"peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
+	except:
+		return {"peaks": pd.np.nan}
+
+
+def parse_FRiP(frip_file, total_reads):
+	"""
+	Calculates the fraction of reads in peaks for a given sample.
+
+	:param frip_file: A sting path to a file with the FRiP output.
+	:type frip_file: str
+	:param total_reads: A Sample object with the "peaks" attribute.
+	:type total_reads: int
+	"""
+	import re
+	try:
+		with open(frip_file, "r") as handle:
+			content = handle.readlines()
+	except:
+		return pd.np.nan
+
+	if content[0].strip() == "":
+		return pd.np.nan
+
+	reads_in_peaks = int(re.sub("\D", "", content[0]))
+
+	return {"frip": reads_in_peaks / float(total_reads)}
+
+
+def parse_nsc_rsc(nsc_rsc_file):
+	"""
+	Parses the values of NSC and RSC from a stats file.
+
+	:param nsc_rsc_file: A sting path to a file with the NSC and RSC output (generally a tsv file).
+	:type nsc_rsc_file: str
+	"""
+	try:
+		nsc_rsc = pd.read_csv(nsc_rsc_file, header=None, sep="\t")
+		return {"NSC": nsc_rsc[8].squeeze(), "RSC": nsc_rsc[9].squeeze()}
+	except:
+		return {"NSC": pd.np.nan, "RSC": pd.np.nan}
+
+
 def main():
 	# Parse command-line arguments
 	parser = ArgumentParser(
@@ -151,7 +288,7 @@ def main():
 		description="ChIP-seq pipeline."
 	)
 	parser = arg_parser(parser)
-	parser = pypiper.add_pypiper_args(parser, all_args=True)
+	parser = pypiper.add_pypiper_args(parser, groups=["all"])
 	args = parser.parse_args()
 
 	# Read in yaml configs
@@ -245,6 +382,7 @@ def process(sample, pipe_manager, args):
 		sample_name=sample.sample_name
 	)
 	pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
+	report_dict(pipe_manager, parse_fastqc(os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), prefix="fastqc_"))
 
 	# Convert bam to fastq
 	pipe_manager.timestamp("Converting to Fastq format")
@@ -302,6 +440,7 @@ def process(sample, pipe_manager, args):
 		else:
 			pipe_manager.clean_add(sample.trimmed1, conditional=True)
 			pipe_manager.clean_add(sample.trimmed2, conditional=True)
+		report_dict(pipe_manager, parse_trim_stats(sample.trimlog))
 
 	# Map
 	pipe_manager.timestamp("Mapping reads with Bowtie2")
@@ -328,6 +467,7 @@ def process(sample, pipe_manager, args):
 		Q=pipe_manager.config.parameters.read_quality
 	)
 	pipe_manager.run(cmd, sample.filtered, shell=True)
+	report_dict(pipe_manager, parse_duplicate_stats(sample.dups_metrics))
 
 	# Index bams
 	pipe_manager.timestamp("Indexing bamfiles with samtools")
@@ -380,6 +520,7 @@ def process(sample, pipe_manager, args):
 		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
+	report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
 
 	# If sample does not have "ctrl" attribute, finish processing it.
 	if not hasattr(sample, "compare_sample"):
@@ -430,38 +571,18 @@ def process(sample, pipe_manager, args):
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
-	cmd = tk.calculateFRiP(
+	cmd = tk.calculate_FRiP(
 		inputBam=sample.filtered,
 		inputBed=sample.peaks,
-		output=sample.frip
+		output=sample.frip,
+		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.frip, shell=True)
+	total = float(pipe_manager.stats_dict["single_ends"]) + (float(pipe_manager.stats_dict["paired_ends"]) / 2.)
+	report_dict(pipe_manager, parse_FRiP(sample.frip, total))
 
 	print("Finished processing sample %s." % sample.name)
 	pipe_manager.stop_pipeline()
-
-
-def get_track_colour(sample, config):
-	"""
-	Get a colour for a genome browser track based on the IP.
-	"""
-	import random
-
-	if not hasattr(config, "track_colours"):
-		return "0,0,0"
-	else:
-		if hasattr(sample, "ip"):
-			if sample.ip in config["track_colours"].__dict__.keys():
-				sample.track_colour = config["track_colours"][sample.ip.upper()]
-			else:
-				if sample.library in ["ATAC", "ATACSEQ", "ATAC-SEQ"]:
-					sample.track_colour = config["track_colours"]["ATAC"]
-				elif sample.library in ["DNASE", "DNASESEQ", "DNASE-SEQ"]:
-					sample.track_colour = config["track_colours"]["DNASE"]
-				else:
-					sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
-		else:
-			sample.track_colour = random.sample(config["track_colours"].__dict__.values(), 1)[0]  # pick one randomly
 
 
 if __name__ == '__main__':
