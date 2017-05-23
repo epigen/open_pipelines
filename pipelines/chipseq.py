@@ -315,7 +315,7 @@ def main():
 
 	# Set file paths
 	sample.set_file_paths()
-	sample.make_sample_dirs()
+	# sample.make_sample_dirs()  # should be fixed to check if values of paths are strings and paths indeed
 
 	# Start Pypiper object
 	# Best practice is to name the pipeline with the name of the script;
@@ -355,7 +355,11 @@ def process(sample, pipe_manager, args):
 	print("Start processing ChIP-seq sample %s." % sample.name)
 
 	for path in ["sample_root"] + sample.paths.__dict__.keys():
-		if not os.path.exists(sample.paths[path]):
+		try:
+			exists = os.path.exists(sample.paths[path])
+		except TypeError:
+			continue
+		if not exists:
 			try:
 				os.mkdir(sample.paths[path])
 			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):

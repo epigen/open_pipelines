@@ -43,8 +43,6 @@ class ATACseqSample(Sample):
 
 		self.tagmented = True
 
-		self.make_sample_dirs()
-
 	def __repr__(self):
 		return "ATAC-seq sample '%s'" % self.sample_name
 
@@ -102,6 +100,7 @@ class ATACseqSample(Sample):
 		# Peaks: peaks called and derivate files
 		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
 		self.peaks = os.path.join(self.paths.peaks, self.name + "_peaks.narrowPeak")
+		self.summits = os.path.join(self.paths.peaks, self.name + "_summits.bed")
 		self.filteredPeaks = os.path.join(self.paths.peaks, self.name + "_peaks.filtered.bed")
 
 
@@ -140,26 +139,36 @@ def parse_fastqc(fastqc_zip, prefix=""):
 	import zipfile
 	import re
 
+	error_dict = {
+		prefix + "total_pass_filter_reads": pd.np.nan,
+		prefix + "poor_quality": pd.np.nan,
+		prefix + "read_length": pd.np.nan,
+		prefix + "GC_perc": pd.np.nan}
+
 	try:
 		zfile = zipfile.ZipFile(fastqc_zip)
 		content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
 	except:
-		return {prefix + "total": pd.np.nan, "poor_quality": pd.np.nan, "seq_len": pd.np.nan, "gc_perc": pd.np.nan}
+		return error_dict
 	try:
 		line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
-		total = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
 		line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
-		poor_quality = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		poor_quality = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
 		line = [i for i in range(len(content)) if "Sequence length	" in content[i]][0]
-		seq_len = re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip())
+		seq_len = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
 		line = [i for i in range(len(content)) if "%GC" in content[i]][0]
-		gc_perc = re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip())
-		return {prefix + "total": total, prefix + "poor_quality": poor_quality, prefix + "seq_len": seq_len, prefix + "gc_perc": gc_perc}
+		gc_perc = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
+		return {
+			prefix + "total_pass_filter_reads": total,
+			prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
+			prefix + "read_length": seq_len,
+			prefix + "GC_perc": gc_perc}
 	except IndexError:
-		return {prefix + "total": pd.np.nan, prefix + "poor_quality": pd.np.nan, prefix + "seq_len": pd.np.nan, prefix + "gc_perc": pd.np.nan}
+		return error_dict
 
 
-def parse_trim_stats(stats_file, prefix=""):
+def parse_trim_stats(stats_file, prefix="", paired_end=True):
 	"""
 	:param stats_file: sambamba output file with duplicate statistics.
 	:type stats_file: str
@@ -167,28 +176,135 @@ def parse_trim_stats(stats_file, prefix=""):
 	:type stats_file: str
 	"""
 	import re
+
+	error_dict = {
+		prefix + "surviving_perc": pd.np.nan,
+		prefix + "short_perc": pd.np.nan,
+		prefix + "empty_perc": pd.np.nan,
+		prefix + "trimmed_perc": pd.np.nan,
+		prefix + "untrimmed_perc": pd.np.nan,
+		prefix + "trim_loss_perc": pd.np.nan}
 	try:
 		with open(stats_file) as handle:
 			content = handle.readlines()  # list of strings per line
 	except:
-		return {prefix + "total": pd.np.nan, "surviving": pd.np.nan, "short": pd.np.nan, "empty": pd.np.nan, prefix + "trimmed": pd.np.nan, prefix + "untrimmed": pd.np.nan}
+		return error_dict
+
+	suf = "s" if not paired_end else " pairs"
 
 	try:
-		line = [i for i in range(len(content)) if "reads processed; of these:" in content[i]][0]
-		total = re.sub("\D", "", re.sub("\(.*", "", content[line]))
-		line = [i for i in range(len(content)) if "reads available; of these:" in content[i]][0]
-		surviving = re.sub("\D", "", re.sub("\(.*", "", content[line]))
-		line = [i for i in range(len(content)) if "short reads filtered out after trimming by size control" in content[i]][0]
-		short = re.sub(" \(.*", "", content[line]).strip()
-		line = [i for i in range(len(content)) if "empty reads filtered out after trimming by size control" in content[i]][0]
-		empty = re.sub(" \(.*", "", content[line]).strip()
-		line = [i for i in range(len(content)) if "trimmed reads available after processing" in content[i]][0]
-		trimmed = re.sub(" \(.*", "", content[line]).strip()
-		line = [i for i in range(len(content)) if "untrimmed reads available after processing" in content[i]][0]
-		untrimmed = re.sub(" \(.*", "", content[line]).strip()
-		return {prefix + "total": total, prefix + "surviving": surviving, prefix + "short": short, prefix + "empty": empty, prefix + "trimmed": trimmed, prefix + "untrimmed": untrimmed}
+		line = [i for i in range(len(content)) if "read{} processed; of these:".format(suf) in content[i]][0]
+		total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+		line = [i for i in range(len(content)) if "read{} available; of these:".format(suf) in content[i]][0]
+		surviving = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+		line = [i for i in range(len(content)) if "short read{} filtered out after trimming by size control".format(suf) in content[i]][0]
+		short = int(re.sub(" \(.*", "", content[line]).strip())
+		line = [i for i in range(len(content)) if "empty read{} filtered out after trimming by size control".format(suf) in content[i]][0]
+		empty = int(re.sub(" \(.*", "", content[line]).strip())
+		line = [i for i in range(len(content)) if "trimmed read{} available after processing".format(suf) in content[i]][0]
+		trimmed = int(re.sub(" \(.*", "", content[line]).strip())
+		line = [i for i in range(len(content)) if "untrimmed read{} available after processing".format(suf) in content[i]][0]
+		untrimmed = int(re.sub(" \(.*", "", content[line]).strip())
+		return {
+			prefix + "surviving_perc": (float(surviving) / total) * 100,
+			prefix + "short_perc": (float(short) / total) * 100,
+			prefix + "empty_perc": (float(empty) / total) * 100,
+			prefix + "trimmed_perc": (float(trimmed) / total) * 100,
+			prefix + "untrimmed_perc": (float(untrimmed) / total) * 100,
+			prefix + "trim_loss_perc": ((total - float(surviving)) / total) * 100}
 	except IndexError:
-		return {prefix + "total": pd.np.nan, prefix + "surviving": pd.np.nan, prefix + "short": pd.np.nan, prefix + "empty": pd.np.nan, prefix + "trimmed": pd.np.nan, prefix + "untrimmed": pd.np.nan}
+		return error_dict
+
+
+def parse_mapping_stats(stats_file, prefix="", paired_end=True):
+	"""
+	:param stats_file: sambamba output file with duplicate statistics.
+	:type stats_file: str
+	:param prefix: A string to be used as prefix to the output dictionary keys.
+	:type stats_file: str
+	"""
+	import re
+
+	if not paired_end:
+		error_dict = {
+			prefix + "not_aligned_perc": pd.np.nan,
+			prefix + "unique_aligned_perc": pd.np.nan,
+			prefix + "multiple_aligned_perc": pd.np.nan,
+			prefix + "perc_aligned": pd.np.nan}
+	else:
+		error_dict = {
+			prefix + "paired_perc": pd.np.nan,
+			prefix + "concordant_perc": pd.np.nan,
+			prefix + "concordant_unique_perc": pd.np.nan,
+			prefix + "concordant_multiple_perc": pd.np.nan,
+			prefix + "not_aligned_or_discordant_perc": pd.np.nan,
+			prefix + "not_aligned_perc": pd.np.nan,
+			prefix + "unique_aligned_perc": pd.np.nan,
+			prefix + "multiple_aligned_perc": pd.np.nan,
+			prefix + "perc_aligned": pd.np.nan}
+
+	try:
+		with open(stats_file) as handle:
+			content = handle.readlines()  # list of strings per line
+	except:
+		return error_dict
+
+	if not paired_end:
+		try:
+			line = [i for i in range(len(content)) if "reads; of these:" in content[i]][0]
+			total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+			line = [i for i in range(len(content)) if "aligned 0 times" in content[i]][0]
+			not_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
+			line = [i for i in range(len(content)) if " aligned exactly 1 time" in content[i]][0]
+			unique_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
+			line = [i for i in range(len(content)) if " aligned >1 times" in content[i]][0]
+			multiple_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
+			line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
+			perc_aligned = float(re.sub("%.*", "", content[line]).strip())
+			return {
+				prefix + "not_aligned_perc": not_aligned_perc,
+				prefix + "unique_aligned_perc": unique_aligned_perc,
+				prefix + "multiple_aligned_perc": multiple_aligned_perc,
+				prefix + "perc_aligned": perc_aligned}
+		except IndexError:
+			return error_dict
+
+	if paired_end:
+		try:
+			line = [i for i in range(len(content)) if "reads; of these:" in content[i]][0]
+			total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+			line = [i for i in range(len(content)) if " were paired; of these:" in content[i]][0]
+			paired_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
+			line = [i for i in range(len(content)) if "aligned concordantly 0 times" in content[i]][0]
+			concordant_unaligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
+			line = [i for i in range(len(content)) if "aligned concordantly exactly 1 time" in content[i]][0]
+			concordant_unique_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
+			line = [i for i in range(len(content)) if "aligned concordantly >1 times" in content[i]][0]
+			concordant_multiple_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
+			line = [i for i in range(len(content)) if "mates make up the pairs; of these:" in content[i]][0]
+			not_aligned_or_discordant = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+			d_fraction = (not_aligned_or_discordant / float(total))
+			not_aligned_or_discordant_perc = d_fraction * 100
+			line = [i for i in range(len(content)) if "aligned 0 times\n" in content[i]][0]
+			not_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2]) * d_fraction
+			line = [i for i in range(len(content)) if " aligned exactly 1 time" in content[i]][0]
+			unique_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2]) * d_fraction
+			line = [i for i in range(len(content)) if " aligned >1 times" in content[i]][0]
+			multiple_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2]) * d_fraction
+			line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
+			perc_aligned = float(re.sub("%.*", "", content[line]).strip())
+			return {
+				prefix + "paired_perc": paired_perc,
+				prefix + "concordant_unaligned_perc": concordant_unaligned_perc,
+				prefix + "concordant_unique_perc": concordant_unique_perc,
+				prefix + "concordant_multiple_perc": concordant_multiple_perc,
+				prefix + "not_aligned_or_discordant_perc": not_aligned_or_discordant_perc,
+				prefix + "not_aligned_perc": not_aligned_perc,
+				prefix + "unique_aligned_perc": unique_aligned_perc,
+				prefix + "multiple_aligned_perc": multiple_aligned_perc,
+				prefix + "perc_aligned": perc_aligned}
+		except IndexError:
+			return error_dict
 
 
 def parse_duplicate_stats(stats_file, prefix=""):
@@ -201,22 +317,30 @@ def parse_duplicate_stats(stats_file, prefix=""):
 	:type stats_file: str
 	"""
 	import re
+
+	error_dict = {
+		prefix + "filtered_single_ends": pd.np.nan,
+		prefix + "filtered_paired_ends": pd.np.nan,
+		prefix + "duplicate_percentage": pd.np.nan}
 	try:
 		with open(stats_file) as handle:
 			content = handle.readlines()  # list of strings per line
 	except:
-		return {"single_ends": pd.np.nan, "paired_ends": pd.np.nan, "duplicates": pd.np.nan}
+		return error_dict
 
 	try:
 		line = [i for i in range(len(content)) if "single ends (among them " in content[i]][0]
-		single_ends = re.sub("\D", "", re.sub("\(.*", "", content[line]))
+		single_ends = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
 		line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
-		paired_ends = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
+		paired_ends = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
 		line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
-		duplicates = re.sub("\D", "", re.sub("\.\.\..*", "", content[line]))
-		return {prefix + "single_ends": single_ends, prefix + "paired_ends": paired_ends, prefix + "duplicates": duplicates}
+		duplicates = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
+		return {
+			prefix + "filtered_single_ends": single_ends,
+			prefix + "filtered_paired_ends": paired_ends,
+			prefix + "duplicate_percentage": (float(duplicates) / (single_ends + paired_ends * 2)) * 100}
 	except IndexError:
-		return {prefix + "single_ends": pd.np.nan, prefix + "paired_ends": pd.np.nan, prefix + "duplicates": pd.np.nan}
+		return error_dict
 
 
 def parse_peak_number(peak_file):
@@ -237,14 +361,16 @@ def parse_FRiP(frip_file, total_reads):
 	:type total_reads: int
 	"""
 	import re
+
+	error_dict = {"frip": pd.np.nan}
 	try:
 		with open(frip_file, "r") as handle:
 			content = handle.readlines()
 	except:
-		return pd.np.nan
+		return error_dict
 
 	if content[0].strip() == "":
-		return pd.np.nan
+		return error_dict
 
 	reads_in_peaks = int(re.sub("\D", "", content[0]))
 
@@ -263,6 +389,35 @@ def parse_nsc_rsc(nsc_rsc_file):
 		return {"NSC": nsc_rsc[8].squeeze(), "RSC": nsc_rsc[9].squeeze()}
 	except:
 		return {"NSC": pd.np.nan, "RSC": pd.np.nan}
+
+
+def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, normalize=False, norm_factor=1000000):
+	import os
+	import re
+	# TODO:
+	# addjust fragment length dependent on read size and real fragment size
+	# (right now it asssumes 50bp reads with 180bp fragments)
+	cmds = list()
+	transientFile = os.path.abspath(re.sub("\.bigWig", "", outputBigWig))
+	cmd1 = "bedtools bamtobed -i {0} |".format(inputBam)
+	if not tagmented:
+		cmd1 += " " + "bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genomeSizes)
+		cmd1 += " fix_bedfile_genome_boundaries.py {0} |".format(genome)
+	cmd1 += " " + "genomeCoverageBed {0}-bg -g {1} -i stdin > {2}.cov".format(
+		"-5 " if tagmented else "",
+		genomeSizes,
+		transientFile
+	)
+	cmds.append(cmd1)
+	if normalize:
+		cmds.append("""awk 'NR==FNR{{sum+= $4; next}}{{ $4 = ($4 / sum) * {1}; print}}' {0}.cov {0}.cov | sort -k1,1 -k2,2n > {0}.normalized.cov""".format(transientFile, norm_factor))
+	cmds.append("bedGraphToBigWig {0}{1}.cov {2} {3}".format(transientFile, ".normalized" if normalize else "", genomeSizes, outputBigWig))
+	# remove tmp files
+	cmds.append("if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transientFile))
+	if normalize:
+		cmds.append("if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transientFile))
+	cmds.append("chmod 755 {0}".format(outputBigWig))
+	return cmds
 
 
 def main():
@@ -299,7 +454,7 @@ def main():
 
 	# Set file paths
 	sample.set_file_paths()
-	sample.make_sample_dirs()
+	# sample.make_sample_dirs()  # should be fixed to check if values of paths are strings and paths indeed
 
 	# Start Pypiper object
 	# Best practice is to name the pipeline with the name of the script;
@@ -330,11 +485,14 @@ def process(sample, pipe_manager, args):
 	and removed, indexed, shifted Bam files along with a UCSC browser track.
 	Peaks are called and filtered.
 	"""
-
 	print("Start processing ATAC-seq sample %s." % sample.sample_name)
 
 	for path in ["sample_root"] + sample.paths.__dict__.keys():
-		if not os.path.exists(sample.paths[path]):
+		try:
+			exists = os.path.exists(sample.paths[path])
+		except TypeError:
+			continue
+		if not exists:
 			try:
 				os.mkdir(sample.paths[path])
 			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
@@ -420,7 +578,7 @@ def process(sample, pipe_manager, args):
 			pipe_manager.clean_add(sample.trimmed1, conditional=True)
 			pipe_manager.clean_add(sample.trimmed2, conditional=True)
 
-		report_dict(pipe_manager, parse_trim_stats(sample.trimlog, prefix="trim_"))
+		report_dict(pipe_manager, parse_trim_stats(sample.trimlog, prefix="trim_", paired_end=sample.paired))
 
 	# Map
 	pipe_manager.timestamp("Mapping reads with Bowtie2")
@@ -435,6 +593,7 @@ def process(sample, pipe_manager, args):
 		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.mapped, shell=True)
+	report_dict(pipe_manager, parse_mapping_stats(sample.aln_rates, paired_end=sample.paired))
 
 	# Get mitochondrial reads
 	pipe_manager.timestamp("Getting mitochondrial stats")
@@ -486,13 +645,14 @@ def process(sample, pipe_manager, args):
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
 	pipe_manager.timestamp("Making bigWig tracks from bam file")
-	cmd = tk.bamToBigWig(
+	cmd = bamToBigWig(
 		inputBam=sample.filtered,
 		outputBigWig=sample.bigwig,
 		genomeSizes=getattr(pipe_manager.config.resources.chromosome_sizes, sample.genome),
 		genome=sample.genome,
-		tagmented=False,  # by default make extended tracks
-		normalize=True
+		tagmented=pipe_manager.config.parameters.cuts,  # by default make extended tracks
+		normalize=pipe_manager.config.parameters.normalize_tracks,
+		norm_factor=pipe_manager.config.parameters.norm_factor
 	)
 	pipe_manager.run(cmd, sample.bigwig, shell=True)
 
@@ -549,7 +709,7 @@ def process(sample, pipe_manager, args):
 		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.frip, shell=True)
-	total = float(pipe_manager.stats_dict["single_ends"]) + (float(pipe_manager.stats_dict["paired_ends"]) / 2.)
+	total = float(pipe_manager.stats_dict["filtered_single_ends"]) + (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.)
 	report_dict(pipe_manager, parse_FRiP(sample.frip, total))
 
 	print(pipe_manager.stats_dict)
