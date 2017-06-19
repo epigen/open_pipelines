@@ -1,0 +1,289 @@
+# The protocol mappings explains how the looper should map from a sample protocol
+# (like RNA-seq) to a particular pipeline (like rnaseq.py), or group of pipelines.
+# You can map multiple pipelines to a single protocol if you want samples of a
+# type to kick of more than one pipeline run
+# The basic format for pipelines run simultaneously is:
+# PROTOCOL: pipeline1 [, pipeline2, ...]
+# Use semi-colons to indicate dependency (NOT IMPLEMENTED YET)
+# Examples:
+# Basic case: one protocol maps to one pipeline.
+# RNA-seq: rnaseq.py
+# Case: one protocol maps to multiple independent pipelines.
+# Drop-seq: quality_control.py, dropseq.py
+# Case: a protocol runs one pipeline which depends on another
+# Quant-seq: first-step.py; second-step.py
+# WGBSNM: first;second;third;(fourth, fifth)
+protocol_mappings:
+  CORE: >
+    wgbs.py,
+    rnaBitSeq.py --core-seq;
+    rnaTopHat.py --core-seq
+  RNA-seq: >
+    rnaBitSeq.py -f;
+    rnaTopHat.py -f
+  RRBS: rrbs.py
+  WGBS: wgbs.py
+  EG: wgbs.py
+  WGBSQC: >
+    wgbs.py;
+    (nnm.py, pdr.py)
+  SMART:  >
+    rnaBitSeq.py -f;
+    rnaTopHat.py -f
+  SMART-seq:  >
+    rnaBitSeq.py -f;
+    rnaTopHat.py -f
+  ATAC: atacseq.py
+  ATAC-SEQ: atacseq.py
+  CHIP: chipseq.py
+  CHIP-SEQ: chipseq.py
+  CHIPMENTATION: chipseq.py
+  STARR: starrseq.py
+  STARR-SEQ: starrseq.py
+  ChIA-PET: chiapet.py
+  QUANT-SEQ: quantseq.py
+
+# The pipelines section describes how the looper, which submits jobs, knows
+# what resources to request for a pipeline, and what arguments to pass to the
+# pipeline. For each pipeline, you specify two components: an arguments list,
+# and a resources list, like so:
+#
+# pipeline_script:
+#   name: value  # used for assessing pipeline flags (optional)
+#   arguments:
+#     "-k" : value
+#     "--key2" : value
+#     "--key3" : null # value-less argument flags
+#   resources:
+#     default:
+#       file_size: "0"
+#       cores: "4"
+#       mem: "6000"
+#       time: "2-00:00:00"
+#       partition: "longq"
+#     resource_package_name:
+#       file_size: "0"
+#       cores: "4"
+#       mem: "6000"
+#       time: "2-00:00:00"
+#       partition: "longq"
+
+# Arguments: the key corresponds verbatim to the string that will be passed on the
+# command line to the pipeline. The value corresponds to an attribute of the sample,
+# which will be derived from the sample_annotation csv file.
+#
+# The looper will automatically add arguments for:
+# -c: config_file (the pipeline config file specified in the project config file;
+# or the default config file, if it exists)
+# -p: cores (the number of cores specified by the resource package chosen)
+
+# Resources: You must define at least 1 option named 'default' with file_size=0.
+# Add as many additional resource sets as you want, with any names.
+# The looper will determine which resource package to use based on the file_size
+# of the input file. It will select the lowest resource package whose file_size
+# attribute does not exceed the size of the input file.
+
+pipelines:
+  wgbs.py:
+    name: WGBS  # Name used by pypiper so looper can find the logs
+    looper_args: True
+    arguments:
+      "--sample-name": sample_name
+      "--genome": genome
+      "--input": data_path
+      "--single-or-paired": read_type
+    resources:
+      default:
+        file_size: "0"
+        cores: "8"
+        mem: "32000"
+        time: "2-00:00:00"
+        partition: "blah"
+      medium:
+        file_size: "3"
+        cores: "16"
+        mem: "64000"
+        time: "4-00:00:00"
+        partition: "basdf"
+      high:
+        file_size: "10"
+        cores: "24"
+        mem: "64000"
+        time: "8-00:00:00"
+        partition: "ad"
+      huge:
+        file_size: "30"
+        cores: "24"
+        mem: "64000"
+        time: "50-00:00:00"
+        partition: "asdfngq"
+
+  rrbs.py:
+    name: RRBS
+    looper_args: True
+    arguments:
+      "--sample-name": sample_name
+      "--genome": genome
+      "--input": data_path
+      "--single-or-paired": read_type
+    resources:
+      default:
+        file_size: "0"
+        cores: "4"
+        mem: "16000"
+        time: "1-00:00:00"
+        partition: "longq"
+      medium:
+        file_size: "2"
+        cores: "4"
+        mem: "16000"
+        time: "1-12:00:00"
+        partition: "longq"
+      high:
+        file_size: "4"
+        cores: "6"
+        mem: "16000"
+        time: "2-00:00:00"
+        partition: "longq"
+
+  rnaBitSeq.py:
+    looper_args: True
+    arguments:
+      "--sample-name": sample_name
+      "--genome": transcriptome
+      "--input": data_path
+      "--single-or-paired": read_type
+      "--ercc-mix": ERCC_spikein
+    optional_arguments:
+      "--input2": read2_val
+    resources:
+      default:
+        file_size: "0"
+        cores: "6"
+        mem: "36000"
+        time: "2-00:00:00"
+        partition: "longq"
+
+  rnaTopHat.py:
+    looper_args: True
+    arguments:
+      "--sample-name": sample_name
+      "--genome": genome
+      "--input": data_path
+      "--single-or-paired": read_type
+    optional_arguments:
+      "-w": wigsum
+    resources:
+      default:
+        file_size: "0"
+        cores: "2"
+        mem: "60000"
+        time: "10-00:00:00"
+        partition: "longq"
+
+  atacseq.py:
+    arguments:
+      "--sample-yaml": yaml_file
+      "-I": sample_name
+      "-G": genome
+    looper_args: True
+    resources:
+      default:
+        file_size: "0"
+        cores: "4"
+        mem: "16000"
+        time: "08:00:00"
+        partition: "shortq"
+      medium:
+        file_size: "1"
+        cores: "8"
+        mem: "32000"
+        time: "1-12:00:00"
+        partition: "mediumq"
+      high:
+        file_size: "2"
+        cores: "12"
+        mem: "64000"
+        time: "4-00:00:00"
+        partition: "longq"
+
+  chipseq.py:
+    arguments:
+      "--sample-yaml": yaml_file
+      "-I": sample_name
+      "-G": genome
+    looper_args: True
+    resources:
+      default:
+        file_size: "0"
+        cores: "4"
+        mem: "16000"
+        time: "08:00:00"
+      medium:
+        file_size: "1"
+        cores: "8"
+        mem: "32000"
+        time: "1-12:00:00"
+      high:
+        file_size: "2"
+        cores: "12"
+        mem: "64000"
+        time: "4-00:00:00"
+
+  starrseq.py:
+    arguments:
+      "--sample-yaml": yaml_file
+      "-I": sample_name
+      "-G": genome
+    looper_args: True
+    resources:
+      default:
+        file_size: "0"
+        cores: "4"
+        mem: "16000"
+        time: "08:00:00"
+        partition: "shortq"
+      medium:
+        file_size: "1"
+        cores: "8"
+        mem: "32000"
+        time: "1-12:00:00"
+        partition: "mediumq"
+      high:
+        file_size: "2"
+        cores: "12"
+        mem: "64000"
+        time: "4-00:00:00"
+        partition: "longq"
+
+  chiapet.py:
+    name: ChIA-PET
+    looper_args: True
+    arguments:
+      "--sample-name": sample_name
+      "--genome": genome
+      "--input": data_path
+      "--single-or-paired": read_type
+    resources:
+      default:
+        file_size: "0"
+        cores: "4"
+        mem: "12000"
+        time: "12-00:00:00"
+        partition: "longq"
+
+  quantseq.py:
+    name: QUANT-SEQ
+    looper_args: True
+    arguments:
+      "--sample-name": sample_name
+      "--genome": genome
+      "--input": data_path
+      "--single-or-paired": read_type
+    resources:
+      default:
+        file_size: "0"
+        cores: "4"
+        mem: "12000"
+        time: "12-00:00:00"
+        partition: "longq"
