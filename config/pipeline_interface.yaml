@@ -15,13 +15,11 @@
 #       cores: "4"
 #       mem: "6000"
 #       time: "2-00:00:00"
-#       partition: "longq"
 #     resource_package_name:
 #       file_size: "0"
 #       cores: "4"
 #       mem: "6000"
 #       time: "2-00:00:00"
-#       partition: "longq"
 
 # Arguments: the key corresponds verbatim to the string that will be passed on the
 # command line to the pipeline. The value corresponds to an attribute of the sample,
@@ -52,25 +50,21 @@ wgbs.py:
       cores: "8"
       mem: "32000"
       time: "2-00:00:00"
-      partition: "longq"
     medium:
       file_size: "3"
       cores: "16"
       mem: "64000"
       time: "4-00:00:00"
-      partition: "longq"
     high:
       file_size: "10"
       cores: "24"
       mem: "64000"
       time: "8-00:00:00"
-      partition: "longq"
     huge:
       file_size: "30"
       cores: "24"
       mem: "64000"
       time: "50-00:00:00"
-      partition: "longq"
 
 rrbs.py:
   name: RRBS
@@ -86,19 +80,16 @@ rrbs.py:
       cores: "4"
       mem: "16000"
       time: "1-00:00:00"
-      partition: "longq"
     medium:
       file_size: "2"
       cores: "4"
       mem: "16000"
       time: "1-12:00:00"
-      partition: "longq"
     high:
       file_size: "4"
       cores: "6"
       mem: "16000"
       time: "2-00:00:00"
-      partition: "longq"
 
 rnaBitSeq.py:
   looper_args: True
@@ -116,7 +107,6 @@ rnaBitSeq.py:
       cores: "6"
       mem: "36000"
       time: "2-00:00:00"
-      partition: "longq"
 
 rnaTopHat.py:
   looper_args: True
@@ -133,7 +123,6 @@ rnaTopHat.py:
       cores: "2"
       mem: "60000"
       time: "10-00:00:00"
-      partition: "longq"
 
 atacseq.py:
   arguments:
@@ -149,19 +138,16 @@ atacseq.py:
       cores: "4"
       mem: "16000"
       time: "08:00:00"
-      partition: "shortq"
     medium:
       file_size: "1"
       cores: "8"
       mem: "32000"
       time: "1-12:00:00"
-      partition: "mediumq"
     high:
       file_size: "2"
       cores: "12"
       mem: "64000"
       time: "4-00:00:00"
-      partition: "longq"
 
 chipseq.py:
   arguments:
@@ -177,19 +163,16 @@ chipseq.py:
       cores: "4"
       mem: "16000"
       time: "08:00:00"
-      partition: "shortq"
     medium:
       file_size: "1"
       cores: "8"
       mem: "32000"
       time: "1-12:00:00"
-      partition: "mediumq"
     high:
       file_size: "2"
       cores: "12"
       mem: "64000"
       time: "4-00:00:00"
-      partition: "longq"
 
 starrseq.py:
   arguments:
@@ -203,19 +186,16 @@ starrseq.py:
       cores: "4"
       mem: "16000"
       time: "08:00:00"
-      partition: "shortq"
     medium:
       file_size: "1"
       cores: "8"
       mem: "32000"
       time: "1-12:00:00"
-      partition: "mediumq"
     high:
       file_size: "2"
       cores: "12"
       mem: "64000"
       time: "4-00:00:00"
-      partition: "longq"
 
 chiapet.py:
   name: ChIA-PET
@@ -231,7 +211,6 @@ chiapet.py:
       cores: "4"
       mem: "12000"
       time: "12-00:00:00"
-      partition: "longq"
 
 quantseq.py:
   name: QUANT-SEQ
@@ -247,7 +226,6 @@ quantseq.py:
       cores: "4"
       mem: "12000"
       time: "12-00:00:00"
-      partition: "longq"
 
 amplicon_simple.py:
   arguments:
@@ -261,8 +239,7 @@ amplicon_simple.py:
       file_size: "0"
       cores: "1"
       mem: "8000"
-      time: "6:00:00"
-      partition: "shortq"
+      time: "0:30:00"
 
 dropseq.py:
   arguments:
@@ -276,10 +253,8 @@ dropseq.py:
       cores: "8"
       mem: "60000"
       time: "1-12:00:00"
-      partition: "mediumq"
     high:
       file_size: "4"
       cores: "8"
       mem: "80000"
       time: "3-12:00:00"
-      partition: "longq"
