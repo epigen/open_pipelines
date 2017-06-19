@@ -132,7 +132,7 @@ def main():
     with open(os.path.join(output_folder, args.sample_name + ".efficiency.csv"), 'w') as handle:
         handle.write("{},{}\n".format(args.sample_name, efficiency))
 
-    print("Sample {} has an edditing efficiency of {}.".format(args.sample_name, efficiency))
+    print("Sample {} has an editing efficiency of {}.".format(args.sample_name, efficiency))
     print("Finished processing sample {}.".format(args.sample_name))
 
 
