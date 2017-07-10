@@ -52,6 +52,13 @@ parameters:
   max_insert: 2000
   # read quality to keep
   read_quality: 30
+  # BigWig file:
+  # should tracks be normalized to total of reads sequenced
+  normalize_tracks: True
+  # normalization factor (this number will be multiplied at each window/bp)
+  norm_factor: 1000000
+  # Should the tracks be based on whole-read densities or 5' read positions (DNAse cuts or Tn5 tagmentation)?
+  tagmented: False
 
 # Colours for genome browser tracks
 # 10 colour gradient from red to blue

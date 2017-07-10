@@ -650,7 +650,7 @@ def process(sample, pipe_manager, args):
 		outputBigWig=sample.bigwig,
 		genomeSizes=getattr(pipe_manager.config.resources.chromosome_sizes, sample.genome),
 		genome=sample.genome,
-		tagmented=pipe_manager.config.parameters.cuts,  # by default make extended tracks
+		tagmented=pipe_manager.config.parameters.tagmented,  # by default make extended tracks
 		normalize=pipe_manager.config.parameters.normalize_tracks,
 		norm_factor=pipe_manager.config.parameters.norm_factor
 	)
