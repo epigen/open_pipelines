@@ -70,12 +70,13 @@ class ChIPseqSample(Sample):
 	def __repr__(self):
 		return "ChIP-seq sample '%s'" % self.sample_name
 
-	def set_file_paths(self):
+	def set_file_paths(self, project):
 		"""
 		Sets the paths of all files for this sample.
 		"""
-		# Inherit paths from Sample by running Sample's set_file_paths()
-		super(ChIPseqSample, self).set_file_paths()
+
+		# Get paths container structure and any contents used by any Sample.
+		super(ChIPseqSample, self).set_file_paths(project)
 
 		# Files in the root of the sample dir
 		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
@@ -140,8 +141,8 @@ class ChIPmentation(ChIPseqSample):
 	def __repr__(self):
 		return "ChIPmentation sample '%s'" % self.sample_name
 
-	def set_file_paths(self):
-		super(ChIPmentation, self).set_file_paths()
+	def set_file_paths(self, project):
+		super(ChIPmentation, self).set_file_paths(project)
 
 
 def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, normalize=False, norm_factor=1000000):
@@ -470,7 +471,7 @@ def main():
 		sample.paired = False
 
 	# Set file paths
-	sample.set_file_paths()
+	sample.set_file_paths(sample.prj)
 	# sample.make_sample_dirs()  # should be fixed to check if values of paths are strings and paths indeed
 
 	# Start Pypiper object
