@@ -451,10 +451,10 @@ def main():
 	# Read in yaml configs
 	series = pd.Series(yaml.load(open(args.sample_config, "r")))
 	# Create Sample object
-	if series["library"] != "ChIPmentation":
-		sample = ChIPseqSample(series)
-	else:
+	if series.library == "ChIPmentation":
 		sample = ChIPmentation(series)
+	else:
+		sample = ChIPseqSample(series)
 
 	# Check if merged
 	if len(sample.data_path.split(" ")) > 1:
