@@ -25,6 +25,11 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
+BROAD_MARKS = ["H3K4me3", "H3K36me3"]
+HISTONE_CODES = ["H3", "H2A", "H2B", "H4"]
+
+
+
 class ChIPseqSample(Sample):
 	"""
 	Class to model ChIP-seq samples based on the generic Sample class (itself a pandas.Series).
@@ -57,11 +62,14 @@ class ChIPseqSample(Sample):
 		# NS: I wrapped this in a try block because this makes it require that
 		# 'ip' be defined, which may not be the case (like for Input samples)
 
-		try:
-			self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
-			self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
-		except:
-			pass
+		mark = self.ip
+		if mark is None:
+			self.broad = False
+			self.histone = False
+		else:
+			mark = mark.upper()
+			self.broad = mark in BROAD_MARKS
+			self.histone = mark in HISTONE_CODES
 
 	def __repr__(self):
 		return "ChIP-seq sample '%s'" % self.sample_name
