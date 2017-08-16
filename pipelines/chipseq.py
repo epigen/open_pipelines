@@ -25,7 +25,7 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
-BROAD_MARKS = ["H3K4me3", "H3K36me3"]
+BROAD_MARKS = ["H3K4ME3", "H3K36ME3"]
 HISTONE_CODES = ["H3", "H2A", "H2B", "H4"]
 
 
