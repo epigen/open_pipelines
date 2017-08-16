@@ -1,2 +1,4 @@
 pandas
 pyyaml
+git+https://github.com/epigen/pypiper/#egg=pypiper
+git+https://github.com/epigen/looper/#egg=looper
