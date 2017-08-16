@@ -48,11 +48,7 @@ class ChIPseqSample(Sample):
 	__library__ = "ChIP-seq"
 
 	def __init__(self, series):
-		# Passed series must either be a pd.Series or a daughter class
-		if not isinstance(series, pd.Series):
-			raise TypeError("Provided object is not a pandas Series.")
 		super(ChIPseqSample, self).__init__(series)
-
 		self.tagmented = False
 
 		# Get type of factor
@@ -131,11 +127,7 @@ class ChIPmentation(ChIPseqSample):
 	__library__ = "ChIPmentation"
 
 	def __init__(self, series):
-		# Use _pd.Series object to have all sample attributes
-		if not isinstance(series, pd.Series):
-			raise TypeError("Provided object is not a pandas Series.")
 		super(ChIPmentation, self).__init__(series)
-
 		self.tagmented = True
 
 	def __repr__(self):
@@ -450,11 +442,12 @@ def main():
 
 	# Read in yaml configs
 	series = pd.Series(yaml.load(open(args.sample_config, "r")))
+	sample = Sample(series)
 	# Create Sample object
-	if series.library == "ChIPmentation":
-		sample = ChIPmentation(series)
+	if sample.protocol == "ChIPmentation":
+		sample = ChIPmentation(sample)
 	else:
-		sample = ChIPseqSample(series)
+		sample = ChIPseqSample(sample)
 
 	# Check if merged
 	if len(sample.data_path.split(" ")) > 1:
