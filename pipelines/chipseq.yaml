@@ -35,7 +35,7 @@ tools:
   macs2: macs2
   # optional:
   Rscript: Rscript
-  spp: /home/arendeiro/.local/bin/run_spp.R
+  spp: ${CODE}/open_pipelines/pipelines/tools/spp_peak_calling.R
 
 # the parameters section is intended for all parameters passed to bioinformatic tools
 parameters:
