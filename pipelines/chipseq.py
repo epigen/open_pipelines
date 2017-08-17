@@ -120,6 +120,12 @@ class ChIPseqSample(Sample):
 		self.qc = os.path.join(self.paths.sample_root, self.sample_name + "_qc.tsv")
 		self.qc_plot = os.path.join(self.paths.sample_root, self.sample_name + "_qc.pdf")
 
+		bigwig_subfolder = "bigwig_{}".format(self.genome)
+		bigwig_folder = os.path.join(
+				self.prj.metadata.results_subdir, bigwig_subfolder)
+		bigwig_file = "CHIP_{}.bw".format(self.sample_name)
+		self.bigwig = os.path.join(bigwig_folder, bigwig_file)
+
 		# Peaks: peaks called and derivate files
 		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
 		self.peaks = os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
