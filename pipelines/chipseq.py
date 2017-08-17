@@ -162,7 +162,10 @@ def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, no
 	cmd1 = "bedtools bamtobed -i {0} |".format(inputBam)
 	if not tagmented:
 		cmd1 += " " + "bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genomeSizes)
-		cmd1 += " fix_bedfile_genome_boundaries.py {0} |".format(genome)
+		bedfile_bounds_script = os.path.join(
+			os.path.dirname(__file__), "tools",
+			"fix_bedfile_genome_boundaries.py")
+		cmd1 += " {0} {1} |".format(bedfile_bounds_script, genome)
 	cmd1 += " " + "genomeCoverageBed {0}-bg -g {1} -i stdin > {2}.cov".format(
 		"-5 " if tagmented else "",
 		genomeSizes,
