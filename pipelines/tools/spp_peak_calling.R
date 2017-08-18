@@ -14,7 +14,7 @@ nCPUs = args[7]
 # The following section shows how to initialize a cluster of 8 nodes for parallel processing
 # see "snow" package manual for details.
 library(snow)
-cluster <- makeCluster(nCPUs, type = "SOCK");
+cluster <- makeCluster(rep("localhost", nCPUs), type = "SOCK");
 
 chip.data <- read.bam.tags(sample)
 input.data <- read.bam.tags(input)
