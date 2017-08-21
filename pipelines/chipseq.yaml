@@ -35,7 +35,7 @@ tools:
   macs2: macs2
   # optional:
   Rscript: Rscript
-  spp: run_spp.R
+  spp: ${PEAK_QUAL_TK}/run_spp.R
 
 # the parameters section is intended for all parameters passed to bioinformatic tools
 parameters:
