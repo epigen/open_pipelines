@@ -713,8 +713,8 @@ def process(sample, pipe_manager, args):
 		# For point-source factors use default settings
 		# For broad factors use broad settings
 		cmd = tk.macs2CallPeaks(
-			treatmentBam=sample.filtered,
-			controlBam=sample.filtered.replace(sample.name, sample.compare_sample),
+			treatmentBams=sample.filtered,
+			controlBams=sample.filtered.replace(sample.name, sample.compare_sample),
 			outputDir=sample.paths.peaks,
 			sampleName=sample.name,
 			genome=sample.genome,
