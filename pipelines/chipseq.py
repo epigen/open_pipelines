@@ -754,7 +754,9 @@ def process(sample, pipe_manager, args):
 		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.frip, shell=True)
-	total = float(pipe_manager.stats_dict["filtered_single_ends"]) + (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.)
+	reads_SE = float(pipe_manager.get_stat("filtered_single_ends"))
+	reads_PE = float(pipe_manager.get_stat("filtered_paired_ends"))
+	total = 0.5 * (reads_SE + reads_PE)
 	report_dict(pipe_manager, parse_FRiP(sample.frip, total))
 
 	print("Finished processing sample %s." % sample.name)
