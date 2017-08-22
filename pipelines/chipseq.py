@@ -718,17 +718,18 @@ def process(sample, pipe_manager, args):
 			outputDir=sample.paths.peaks,
 			sampleName=sample.name,
 			genome=sample.genome,
-			broad=True if sample.broad else False
+			broad=sample.broad
 		)
 		pipe_manager.run(cmd, sample.peaks, shell=True)
 		report_dict(pipe_manager, parse_peak_number(sample.peaks))
 
-		pipe_manager.timestamp("Plotting MACS2 model")
-		cmd = tk.macs2PlotModel(
-			sampleName=sample.name,
-			outputDir=os.path.join(sample.paths.peaks, sample.name)
-		)
-		pipe_manager.run(cmd, os.path.join(sample.paths.peaks, sample.name, sample.name + "_model.pdf"), shell=True, nofail=True)
+		if not sample.broad:
+			pipe_manager.timestamp("Plotting MACS2 model")
+			cmd = tk.macs2PlotModel(
+				sampleName=sample.name,
+				outputDir=os.path.join(sample.paths.peaks, sample.name)
+			)
+			pipe_manager.run(cmd, os.path.join(sample.paths.peaks, sample.name, sample.name + "_model.pdf"), shell=True, nofail=True)
 
 	elif args.peak_caller == "spp":
 		pipe_manager.timestamp("Calling peaks with spp")
@@ -740,7 +741,7 @@ def process(sample, pipe_manager, args):
 			treatmentName=sample.name,
 			controlName=sample.compare_sample,
 			outputDir=os.path.join(sample.paths.peaks, sample.name),
-			broad=True if sample.broad else False,
+			broad=sample.broad,
 			cpus=args.cpus
 		)
 		pipe_manager.run(cmd, sample.peaks, shell=True)
