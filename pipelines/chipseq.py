@@ -695,10 +695,10 @@ def process(sample, pipe_manager, args):
 	pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
 	report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
 
-	# If sample does not have "ctrl" attribute, finish processing it.
-	if not hasattr(sample, "compare_sample"):
+	# If the sample is a control, we're finished.
+	if not hasattr(sample, "compare_sample") or sample.compare_sample in ["", "NA"]:
 		pipe_manager.stop_pipeline()
-		print("Finished processing sample %s." % sample.name)
+		print("Finished processing sample {}".format(sample.name))
 		return
 
 	# The pipeline will now wait for the comparison sample file to be completed
