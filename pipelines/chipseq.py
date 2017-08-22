@@ -723,7 +723,7 @@ def process(sample, pipe_manager, args):
 		pipe_manager.run(cmd, sample.peaks, shell=True)
 		report_dict(pipe_manager, parse_peak_number(sample.peaks))
 
-		pipe_manager.timestamp("Ploting MACS2 model")
+		pipe_manager.timestamp("Plotting MACS2 model")
 		cmd = tk.macs2PlotModel(
 			sampleName=sample.name,
 			outputDir=os.path.join(sample.paths.peaks, sample.name)
