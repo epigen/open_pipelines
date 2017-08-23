@@ -122,7 +122,7 @@ class ChIPseqSample(Sample):
 
 		bigwig_subfolder = "bigwig_{}".format(self.genome)
 		bigwig_folder = os.path.join(
-				self.prj.metadata.results_subdir, bigwig_subfolder)
+				self.prj.metadata.results_subdir, self.name, bigwig_subfolder)
 		bigwig_file = "CHIP_{}.bw".format(self.sample_name)
 		self.bigwig = os.path.join(bigwig_folder, bigwig_file)
 
