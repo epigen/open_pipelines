@@ -506,10 +506,12 @@ def arg_parser(parser):
 	parser.add_argument(
 		"-p", "--peak-caller",
 		dest="peak_caller",
+		choices=["macs2", "spp"],
 		help="Peak caller algorithm.",
-		default="macs2",
-		type=str
+		default="macs2"
 	)
+	parser.add_argument("--pvalue", type=float, default=0.001, help="MACS2 p-value")
+	parser.add_argument("--qvalue", type=float, help="Q-value for peak calling")
 	return parser
 
 
@@ -718,7 +720,8 @@ def process(sample, pipe_manager, args):
 			outputDir=sample.paths.peaks,
 			sampleName=sample.name,
 			genome=sample.genome,
-			broad=sample.broad
+			broad=sample.broad,
+			pvalue=args.pvalue, qvalue=args.qvalue
 		)
 		pipe_manager.run(cmd, sample.peaks, shell=True)
 		report_dict(pipe_manager, parse_peak_number(sample.peaks))
@@ -731,7 +734,7 @@ def process(sample, pipe_manager, args):
 			)
 			pipe_manager.run(cmd, os.path.join(sample.paths.peaks, sample.name, sample.name + "_model.pdf"), shell=True, nofail=True)
 
-	elif args.peak_caller == "spp":
+	else:
 		pipe_manager.timestamp("Calling peaks with spp")
 		# For point-source factors use default settings
 		# For broad factors use broad settings
@@ -742,7 +745,8 @@ def process(sample, pipe_manager, args):
 			controlName=sample.compare_sample,
 			outputDir=os.path.join(sample.paths.peaks, sample.name),
 			broad=sample.broad,
-			cpus=args.cpus
+			cpus=args.cpus,
+			qvalue=args.qvalue
 		)
 		pipe_manager.run(cmd, sample.peaks, shell=True)
 
