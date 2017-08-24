@@ -736,15 +736,16 @@ def process(sample, pipe_manager, args):
 	# Do plotting as desired.
 	if args.peak_caller == "macs2" and not broad_mode:
 		pipe_manager.timestamp("Plotting MACS2 model")
+		model_files_base = sample.name + "_model"
 
 		# Create the command to run the model script.
-		name_model_script = "{}_model.r".format(sample.name)
+		name_model_script = model_files_base + ".r"
 		path_model_script = os.path.join(peaks_folder, name_model_script)
 		exec_model_script = \
 				"{} {}".format(pipe_manager.tools.Rscript, path_model_script)
 
 		# Create the command to create and rename the model plot.
-		plot_name = "{}_model.pdf".format(sample.name)
+		plot_name = model_files_base + ".pdf"
 		src_plot_path = os.path.join(os.getcwd(), plot_name)
 		dst_plot_path = os.path.join(peaks_folder, plot_name)
 		rename_model_plot = "mv {} {}".format(src_plot_path, dst_plot_path)
