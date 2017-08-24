@@ -732,14 +732,26 @@ def process(sample, pipe_manager, args):
 				cpus=args.cpus, **peak_call_kwargs)
 	pipe_manager.run(cmd, target=sample.peaks, shell=True)
 	report_dict(pipe_manager, parse_peak_number(sample.peaks))
+
+	# Do plotting as desired.
 	if args.peak_caller == "macs2" and not broad_mode:
 		pipe_manager.timestamp("Plotting MACS2 model")
-		cmd = tk.macs2PlotModel(
-			sampleName=sample.name,
-			outputDir=os.path.join(peaks_folder, sample.name))
-		pipe_manager.run(cmd, os.path.join(peaks_folder, sample.name,
-										   sample.name + "_model.pdf"),
-						 shell=True, nofail=True)
+
+		# Create the command to run the model script.
+		name_model_script = "{}_model.r".format(sample.name)
+		path_model_script = os.path.join(peaks_folder, name_model_script)
+		exec_model_script = \
+				"{} {}".format(pipe_manager.tools.Rscript, path_model_script)
+
+		# Create the command to create and rename the model plot.
+		plot_name = "{}_model.pdf".format(sample.name)
+		src_plot_path = os.path.join(os.getcwd(), plot_name)
+		dst_plot_path = os.path.join(peaks_folder, plot_name)
+		rename_model_plot = "mv {} {}".format(src_plot_path, dst_plot_path)
+
+		# Run the model script and rename the model plot.
+		pipe_manager.run([exec_model_script, rename_model_plot],
+						 target=dst_plot_path, shell=True, nofail=True)
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
