@@ -702,12 +702,13 @@ def process(sample, pipe_manager, args):
 		# For point-source factors use default settings
 		# For broad factors use broad settings
 		cmd = tk.macs2CallPeaks(
-			treatmentBam=sample.filtered,
-			controlBam=sample.filtered.replace(sample.name, sample.compare_sample),
+			treatmentBams=sample.filtered,
+			controlBams=sample.filtered.replace(sample.name, sample.compare_sample),
 			outputDir=sample.paths.peaks,
 			sampleName=sample.name,
 			genome=sample.genome,
-			broad=sample.broad
+			broad=sample.broad,
+			paired=sample.paired
 		)
 		pipe_manager.run(cmd, sample.peaks, shell=True)
 		report_dict(pipe_manager, parse_peak_number(sample.peaks))
@@ -715,10 +716,11 @@ def process(sample, pipe_manager, args):
 		if not sample.broad:
 			pipe_manager.timestamp("Ploting MACS2 model")
 			cmd = tk.macs2PlotModel(
-				sampleName=sample.name,
-				outputDir=os.path.join(sample.paths.peaks, sample.name)
+				r_peak_model_file=sample.r_peak_model_file,
+				sample_name=sample.name,
+				output_dir=sample.paths.peaks
 			)
-			pipe_manager.run(cmd, os.path.join(sample.paths.peaks, sample.name, sample.name + "_model.pdf"), shell=True, nofail=True)
+			pipe_manager.run(cmd, os.path.join(sample.paths.peaks, sample.name + "_model.pdf"), shell=True, nofail=True)
 
 	elif args.peak_caller == "spp":
 		pipe_manager.timestamp("Calling peaks with spp")
