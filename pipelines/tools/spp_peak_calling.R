@@ -10,7 +10,7 @@ input_name = args[4]
 outputDir = args[5]
 broad_peaks = args[6]
 nCPUs = args[7]
-# Set FDR of 1% by default.
+# Parse FDR or set to 1% by default.
 fdr <- if (length(args) > 7) as.numeric(args[8]) else 1e-2
 
 # The following section shows how to initialize a cluster of 8 nodes for parallel processing

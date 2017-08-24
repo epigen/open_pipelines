@@ -706,49 +706,40 @@ def process(sample, pipe_manager, args):
 	# The pipeline will now wait for the comparison sample file to be completed
 	pipe_manager._wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
 
+	# Call peaks.
+	broad_mode = sample.broad
+	peaks_folder = sample.paths.peaks
+	treatment_file = sample.filtered
+	control_file = sample.filtered.replace(sample.name, sample.compare_sample)
+	if not os.path.exists(peaks_folder):
+		os.makedirs(peaks_folder)
+	# TODO: include the filepaths as caller-neutral positionals/keyword args
+	# TODO (cont.) once NGSTK API is tweaked.
+	peak_call_kwargs = {
+		"outputDir": peaks_folder, 
+		"broad": broad_mode, 
+		"qvalue": args.qvalue
+	}
 	if args.peak_caller == "macs2":
-		pipe_manager.timestamp("Calling peaks with MACS2")
-		# make dir for output (macs fails if it does not exist)
-		if not os.path.exists(sample.paths.peaks):
-			os.makedirs(sample.paths.peaks)
-
-		# For point-source factors use default settings
-		# For broad factors use broad settings
 		cmd = tk.macs2CallPeaks(
-			treatmentBams=sample.filtered,
-			controlBams=sample.filtered.replace(sample.name, sample.compare_sample),
-			outputDir=sample.paths.peaks,
-			sampleName=sample.name,
-			genome=sample.genome,
-			broad=sample.broad,
-			pvalue=args.pvalue, qvalue=args.qvalue
-		)
-		pipe_manager.run(cmd, sample.peaks, shell=True)
-		report_dict(pipe_manager, parse_peak_number(sample.peaks))
-
-		if not sample.broad:
-			pipe_manager.timestamp("Plotting MACS2 model")
-			cmd = tk.macs2PlotModel(
-				sampleName=sample.name,
-				outputDir=os.path.join(sample.paths.peaks, sample.name)
-			)
-			pipe_manager.run(cmd, os.path.join(sample.paths.peaks, sample.name, sample.name + "_model.pdf"), shell=True, nofail=True)
-
+				treatmentBams=treatment_file, controlBams=control_file,
+				genome=sample.genome, pvalue=args.pvalue,
+				sampleName=sample.name, **peak_call_kwargs)
 	else:
-		pipe_manager.timestamp("Calling peaks with spp")
-		# For point-source factors use default settings
-		# For broad factors use broad settings
 		cmd = tk.sppCallPeaks(
-			treatmentBam=sample.filtered,
-			controlBam=sample.filtered.replace(sample.name, sample.compare_sample),
-			treatmentName=sample.name,
-			controlName=sample.compare_sample,
-			outputDir=os.path.join(sample.paths.peaks, sample.name),
-			broad=sample.broad,
-			cpus=args.cpus,
-			qvalue=args.qvalue
-		)
-		pipe_manager.run(cmd, sample.peaks, shell=True)
+				treatmentBam=treatment_file, controlBam=control_file,
+				treatmentName=sample.name, controlName=sample.compare_sample,
+				cpus=args.cpus, **peak_call_kwargs)
+	pipe_manager.run(cmd, target=sample.peaks, shell=True)
+	report_dict(pipe_manager, parse_peak_number(sample.peaks))
+	if args.peak_caller == "macs2" and not broad_mode:
+		pipe_manager.timestamp("Plotting MACS2 model")
+		cmd = tk.macs2PlotModel(
+			sampleName=sample.name,
+			outputDir=os.path.join(peaks_folder, sample.name))
+		pipe_manager.run(cmd, os.path.join(peaks_folder, sample.name,
+										   sample.name + "_model.pdf"),
+						 shell=True, nofail=True)
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
