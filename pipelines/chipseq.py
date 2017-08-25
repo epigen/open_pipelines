@@ -4,15 +4,17 @@
 ChIP-seq pipeline
 """
 
+from argparse import ArgumentParser
+import itertools
 import os
 import sys
-from argparse import ArgumentParser
+
+import pandas as pd
 import yaml
+
 import pypiper
 from pypiper.ngstk import NGSTk
 from looper.models import AttributeDict, Sample
-
-import pandas as pd
 
 
 __author__ = "Andre Rendeiro"
@@ -25,7 +27,11 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
-BROAD_MARKS = ["H3K4ME3", "H3K36ME3"]
+BROAD_MARKS = {
+		"H3K9ME1", "H3K9ME2", "H3K9ME3",
+		"H3K27ME1", "H3K27ME2", "H3K27ME3",
+		"H3K36ME1", "H3K36ME2", "H3K36ME3",
+		"H3K72ME1", "H3K72ME2", "H3K72ME3"}
 HISTONE_CODES = ["H3", "H2A", "H2B", "H4"]
 
 
@@ -56,20 +62,17 @@ class ChIPseqSample(Sample):
 		super(ChIPseqSample, self).__init__(series)
 		self.tagmented = False
 
-		# Get type of factor
-		# TODO: get config file specifying broad/narrow factors
-		# e.g. self.broad = True if self.ip in self.prj.config["broadfactors"] else False
-		# NS: I wrapped this in a try block because this makes it require that
-		# 'ip' be defined, which may not be the case (like for Input samples)
-
-		mark = self.ip
+		# Set broad/histone status that may later be modified given
+		# context of a pipeline configuration file.
+		mark = getattr(self, "ip", None)    # Handle null/nonexistent mark.
 		if mark is None:
 			self.broad = False
 			self.histone = False
 		else:
 			mark = mark.upper()
 			self.broad = mark in BROAD_MARKS
-			self.histone = mark in HISTONE_CODES
+			self.histone = any([mark.startswith(histone_code)
+								for histone_code in HISTONE_CODES])
 
 	def __repr__(self):
 		return "ChIP-seq sample '%s'" % self.sample_name
