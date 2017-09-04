@@ -5,7 +5,6 @@ ChIP-seq pipeline
 """
 
 from argparse import ArgumentParser
-import itertools
 import os
 import sys
 
@@ -25,6 +24,7 @@ __version__ = "0.3"
 __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
+
 
 
 BROAD_MARKS = {
