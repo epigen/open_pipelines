@@ -719,15 +719,15 @@ def process(sample, pipe_manager, args):
 	# TODO: include the filepaths as caller-neutral positionals/keyword args
 	# TODO (cont.) once NGSTK API is tweaked.
 	peak_call_kwargs = {
-		"outputDir": peaks_folder, 
-		"broad": broad_mode, 
+		"outputDir": peaks_folder,
+		"broad": broad_mode,
 		"qvalue": args.qvalue
 	}
 	if args.peak_caller == "macs2":
 		cmd = tk.macs2CallPeaks(
 				treatmentBams=treatment_file, controlBams=control_file,
-				genome=sample.genome, pvalue=args.pvalue,
-				sampleName=sample.name, **peak_call_kwargs)
+                sampleName=sample.name, pvalue=args.pvalue,
+                genome=sample.genome, paired=sample.paired, **peak_call_kwargs)
 	else:
 		cmd = tk.sppCallPeaks(
 				treatmentBam=treatment_file, controlBam=control_file,
