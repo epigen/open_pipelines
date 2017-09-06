@@ -4,17 +4,13 @@
 Drop-seq pipeline
 """
 
+import os
 import sys
 from argparse import ArgumentParser
-import yaml
-import pypiper
-import os
 
-try:
-	from pipelines.models import AttributeDict
-except:
-	sys.path.append(os.path.join(os.path.dirname(__file__), "pipelines"))
-	from models import AttributeDict
+import pypiper
+import yaml
+from looper.models import AttributeDict
 
 
 __author__ = "Andre Rendeiro"
@@ -214,7 +210,11 @@ def process(sample, pipeline_config, args):
 	print("Start processing Drop-seq sample %s." % sample.sample_name)
 
 	for path in ["sample_root"] + sample.paths.__dict__.keys():
-		if not os.path.exists(sample.paths[path]):
+		try:
+			exists = os.path.exists(sample.paths[path])
+		except TypeError:
+			continue
+		if not exists:
 			try:
 				os.mkdir(sample.paths[path])
 			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
