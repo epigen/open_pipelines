@@ -1,10 +1,8 @@
 # Pipelines
 
-Documentation is in  [/doc](doc) subfolder, managed by sphinx.
+[More thorough documentation of each pipeline and its outputs will follow soon.]
 
 This repository contains pipelines for processing NGS data and associated scripts used by them (in the [/pipelines/tools](pipelines/tools) subdirectory).
-It also has several accompanying scripts that use the same infrastructure to do other processing for projects.
-
 Pipelines here are configured to work with [`looper`](https://github.com/epigen/looper/) and use [`pypiper`](https://github.com/epigen/pypiper/) (see the corresponding repositories).
 
 # Installing
