@@ -429,6 +429,9 @@ def main():
 	parser = arg_parser(parser)
 	parser = pypiper.add_pypiper_args(parser, groups=["all"])
 	args = parser.parse_args()
+	if args.sample_config is None:
+		parser.print_help()
+		return 1
 
 	# Read in yaml configs
 	series = pd.Series(yaml.load(open(args.sample_config, "r")))
