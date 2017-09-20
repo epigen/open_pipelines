@@ -14,6 +14,10 @@ protocol_mapping:
   ChIA-PET: chiapet.py
   QUANT-SEQ: quantseq.py
   Amplicon: amplicon_simple.py
+  Drop-seq: dropseq.py
+  SMART-seq:  >
+    rnaBitSeq.py -f;
+    rnaTopHat.py -f
 
 # The pipelines section describes how looper, which submits jobs, knows
 # what resources to request for a pipeline, and what arguments to pass to the
