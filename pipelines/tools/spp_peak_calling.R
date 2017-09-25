@@ -75,7 +75,6 @@ if (broad_peaks){
 
 # binding detection parameters
 # As an alternative to FDR, an E-value can be supplied to the method calls below.
-fdr <- 1e-2; 
 # the binding.characteristics contains the optimized half-size for binding detection window
 detection.window.halfsize <- binding.characteristics$whs;
   
