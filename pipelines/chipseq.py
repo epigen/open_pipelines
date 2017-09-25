@@ -509,8 +509,11 @@ def arg_parser(parser):
 	parser.add_argument(
 		"-y", "--sample-yaml",
 		dest="sample_config",
-		help="Yaml config file with sample attributes.",
-		type=str
+		help="Yaml config file with sample attributes; in addition to "
+			"sample_name, this should define read_type, as 'single' or "
+			"'paired'; 'ip', with the mark analyzed in a sample, and "
+			"'compare_sample' with the name of a control sample (if the "
+			"sample itself is not a control.)"
 	)
 	parser.add_argument(
 		"-p", "--peak-caller",
@@ -529,6 +532,12 @@ def process(sample, pipe_manager, args):
 	This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
 	and removed, indexed (and shifted if necessary) Bam files
 	along with a UCSC browser track.
+
+	:param Sample sample: individual Sample object to process
+	:param pypiper.PipelineManager pipe_manager: PipelineManager to use during
+		Sample processing
+	:param argparse.Namespace args: binding between command-line option and
+		argument, for specifying values various pipeline parameters
 	"""
 	print("Start processing ChIP-seq sample %s." % sample.name)
 
@@ -781,6 +790,7 @@ def process(sample, pipe_manager, args):
 
 	print("Finished processing sample %s." % sample.name)
 	pipe_manager.stop_pipeline()
+
 
 
 if __name__ == '__main__':
