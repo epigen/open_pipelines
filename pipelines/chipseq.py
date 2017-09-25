@@ -480,10 +480,13 @@ def main():
 	sample.prj = AttributeDict(sample.prj)
 	sample.paths = AttributeDict(sample.paths.__dict__)
 
-	# Shorthand for read_type
-	if sample.read_type == "paired":
-		sample.paired = True
-	else:
+	# Flag version of read type since it's a binary; handle case vagaries.
+	read_type = sample.read_type
+	try:
+		sample.paired = (read_type.lower() == "paired")
+	except AttributeError:
+		print("WARNING: non-string read_type: {} ({})".format(
+			read_type, type(read_type)))
 		sample.paired = False
 
 	# Set file paths
