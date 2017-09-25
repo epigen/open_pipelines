@@ -704,7 +704,9 @@ def process(sample, pipe_manager, args):
 	report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
 
 	# If the sample is a control, we're finished.
-	if not hasattr(sample, "compare_sample") or sample.compare_sample in ["", "NA"]:
+	# The type/value for the comparison Sample in this case should be either
+	# absent or a null-indicative/-suggestive value.
+	if not hasattr(sample, "compare_sample") or sample.compare_sample in [None, "", "NA"]:
 		pipe_manager.stop_pipeline()
 		print("Finished processing sample {}".format(sample.name))
 		return
