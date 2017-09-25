@@ -14,6 +14,8 @@ import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
 from looper.models import AttributeDict, Sample
+from .const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
+from .tools.sample_tools import determine_comparison
 
 
 __author__ = "Andre Rendeiro"
@@ -63,8 +65,8 @@ class ChIPseqSample(Sample):
 		self.tagmented = False
 
 		# Set broad/histone status that may later be modified given
-		# context of a pipeline configuration file.
-		mark = getattr(self, "ip", None)    # Handle null/nonexistent mark.
+		# context of a pipeline configuration file, handling null/missing mark.
+		mark = getattr(self, CHIP_MARK_COLUMN, None)
 		if mark is None:
 			self.broad = False
 			self.histone = False
@@ -510,10 +512,10 @@ def arg_parser(parser):
 		"-y", "--sample-yaml",
 		dest="sample_config",
 		help="Yaml config file with sample attributes; in addition to "
-			"sample_name, this should define read_type, as 'single' or "
+			"sample_name, this should define '{rt}', as 'single' or "
 			"'paired'; 'ip', with the mark analyzed in a sample, and "
-			"'compare_sample' with the name of a control sample (if the "
-			"sample itself is not a control.)"
+			"'{comparison}' with the name of a control sample (if the "
+			"sample itself is not a control.)".format(rt="read_type", comparison=CHIP_COMPARE_COLUMN)
 	)
 	parser.add_argument(
 		"-p", "--peak-caller",
@@ -718,19 +720,22 @@ def process(sample, pipe_manager, args):
 	# If the sample is a control, we're finished.
 	# The type/value for the comparison Sample in this case should be either
 	# absent or a null-indicative/-suggestive value.
-	if not hasattr(sample, "compare_sample") or sample.compare_sample in [None, "", "NA"]:
+	#if not hasattr(sample, CHIP_COMPARE_COLUMN) or determine_comparison(sample) in [None, "", "NA"]:
+	try:
+		comparison = determine_comparison(sample)
+	except AttributeError:
 		pipe_manager.stop_pipeline()
 		print("Finished processing sample {}".format(sample.name))
 		return
 
 	# The pipeline will now wait for the comparison sample file to be completed
-	pipe_manager._wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
+	pipe_manager._wait_for_file(sample.filtered.replace(sample.name, comparison))
 
 	# Call peaks.
 	broad_mode = sample.broad
 	peaks_folder = sample.paths.peaks
 	treatment_file = sample.filtered
-	control_file = sample.filtered.replace(sample.name, sample.compare_sample)
+	control_file = sample.filtered.replace(sample.name, comparison)
 	if not os.path.exists(peaks_folder):
 		os.makedirs(peaks_folder)
 	# TODO: include the filepaths as caller-neutral positionals/keyword args
@@ -748,7 +753,7 @@ def process(sample, pipe_manager, args):
 	else:
 		cmd = tk.sppCallPeaks(
 				treatmentBam=treatment_file, controlBam=control_file,
-				treatmentName=sample.name, controlName=sample.compare_sample,
+				treatmentName=sample.name, controlName=comparison,
 				cpus=args.cpus, **peak_call_kwargs)
 	pipe_manager.run(cmd, target=sample.peaks, shell=True)
 	report_dict(pipe_manager, parse_peak_number(sample.peaks))
