@@ -10,6 +10,7 @@ else:
 import pandas as pd
 from ..const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
 
+
 __author__ = "Vince Reuter"
 __email__ = "vreuter@virginia.edu"
 
@@ -108,6 +109,22 @@ def _format_values_for_table(values, table):
 
 
 def _update_table(table, values, column, replace=False):
+    """
+    Update a data table (e.g., annotations sheet) with values for a column.
+
+    Single value is supported (set for each row), as is a collection of
+    atomic values (must be exactly one for each row). A function with which to
+    derive values when passed the table itself as an argument is also valid
+    as an argument for the values.
+
+    :param pandas.core.frame.DataFrame table:
+    :param object | Iterable[object] | function values: value for each row,
+        or a way to derive such values when given the table
+    :param str column: name of the column to set or update
+    :param bool replace: whether to replace the column indicated if it
+        already exists
+    :return pandas.core.frame.DataFrame: the updated table
+    """
     if column in table.columns and not replace:
         print("Column '{}' already exists, doing nothing".format(column))
     else:
