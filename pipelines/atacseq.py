@@ -46,12 +46,12 @@ class ATACseqSample(Sample):
 	def __repr__(self):
 		return "ATAC-seq sample '%s'" % self.sample_name
 
-	def set_file_paths(self):
+	def set_file_paths(self, project):
 		"""
 		Sets the paths of all files for this sample.
 		"""
 		# Inherit paths from Sample by running Sample's set_file_paths()
-		super(ATACseqSample, self).set_file_paths()
+		super(ATACseqSample, self).set_file_paths(project)
 
 		# Files in the root of the sample dir
 		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
@@ -123,8 +123,8 @@ class DNaseSample(ATACseqSample):
 	def __repr__(self):
 		return "DNase-seq sample '%s'" % self.sample_name
 
-	def set_file_paths(self):
-		super(DNaseSample, self).set_file_paths()
+	def set_file_paths(self, project):
+		super(DNaseSample, self).set_file_paths(project)
 
 
 def report_dict(pipe, stats_dict):
@@ -456,7 +456,7 @@ def main():
 		sample.paired = False
 
 	# Set file paths
-	sample.set_file_paths()
+	sample.set_file_paths(sample.prj)
 	# sample.make_sample_dirs()  # should be fixed to check if values of paths are strings and paths indeed
 
 	# Start Pypiper object
