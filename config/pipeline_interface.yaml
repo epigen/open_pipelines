@@ -42,7 +42,7 @@ wgbs.py:
   arguments:
     "--sample-name": sample_name
     "--genome": genome
-    "--input": data_path
+    "--input": data_source
     "--single-or-paired": read_type
   resources:
     default:
@@ -72,7 +72,7 @@ rrbs.py:
   arguments:
     "--sample-name": sample_name
     "--genome": genome
-    "--input": data_path
+    "--input": data_source
     "--single-or-paired": read_type
   resources:
     default:
@@ -96,7 +96,7 @@ rnaBitSeq.py:
   arguments:
     "--sample-name": sample_name
     "--genome": transcriptome
-    "--input": data_path
+    "--input": data_source
     "--single-or-paired": read_type
     "--ercc-mix": ERCC_spikein
   optional_arguments:
@@ -113,7 +113,7 @@ rnaTopHat.py:
   arguments:
     "--sample-name": sample_name
     "--genome": genome
-    "--input": data_path
+    "--input": data_source
     "--single-or-paired": read_type
   optional_arguments:
     "-w": wigsum
@@ -130,8 +130,8 @@ atacseq.py:
     "-I": sample_name
     "-G": genome
   looper_args: True
-  required_input_files: [data_path]
-  ngs_input_files: [data_path]
+  required_input_files: [data_source]
+  ngs_input_files: [data_source]
   resources:
     default:
       file_size: "0"
@@ -155,8 +155,8 @@ chipseq.py:
     "-I": sample_name
     "-G": genome
   looper_args: True
-  required_input_files: [data_path]
-  ngs_input_files: [data_path]
+  required_input_files: [data_source]
+  ngs_input_files: [data_source]
   resources:
     default:
       file_size: "0"
@@ -203,7 +203,7 @@ chiapet.py:
   arguments:
     "--sample-name": sample_name
     "--genome": genome
-    "--input": data_path
+    "--input": data_source
     "--single-or-paired": read_type
   resources:
     default:
@@ -218,7 +218,7 @@ quantseq.py:
   arguments:
     "--sample-name": sample_name
     "--genome": genome
-    "--input": data_path
+    "--input": data_source
     "--single-or-paired": read_type
   resources:
     default:
@@ -230,7 +230,7 @@ quantseq.py:
 amplicon_simple.py:
   arguments:
     "-n": sample_name
-    "-i": data_path
+    "-i": data_source
     "-a": amplicon
     "-g": guide_rna
   looper_args: True

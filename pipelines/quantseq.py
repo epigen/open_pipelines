@@ -98,7 +98,7 @@ def main():
 	sample = QuantseqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
 
 	# Check if merged
-	if len(sample.data_path.split(" ")) > 1:
+	if len(sample.data_source.split(" ")) > 1:
 		sample.merged = True
 	else:
 		sample.merged = False
@@ -157,19 +157,19 @@ def process(sample, pipe_manager, args):
 	tk = NGSTk(pm=pipe_manager)
 
 	# Merge Bam files if more than one technical replicate
-	if len(sample.data_path.split(" ")) > 1:
+	if len(sample.data_source.split(" ")) > 1:
 		pipe_manager.timestamp("Merging bam files from replicates")
 		cmd = tk.mergeBams(
-			inputBams=sample.data_path.split(" "),  # this is a list of sample paths
+			inputBams=sample.data_source.split(" "),  # this is a list of sample paths
 			outputBam=sample.unmapped
 		)
 		pipe_manager.run(cmd, sample.unmapped, shell=True)
-		sample.data_path = sample.unmapped
+		sample.data_source = sample.unmapped
 
 	# Fastqc
 	pipe_manager.timestamp("Measuring sample quality with Fastqc")
 	cmd = tk.fastqc(
-		inputBam=sample.data_path,
+		inputBam=sample.data_source,
 		outputDir=sample.paths.sample_root,
 		sampleName=sample.sample_name
 	)
@@ -178,7 +178,7 @@ def process(sample, pipe_manager, args):
 	# Convert bam to fastq
 	pipe_manager.timestamp("Converting to Fastq format")
 	cmd = tk.bam2fastq(
-		inputBam=sample.data_path,
+		inputBam=sample.data_source,
 		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
 		outputFastq2=sample.fastq2 if sample.paired else None,
 		unpairedFastq=sample.fastq_unpaired if sample.paired else None

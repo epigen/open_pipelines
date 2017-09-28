@@ -231,10 +231,10 @@ def process(sample, pipeline_config, args):
 	output_dir = sample.paths.sample_root
 
 	# Merge Bam files if more than one technical replicate
-	if len(sample.data_path.split(" ")) > 1:
+	if len(sample.data_source.split(" ")) > 1:
 		pipe.timestamp("## Merging bam files from replicates")
 		cmd = merge_bam_files(
-			inputBams=sample.data_path.split(" "),  # this is a list of sample paths
+			inputBams=sample.data_source.split(" "),  # this is a list of sample paths
 			outputBam=os.path.join(output_dir, "unaligned_merged.bam"),
 			args=args, pipe=pipe,
 			tmpdir=output_dir
@@ -244,7 +244,7 @@ def process(sample, pipeline_config, args):
 
 		input_file = os.path.join(output_dir, "unaligned_merged.bam")
 	else:
-		input_file = sample.data_path
+		input_file = sample.data_source
 
 	# Copy the input file if it is not writable
 	# (the first step requires the file to be writable which is silly)

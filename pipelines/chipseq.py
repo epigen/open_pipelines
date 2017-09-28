@@ -475,7 +475,7 @@ def main():
 		sample = ChIPseqSample(sample)
 
 	# Check if merged
-	if len(sample.data_path.split(" ")) > 1:
+	if len(sample.data_source.split(" ")) > 1:
 		sample.merged = True
 	else:
 		sample.merged = False
@@ -558,29 +558,30 @@ def process(sample, pipe_manager, args):
 	tk = NGSTk(pm=pipe_manager)
 
 	# Merge Bam files if more than one technical replicate
-	if len(sample.data_path.split(" ")) > 1:
+	if len(sample.data_source.split(" ")) > 1:
 		pipe_manager.timestamp("Merging bam files from replicates")
 		cmd = tk.merge_bams(
-			input_bams=sample.data_path.split(" "),  # this is a list of sample paths
+			input_bams=sample.data_source.split(" "),  # this is a list of sample paths
 			merged_bam=sample.unmapped
 		)
 		pipe_manager.run(cmd, sample.unmapped, shell=True)
-		sample.data_path = sample.unmapped
+		sample.data_source = sample.unmapped
 
 	# Fastqc
 	pipe_manager.timestamp("Measuring sample quality with Fastqc")
 	cmd = tk.fastqc_rename(
-		input_bam=sample.data_path,
+		input_bam=sample.data_source,
 		output_dir=sample.paths.sample_root,
 		sample_name=sample.sample_name
 	)
-	pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
-	report_dict(pipe_manager, parse_fastqc(os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), prefix="fastqc_"))
+	fastqc_target = os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip")
+	pipe_manager.run(cmd, fastqc_target, shell=True)
+	report_dict(pipe_manager, parse_fastqc(fastqc_target, prefix="fastqc_"))
 
 	# Convert bam to fastq
 	pipe_manager.timestamp("Converting to Fastq format")
 	cmd = tk.bam2fastq(
-		inputBam=sample.data_path,
+		inputBam=sample.data_source,
 		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
 		outputFastq2=sample.fastq2 if sample.paired else None,
 		unpairedFastq=sample.fastq_unpaired if sample.paired else None
