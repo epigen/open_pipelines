@@ -14,8 +14,7 @@ import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
 from looper.models import AttributeDict, Sample
-from .const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
-from .tools.sample_tools import determine_comparison
+from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
 
 
 __author__ = "Andre Rendeiro"
@@ -721,9 +720,9 @@ def process(sample, pipe_manager, args):
 	# If the sample is a control, we're finished.
 	# The type/value for the comparison Sample in this case should be either
 	# absent or a null-indicative/-suggestive value.
-	#if not hasattr(sample, CHIP_COMPARE_COLUMN) or determine_comparison(sample) in [None, "", "NA"]:
+	#if not hasattr(sample, CHIP_COMPARE_COLUMN) or getattr(sample, CHIP_COMPARE_COLUMN) in [None, "", "NA"]:
 	try:
-		comparison = determine_comparison(sample)
+		comparison = getattr(sample, CHIP_COMPARE_COLUMN)
 	except AttributeError:
 		pipe_manager.stop_pipeline()
 		print("Finished processing sample {}".format(sample.name))
