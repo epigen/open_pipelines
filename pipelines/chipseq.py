@@ -155,35 +155,36 @@ class ChIPmentation(ChIPseqSample):
 		super(ChIPmentation, self).set_file_paths(project)
 
 
-def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, normalize=False, norm_factor=1000000):
+# TODO: remove and use the pypiper version once it supports normalization factor.
+def bam_to_bigwig(input_bam, output_bigwig, genome_sizes, genome, tagmented=False, normalize=False, norm_factor=1000000):
 	import os
 	import re
 	# TODO:
-	# addjust fragment length dependent on read size and real fragment size
-	# (right now it asssumes 50bp reads with 180bp fragments)
+	# Adjust fragment length dependent on read size and real fragment size
+	# (right now it assumes 50bp reads with 180bp fragments.)
 	cmds = list()
-	transientFile = os.path.abspath(re.sub("\.bigWig", "", outputBigWig))
-	cmd1 = "bedtools bamtobed -i {0} |".format(inputBam)
+	transient_file = os.path.abspath(re.sub("\.bigWig", "", output_bigwig))
+	cmd1 = "bedtools bamtobed -i {0} |".format(input_bam)
 	if not tagmented:
-		cmd1 += " " + "bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genomeSizes)
+		cmd1 += " " + "bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genome_sizes)
 		bedfile_bounds_script = os.path.join(
 			os.path.dirname(__file__), "tools",
 			"fix_bedfile_genome_boundaries.py")
 		cmd1 += " {0} {1} |".format(bedfile_bounds_script, genome)
 	cmd1 += " " + "genomeCoverageBed {0}-bg -g {1} -i stdin > {2}.cov".format(
 		"-5 " if tagmented else "",
-		genomeSizes,
-		transientFile
+		genome_sizes,
+		transient_file
 	)
 	cmds.append(cmd1)
 	if normalize:
-		cmds.append("""awk 'NR==FNR{{sum+= $4; next}}{{ $4 = ($4 / sum) * {1}; print}}' {0}.cov {0}.cov | sort -k1,1 -k2,2n > {0}.normalized.cov""".format(transientFile, norm_factor))
-	cmds.append("bedGraphToBigWig {0}{1}.cov {2} {3}".format(transientFile, ".normalized" if normalize else "", genomeSizes, outputBigWig))
+		cmds.append("""awk 'NR==FNR{{sum+= $4; next}}{{ $4 = ($4 / sum) * {1}; print}}' {0}.cov {0}.cov | sort -k1,1 -k2,2n > {0}.normalized.cov""".format(transient_file, norm_factor))
+	cmds.append("bedGraphToBigWig {0}{1}.cov {2} {3}".format(transient_file, ".normalized" if normalize else "", genome_sizes, output_bigwig))
 	# remove tmp files
-	cmds.append("if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transientFile))
+	cmds.append("if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transient_file))
 	if normalize:
-		cmds.append("if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transientFile))
-	cmds.append("chmod 755 {0}".format(outputBigWig))
+		cmds.append("if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transient_file))
+	cmds.append("chmod 755 {0}".format(output_bigwig))
 	return cmds
 
 
@@ -580,10 +581,10 @@ def process(sample, pipe_manager, args):
 	# Convert bam to fastq
 	pipe_manager.timestamp("Converting to Fastq format")
 	cmd = tk.bam2fastq(
-		inputBam=sample.data_source,
-		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
-		outputFastq2=sample.fastq2 if sample.paired else None,
-		unpairedFastq=sample.fastq_unpaired if sample.paired else None
+		input_bam=sample.data_source,
+		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
+		output_fastq2=sample.fastq2 if sample.paired else None,
+		unpaired_fastq=sample.fastq_unpaired if sample.paired else None
 	)
 	pipe_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
 	if not sample.paired:
@@ -597,12 +598,12 @@ def process(sample, pipe_manager, args):
 	pipe_manager.timestamp("Trimming adapters from sample")
 	if pipe_manager.config.parameters.trimmer == "trimmomatic":
 		cmd = tk.trimmomatic(
-			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-			inputFastq2=sample.fastq2 if sample.paired else None,
-			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			outputFastq1unpaired=sample.trimmed1_unpaired if sample.paired else None,
-			outputFastq2=sample.trimmed2 if sample.paired else None,
-			outputFastq2unpaired=sample.trimmed2_unpaired if sample.paired else None,
+			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+			input_fastq2=sample.fastq2 if sample.paired else None,
+			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			output_fastq1_unpaired=sample.trimmed1_unpaired if sample.paired else None,
+			output_fastq2=sample.trimmed2 if sample.paired else None,
+			output_fastq2_unpaired=sample.trimmed2_unpaired if sample.paired else None,
 			cpus=args.cores,
 			adapters=pipe_manager.config.resources.adapters,
 			log=sample.trimlog
@@ -618,12 +619,12 @@ def process(sample, pipe_manager, args):
 
 	elif pipe_manager.config.parameters.trimmer == "skewer":
 		cmd = tk.skewer(
-			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-			inputFastq2=sample.fastq2 if sample.paired else None,
-			outputPrefix=os.path.join(sample.paths.unmapped, sample.sample_name),
-			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			outputFastq2=sample.trimmed2 if sample.paired else None,
-			trimLog=sample.trimlog,
+			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+			input_fastq2=sample.fastq2 if sample.paired else None,
+			output_prefix=os.path.join(sample.paths.unmapped, sample.sample_name),
+			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			output_fastq2=sample.trimmed2 if sample.paired else None,
+			trim_log=sample.trimlog,
 			cpus=args.cores,
 			adapters=pipe_manager.config.resources.adapters
 		)
@@ -637,14 +638,14 @@ def process(sample, pipe_manager, args):
 
 	# Map
 	pipe_manager.timestamp("Mapping reads with Bowtie2")
-	cmd = tk.bowtie2Map(
-		inputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-		inputFastq2=sample.trimmed2 if sample.paired else None,
-		outputBam=sample.mapped,
+	cmd = tk.bowtie2_map(
+		input_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+		input_fastq2=sample.trimmed2 if sample.paired else None,
+		output_bam=sample.mapped,
 		log=sample.aln_rates,
 		metrics=sample.aln_metrics,
-		genomeIndex=getattr(pipe_manager.config.resources.genomes, sample.genome),
-		maxInsert=pipe_manager.config.parameters.max_insert,
+		genome_index=getattr(pipe_manager.config.resources.genomes, sample.genome),
+		max_insert=pipe_manager.config.parameters.max_insert,
 		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.mapped, shell=True)
@@ -652,10 +653,10 @@ def process(sample, pipe_manager, args):
 
 	# Filter reads
 	pipe_manager.timestamp("Filtering reads for quality")
-	cmd = tk.filterReads(
-		inputBam=sample.mapped,
-		outputBam=sample.filtered,
-		metricsFile=sample.dups_metrics,
+	cmd = tk.filter_reads(
+		input_bam=sample.mapped,
+		output_bam=sample.filtered,
+		metrics_file=sample.dups_metrics,
 		paired=sample.paired,
 		cpus=args.cores,
 		Q=pipe_manager.config.parameters.read_quality
@@ -665,9 +666,9 @@ def process(sample, pipe_manager, args):
 
 	# Index bams
 	pipe_manager.timestamp("Indexing bamfiles with samtools")
-	cmd = tk.indexBam(inputBam=sample.mapped)
+	cmd = tk.index_bam(input_bam=sample.mapped)
 	pipe_manager.run(cmd, sample.mapped + ".bai", shell=True)
-	cmd = tk.indexBam(inputBam=sample.filtered)
+	cmd = tk.index_bam(input_bam=sample.filtered)
 	pipe_manager.run(cmd, sample.filtered + ".bai", shell=True)
 
 	track_dir = os.path.dirname(sample.bigwig)
@@ -677,10 +678,10 @@ def process(sample, pipe_manager, args):
 	# Make tracks
 	# right now tracks are only made for bams without duplicates
 	pipe_manager.timestamp("Making bigWig tracks from bam file")
-	cmd = bamToBigWig(
-		inputBam=sample.filtered,
-		outputBigWig=sample.bigwig,
-		genomeSizes=getattr(pipe_manager.config.resources.chromosome_sizes, sample.genome),
+	cmd = bam_to_bigwig(
+		input_bam=sample.filtered,
+		output_bigwig=sample.bigwig,
+		genome_sizes=getattr(pipe_manager.config.resources.chromosome_sizes, sample.genome),
 		genome=sample.genome,
 		tagmented=pipe_manager.config.parameters.tagmented,  # by default make extended tracks
 		normalize=pipe_manager.config.parameters.normalize_tracks,
@@ -699,17 +700,17 @@ def process(sample, pipe_manager, args):
 
 	# Count coverage genome-wide
 	pipe_manager.timestamp("Calculating genome-wide coverage")
-	cmd = tk.genomeWideCoverage(
-		inputBam=sample.filtered,
-		genomeWindows=getattr(pipe_manager.config.resources.genome_windows, sample.genome),
+	cmd = tk.genome_wide_coverage(
+		input_bam=sample.filtered,
+		genome_windows=getattr(pipe_manager.config.resources.genome_windows, sample.genome),
 		output=sample.coverage
 	)
 	pipe_manager.run(cmd, sample.coverage, shell=True)
 
 	# Calculate NSC, RSC
 	pipe_manager.timestamp("Assessing signal/noise in sample")
-	cmd = tk.peakTools(
-		inputBam=sample.filtered,
+	cmd = tk.peak_tools(
+		input_bam=sample.filtered,
 		output=sample.qc,
 		plot=sample.qc_plot,
 		cpus=args.cores
@@ -741,19 +742,19 @@ def process(sample, pipe_manager, args):
 	# TODO: include the filepaths as caller-neutral positionals/keyword args
 	# TODO (cont.) once NGSTK API is tweaked.
 	peak_call_kwargs = {
-		"outputDir": peaks_folder,
+		"output_dir": peaks_folder,
 		"broad": broad_mode,
 		"qvalue": args.qvalue
 	}
 	if args.peak_caller == "macs2":
-		cmd = tk.macs2CallPeaks(
-				treatmentBams=treatment_file, controlBams=control_file,
-                sampleName=sample.name, pvalue=args.pvalue,
+		cmd = tk.macs2_call_peaks(
+				treatment_bams=treatment_file, control_bams=control_file,
+                sample_name=sample.name, pvalue=args.pvalue,
                 genome=sample.genome, paired=sample.paired, **peak_call_kwargs)
 	else:
-		cmd = tk.sppCallPeaks(
-				treatmentBam=treatment_file, controlBam=control_file,
-				treatmentName=sample.name, controlName=comparison,
+		cmd = tk.spp_call_peaks(
+				treatment_bam=treatment_file, control_bam=control_file,
+				treatment_name=sample.name, control_name=comparison,
 				cpus=args.cpus, **peak_call_kwargs)
 	pipe_manager.run(cmd, target=sample.peaks, shell=True)
 	report_dict(pipe_manager, parse_peak_number(sample.peaks))
@@ -781,9 +782,9 @@ def process(sample, pipe_manager, args):
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
-	cmd = tk.calculate_FRiP(
-		inputBam=sample.filtered,
-		inputBed=sample.peaks,
+	cmd = tk.calculate_frip(
+		input_bam=sample.filtered,
+		input_bed=sample.peaks,
 		output=sample.frip,
 		cpus=args.cores
 	)

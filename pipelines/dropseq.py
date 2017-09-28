@@ -62,14 +62,14 @@ def arg_parser(parser):
 	return parser
 
 
-def merge_bam_files(inputBams, outputBam, args, pipe, tmpdir):
+def merge_bam_files(input_bams, output_bam, args, pipe, tmpdir):
 	cmd = 'java -Djava.io.tmpdir={}'.format(tmpdir)
 	cmd += " -Xmx{}g".format(int(args.mem) / 1000)
 	cmd += " -jar " + pipe.config.tools.piccard_jar + " MergeSamFiles"
 	cmd += " USE_THREADING=TRUE"
 	cmd += " SORT_ORDER=queryname"
-	cmd += " " + (" ".join(["INPUT=%s"] * len(inputBams))) % tuple(inputBams)
-	cmd += " OUTPUT={0}".format(outputBam)
+	cmd += " " + (" ".join(["INPUT=%s"] * len(input_bams))) % tuple(input_bams)
+	cmd += " OUTPUT={0}".format(output_bam)
 	return cmd
 
 
@@ -234,8 +234,8 @@ def process(sample, pipeline_config, args):
 	if len(sample.data_source.split(" ")) > 1:
 		pipe.timestamp("## Merging bam files from replicates")
 		cmd = merge_bam_files(
-			inputBams=sample.data_source.split(" "),  # this is a list of sample paths
-			outputBam=os.path.join(output_dir, "unaligned_merged.bam"),
+			input_bams=sample.data_source.split(" "),  # this is a list of sample paths
+			output_bam=os.path.join(output_dir, "unaligned_merged.bam"),
 			args=args, pipe=pipe,
 			tmpdir=output_dir
 		)

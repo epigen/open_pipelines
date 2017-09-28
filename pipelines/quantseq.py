@@ -160,28 +160,24 @@ def process(sample, pipe_manager, args):
 	if len(sample.data_source.split(" ")) > 1:
 		pipe_manager.timestamp("Merging bam files from replicates")
 		cmd = tk.mergeBams(
-			inputBams=sample.data_source.split(" "),  # this is a list of sample paths
-			outputBam=sample.unmapped
+			input_bams=sample.data_source.split(" "),  # this is a list of sample paths
+			output_bam=sample.unmapped
 		)
 		pipe_manager.run(cmd, sample.unmapped, shell=True)
 		sample.data_source = sample.unmapped
 
 	# Fastqc
 	pipe_manager.timestamp("Measuring sample quality with Fastqc")
-	cmd = tk.fastqc(
-		inputBam=sample.data_source,
-		outputDir=sample.paths.sample_root,
-		sampleName=sample.sample_name
-	)
+	cmd = tk.fastqc(sample.data_source, sample.paths.sample_root)
 	pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
 
 	# Convert bam to fastq
 	pipe_manager.timestamp("Converting to Fastq format")
 	cmd = tk.bam2fastq(
-		inputBam=sample.data_source,
-		outputFastq=sample.fastq1 if sample.paired else sample.fastq,
-		outputFastq2=sample.fastq2 if sample.paired else None,
-		unpairedFastq=sample.fastq_unpaired if sample.paired else None
+		input_bam=sample.data_source,
+		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
+		output_fastq2=sample.fastq2 if sample.paired else None,
+		unpaired_fastq=sample.fastq_unpaired if sample.paired else None
 	)
 	pipe_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
 	if not sample.paired:
@@ -195,12 +191,12 @@ def process(sample, pipe_manager, args):
 	pipe_manager.timestamp("Trimming adapters from sample")
 	if pipe_manager.parameters.trimmer == "trimmomatic":
 		cmd = tk.trimmomatic(
-			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-			inputFastq2=sample.fastq2 if sample.paired else None,
-			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			outputFastq1unpaired=sample.trimmed1_unpaired if sample.paired else None,
-			outputFastq2=sample.trimmed2 if sample.paired else None,
-			outputFastq2unpaired=sample.trimmed2_unpaired if sample.paired else None,
+			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+			input_fastq2=sample.fastq2 if sample.paired else None,
+			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			output_fastq1_unpaired=sample.trimmed1_unpaired if sample.paired else None,
+			output_fastq2=sample.trimmed2 if sample.paired else None,
+			output_fastq2_unpaired=sample.trimmed2_unpaired if sample.paired else None,
 			cpus=args.cores,
 			adapters=pipe_manager.resources.adapters,
 			log=sample.trimlog
@@ -216,12 +212,12 @@ def process(sample, pipe_manager, args):
 
 	elif pipe_manager.parameters.trimmer == "skewer":
 		cmd = tk.skewer(
-			inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-			inputFastq2=sample.fastq2 if sample.paired else None,
-			outputPrefix=os.path.join(sample.paths.unmapped, sample.sample_name),
-			outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			outputFastq2=sample.trimmed2 if sample.paired else None,
-			trimLog=sample.trimlog,
+			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+			input_fastq2=sample.fastq2 if sample.paired else None,
+			output_prefix=os.path.join(sample.paths.unmapped, sample.sample_name),
+			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			output_fastq2=sample.trimmed2 if sample.paired else None,
+			trim_log=sample.trimlog,
 			cpus=args.cores,
 			adapters=pipe_manager.resources.adapters
 		)
@@ -236,9 +232,9 @@ def process(sample, pipe_manager, args):
 	pipe_manager.timestamp("Quantifying read counts with kallisto")
 	cmd = tk.kallisto(
 		inputFastq=sample.trimmed1 if sample.paired else sample.trimmed,
-		inputFastq2=sample.trimmed1 if sample.paired else None,
-		outputDir=sample.paths.quant,
-		outputBam=sample.pseudomapped,
+		input_fastq2=sample.trimmed1 if sample.paired else None,
+		output_dir=sample.paths.quant,
+		output_bam=sample.pseudomapped,
 		transcriptomeIndex=pipe_manager.resources.genome_index[sample.transcriptome],
 		cpus=args.cores
 	)
