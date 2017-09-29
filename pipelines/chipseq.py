@@ -500,6 +500,9 @@ def main():
 	# or put the name in the pipeline interface.
 	pipe_manager = pypiper.PipelineManager(name="chipseq", outfolder=sample.paths.sample_root, args=args)
 
+	# DEBUG
+	print("TOOLS IN PIPE MANAGER: {}".format(hasattr(pipe_manager, "tools")))
+
 	# Start main function
 	process(sample, pipe_manager, args)
 
