@@ -721,10 +721,8 @@ def process(sample, pipe_manager, args):
 	# If the sample is a control, we're finished.
 	# The type/value for the comparison Sample in this case should be either
 	# absent or a null-indicative/-suggestive value.
-	#if not hasattr(sample, CHIP_COMPARE_COLUMN) or getattr(sample, CHIP_COMPARE_COLUMN) in [None, "", "NA"]:
-	try:
-		comparison = getattr(sample, CHIP_COMPARE_COLUMN)
-	except AttributeError:
+	comparison = getattr(sample, CHIP_COMPARE_COLUMN, None)
+	if comparison in [None, "", "NA"]:
 		pipe_manager.stop_pipeline()
 		print("Finished processing sample {}".format(sample.name))
 		return
