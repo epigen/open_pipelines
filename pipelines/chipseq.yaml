@@ -59,16 +59,15 @@ parameters:
   # Should the tracks be based on whole-read densities or 5' read positions (DNAse cuts or Tn5 tagmentation)?
   tagmented: False
 
-# Factors considered as histones
-# Factors matching this as substring
-# will be considered as well (e.g. H3K4ME3)
+# Histone names, which if matched to a substring of a target name will cause
+# the target to be considered a histone.
 histones:
   - "H2A"
   - "H2B"
   - "H3"
   - "H4"
 
-# Factors considered as broad
+# Histone modifications associated with broad peaks
 broadfactors:
   - "H3K27ME1"
   - "H3K27ME2"
