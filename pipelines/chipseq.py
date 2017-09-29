@@ -768,7 +768,7 @@ def process(sample, pipe_manager, args):
 		name_model_script = model_files_base + ".r"
 		path_model_script = os.path.join(peaks_folder, name_model_script)
 		exec_model_script = \
-				"{} {}".format(pipe_manager.tools.Rscript, path_model_script)
+				"{} {}".format(pipe_manager.config.tools.Rscript, path_model_script)
 
 		# Create the command to create and rename the model plot.
 		plot_name = model_files_base + ".pdf"
