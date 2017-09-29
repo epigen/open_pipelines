@@ -500,9 +500,6 @@ def main():
 	# or put the name in the pipeline interface.
 	pipe_manager = pypiper.PipelineManager(name="chipseq", outfolder=sample.paths.sample_root, args=args)
 
-	# DEBUG
-	print("TOOLS IN PIPE MANAGER: {}".format(hasattr(pipe_manager, "tools")))
-
 	# Start main function
 	process(sample, pipe_manager, args)
 
@@ -771,7 +768,7 @@ def process(sample, pipe_manager, args):
 		name_model_script = model_files_base + ".r"
 		path_model_script = os.path.join(peaks_folder, name_model_script)
 		exec_model_script = \
-				"{} {}".format(pipe_manager.tools.Rscript, path_model_script)
+				"{} {}".format(pipe_manager.config.tools.Rscript, path_model_script)
 
 		# Create the command to create and rename the model plot.
 		plot_name = model_files_base + ".pdf"
