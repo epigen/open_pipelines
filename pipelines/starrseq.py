@@ -341,7 +341,7 @@ def process(sample, pipe_manager, args):
 
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
-	cmd = tk.calculateFRiP(
+	cmd = tk.calculate_frip(
 		input_bam=sample.filtered,
 		input_bed=sample.peaks,
 		output=sample.frip
