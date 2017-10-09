@@ -6,6 +6,7 @@ ChIP-seq pipeline
 
 from argparse import ArgumentParser
 import os
+import re
 import sys
 
 import pandas as pd
@@ -158,7 +159,6 @@ class ChIPmentation(ChIPseqSample):
 # TODO: remove and use the pypiper version once it supports normalization factor.
 def bam_to_bigwig(input_bam, output_bigwig, genome_sizes, genome, tagmented=False, normalize=False, norm_factor=1000000):
 	import os
-	import re
 	# TODO:
 	# Adjust fragment length dependent on read size and real fragment size
 	# (right now it assumes 50bp reads with 180bp fragments.)
@@ -189,28 +189,52 @@ def bam_to_bigwig(input_bam, output_bigwig, genome_sizes, genome, tagmented=Fals
 
 
 def report_dict(pipe, stats_dict):
+	"""
+	Convenience wrapper to report a collection of pipeline results.
+
+	This writes a collection of key-value pairs to the central stats/results
+	file associated with the pipeline manager provided.
+
+	:param pipe: Pipeline manager with which to do the reporting
+	:type pipe: pypiper.PipelineManager
+	:param stats_dict: Collection of results, each mapped to a name
+	:type stats_dict: Mapping[str, object]
+	"""
 	for key, value in stats_dict.items():
 		pipe.report_result(key, value)
 
 
 def parse_fastqc(fastqc_zip, prefix=""):
 	"""
+	Fetch a handful of fastqc metrics from its output file.
+
+	Count of total reads passing filtration, poor quality reads, read length,
+	and GC content are the metrics parsed and returned.
+
+	:param fastqc_zip: Path to the zipfile created by fastqc
+	:type fastqc_zip: str
+	:param prefix: Prefix for name of each metric
+	:type prefix: str
+	:rtype: Mapping[str, object]
 	"""
 	import StringIO
 	import zipfile
-	import re
 
-	error_dict = {
-		prefix + "total_pass_filter_reads": pd.np.nan,
-		prefix + "poor_quality": pd.np.nan,
-		prefix + "read_length": pd.np.nan,
-		prefix + "GC_perc": pd.np.nan}
+	stat_names = [prefix + stat for stat in
+				  ["total_pass_filter_reads", "poor_quality",
+				   "read_length", "GC_perc"]]
 
+	def error_dict():
+		return dict((sn, pd.np.nan) for sn in stat_names)
+
+	# Read the zipfile from fastqc.
 	try:
 		zfile = zipfile.ZipFile(fastqc_zip)
 		content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
 	except:
-		return error_dict
+		return error_dict()
+
+	# Parse the unzipped fastqc data, fetching the desired metrics.
 	try:
 		line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
 		total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
@@ -220,13 +244,11 @@ def parse_fastqc(fastqc_zip, prefix=""):
 		seq_len = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
 		line = [i for i in range(len(content)) if "%GC" in content[i]][0]
 		gc_perc = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
-		return {
-			prefix + "total_pass_filter_reads": total,
-			prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
-			prefix + "read_length": seq_len,
-			prefix + "GC_perc": gc_perc}
+		values = [total, 100 * float(poor_quality) / total, seq_len, gc_perc]
+		return dict(zip(stat_names, values))
+
 	except IndexError:
-		return error_dict
+		return error_dict()
 
 
 def parse_trim_stats(stats_file, prefix="", paired_end=True):
@@ -236,7 +258,6 @@ def parse_trim_stats(stats_file, prefix="", paired_end=True):
 	:param prefix: A string to be used as prefix to the output dictionary keys.
 	:type stats_file: str
 	"""
-	import re
 
 	error_dict = {
 		prefix + "surviving_perc": pd.np.nan,
@@ -284,7 +305,6 @@ def parse_mapping_stats(stats_file, prefix="", paired_end=True):
 	:param prefix: A string to be used as prefix to the output dictionary keys.
 	:type stats_file: str
 	"""
-	import re
 
 	if not paired_end:
 		error_dict = {
@@ -377,7 +397,6 @@ def parse_duplicate_stats(stats_file, prefix=""):
 	:param prefix: A string to be used as prefix to the output dictionary keys.
 	:type stats_file: str
 	"""
-	import re
 
 	error_dict = {
 		prefix + "filtered_single_ends": pd.np.nan,
@@ -423,7 +442,6 @@ def parse_frip(frip_file, total_reads):
 	:type total_reads: int | float
 	:rtype: float
 	"""
-	import re
 
 	try:
 		with open(frip_file, "r") as handle:
@@ -707,7 +725,7 @@ def process(sample, pipe_manager, args):
 
 	# Calculate NSC, RSC
 	pipe_manager.timestamp("Assessing signal/noise in sample")
-	cmd = tk.peak_tools(
+	cmd = tk.run_spp(
 		input_bam=sample.filtered,
 		output=sample.qc,
 		plot=sample.qc_plot,

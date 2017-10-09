@@ -679,7 +679,7 @@ def process(sample, pipe_manager, args):
 
 	# Calculate NSC, RSC
 	pipe_manager.timestamp("Assessing signal/noise in sample")
-	cmd = tk.peak_tools(
+	cmd = tk.run_spp(
 		input_bam=sample.filtered,
 		output=sample.qc,
 		plot=sample.qc_plot,
