@@ -585,12 +585,13 @@ def process(sample, pipe_manager, args):
 
 	# Fastqc
 	pipe_manager.timestamp("Measuring sample quality with Fastqc")
+	fastqc_folder = os.path.join(sample.paths.sample_root, "fastqc")
 	cmd = tk.fastqc_rename(
 		input_bam=sample.data_source,
-		output_dir=sample.paths.sample_root,
+		output_dir=fastqc_folder,
 		sample_name=sample.sample_name
 	)
-	fastqc_target = os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip")
+	fastqc_target = os.path.join(fastqc_folder, sample.sample_name + "_fastqc.zip")
 	pipe_manager.run(cmd, fastqc_target, shell=True)
 	report_dict(pipe_manager, parse_fastqc(fastqc_target, prefix="fastqc_"))
 
