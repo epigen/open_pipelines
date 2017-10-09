@@ -475,7 +475,7 @@ def main():
 		sample = ChIPseqSample(sample)
 
 	# Check if merged
-	if len(sample.data_source.split(" ")) > 1:
+	if len(sample.input_file_paths) > 1:
 		sample.merged = True
 	else:
 		sample.merged = False
@@ -558,12 +558,10 @@ def process(sample, pipe_manager, args):
 	tk = NGSTk(pm=pipe_manager)
 
 	# Merge Bam files if more than one technical replicate
-	if len(sample.data_source.split(" ")) > 1:
+	if len(sample.input_file_paths) > 1:
 		pipe_manager.timestamp("Merging bam files from replicates")
 		cmd = tk.merge_bams(
-			input_bams=sample.data_source.split(" "),  # this is a list of sample paths
-			merged_bam=sample.unmapped
-		)
+			input_bams=sample.input_file_paths, merged_bam=sample.unmapped)
 		pipe_manager.run(cmd, sample.unmapped, shell=True)
 		sample.data_source = sample.unmapped
 
