@@ -418,8 +418,9 @@ def parse_frip(frip_file, total_reads):
 
 	:param frip_file: A path to a file with the FRiP output.
 	:type frip_file: str
-	:param total_reads: A Sample object with the "peaks" attribute.
-	:type total_reads: int
+	:param total_reads: Number of total reads (i.e., the denominator for the
+		FRiP calculation)
+	:type total_reads: int | float
 	:rtype: float
 	"""
 	import re
