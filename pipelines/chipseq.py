@@ -412,30 +412,29 @@ def parse_peak_number(peak_file):
 		return {"peaks": pd.np.nan}
 
 
-def parse_FRiP(frip_file, total_reads):
+def parse_frip(frip_file, total_reads):
 	"""
 	Calculates the fraction of reads in peaks for a given sample.
 
-	:param frip_file: A sting path to a file with the FRiP output.
+	:param frip_file: A path to a file with the FRiP output.
 	:type frip_file: str
 	:param total_reads: A Sample object with the "peaks" attribute.
 	:type total_reads: int
+	:rtype: float
 	"""
 	import re
 
-	error_dict = {"frip": pd.np.nan}
 	try:
 		with open(frip_file, "r") as handle:
 			content = handle.readlines()
 	except:
-		return error_dict
-
+		return pd.np.nan
 	if content[0].strip() == "":
-		return error_dict
+		return pd.np.nan
 
 	reads_in_peaks = int(re.sub("\D", "", content[0]))
-
-	return {"frip": reads_in_peaks / float(total_reads)}
+	frip = reads_in_peaks / float(total_reads)
+	return frip
 
 
 def parse_nsc_rsc(nsc_rsc_file):
@@ -788,7 +787,8 @@ def process(sample, pipe_manager, args):
 	reads_SE = float(pipe_manager.get_stat("filtered_single_ends"))
 	reads_PE = float(pipe_manager.get_stat("filtered_paired_ends"))
 	total = 0.5 * (reads_SE + reads_PE)
-	report_dict(pipe_manager, parse_FRiP(sample.frip, total))
+	frip = parse_frip(sample.frip, total)
+	pipe_manager.report_result("frip", frip)
 
 	print("Finished processing sample %s." % sample.name)
 	pipe_manager.stop_pipeline()
