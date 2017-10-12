@@ -29,6 +29,9 @@ __status__ = "Development"
 
 
 
+# Allow the sample's 'ip' (or other attribute indicating the antiody target)
+# to determine the peak calling mode, based on known characteristics of
+# binding density patterns for different targets.
 BROAD_MARKS = {
 		"H3K9ME1", "H3K9ME2", "H3K9ME3",
 		"H3K27ME1", "H3K27ME2", "H3K27ME3",
@@ -58,7 +61,9 @@ class ChIPseqSample(Sample):
 	sheet = SampleSheet("project_sheet.csv")
 	s1 = Sample(sheet.ix[0])  # here's a Sample too
 	"""
+
 	__library__ = "ChIP-seq"
+
 
 	def __init__(self, series):
 		super(ChIPseqSample, self).__init__(series)
@@ -76,8 +81,10 @@ class ChIPseqSample(Sample):
 			self.histone = any([mark.startswith(histone_code)
 								for histone_code in HISTONE_CODES])
 
+
 	def __repr__(self):
 		return "ChIP-seq sample '%s'" % self.sample_name
+
 
 	def set_file_paths(self, project):
 		"""
@@ -136,6 +143,7 @@ class ChIPseqSample(Sample):
 		self.peaks = os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
 
 
+
 class ChIPmentation(ChIPseqSample):
 	"""
 	Class to model ChIPmentation samples based on the ChIPseqSample class.
@@ -143,17 +151,22 @@ class ChIPmentation(ChIPseqSample):
 	:param series: Pandas `Series` object.
 	:type series: pandas.Series
 	"""
+
 	__library__ = "ChIPmentation"
+
 
 	def __init__(self, series):
 		super(ChIPmentation, self).__init__(series)
 		self.tagmented = True
 
+
 	def __repr__(self):
 		return "ChIPmentation sample '%s'" % self.sample_name
 
+
 	def set_file_paths(self, project):
 		super(ChIPmentation, self).set_file_paths(project)
+
 
 
 # TODO: remove and use the pypiper version once it supports normalization factor.
@@ -188,6 +201,7 @@ def bam_to_bigwig(input_bam, output_bigwig, genome_sizes, genome, tagmented=Fals
 	return cmds
 
 
+
 def report_dict(pipe, stats_dict):
 	"""
 	Convenience wrapper to report a collection of pipeline results.
@@ -202,6 +216,7 @@ def report_dict(pipe, stats_dict):
 	"""
 	for key, value in stats_dict.items():
 		pipe.report_result(key, value)
+
 
 
 def parse_fastqc(fastqc_zip, prefix=""):
@@ -251,6 +266,7 @@ def parse_fastqc(fastqc_zip, prefix=""):
 		return error_dict()
 
 
+
 def parse_trim_stats(stats_file, prefix="", paired_end=True):
 	"""
 	:param stats_file: sambamba output file with duplicate statistics.
@@ -296,6 +312,7 @@ def parse_trim_stats(stats_file, prefix="", paired_end=True):
 			prefix + "trim_loss_perc": ((total - float(surviving)) / total) * 100}
 	except IndexError:
 		return error_dict
+
 
 
 def parse_mapping_stats(stats_file, prefix="", paired_end=True):
@@ -388,6 +405,7 @@ def parse_mapping_stats(stats_file, prefix="", paired_end=True):
 			return error_dict
 
 
+
 def parse_duplicate_stats(stats_file, prefix=""):
 	"""
 	Parses sambamba markdup output, returns series with values.
@@ -423,12 +441,14 @@ def parse_duplicate_stats(stats_file, prefix=""):
 		return error_dict
 
 
+
 def parse_peak_number(peak_file):
 	from subprocess import check_output
 	try:
 		return {"peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
 	except:
 		return {"peaks": pd.np.nan}
+
 
 
 def parse_frip(frip_file, total_reads):
@@ -456,6 +476,7 @@ def parse_frip(frip_file, total_reads):
 	return frip
 
 
+
 def parse_nsc_rsc(nsc_rsc_file):
 	"""
 	Parses the values of NSC and RSC from a stats file.
@@ -468,6 +489,12 @@ def parse_nsc_rsc(nsc_rsc_file):
 		return {"NSC": nsc_rsc[8].squeeze(), "RSC": nsc_rsc[9].squeeze()}
 	except:
 		return {"NSC": pd.np.nan, "RSC": pd.np.nan}
+
+
+
+class ChipseqPipeline(pypiper.Pipeline):
+	pass
+
 
 
 def main():
@@ -501,12 +528,11 @@ def main():
 	sample.paths = AttributeDict(sample.paths.__dict__)
 
 	# Flag version of read type since it's a binary; handle case vagaries.
-	read_type = sample.read_type
 	try:
-		sample.paired = (read_type.lower() == "paired")
+		sample.paired = (sample.read_type.lower() == "paired")
 	except AttributeError:
 		print("WARNING: non-string read_type: {} ({})".format(
-			read_type, type(read_type)))
+			sample.read_type, type(sample.read_type)))
 		sample.paired = False
 
 	# Set file paths
@@ -520,6 +546,7 @@ def main():
 
 	# Start main function
 	process(sample, pipe_manager, args)
+
 
 
 def arg_parser(parser):
@@ -545,6 +572,7 @@ def arg_parser(parser):
 	parser.add_argument("--pvalue", type=float, default=0.001, help="MACS2 p-value")
 	parser.add_argument("--qvalue", type=float, help="Q-value for peak calling")
 	return parser
+
 
 
 def process(sample, pipe_manager, args):
@@ -752,15 +780,14 @@ def process(sample, pipe_manager, args):
 	peaks_folder = sample.paths.peaks
 	treatment_file = sample.filtered
 	control_file = sample.filtered.replace(sample.name, comparison)
+
 	if not os.path.exists(peaks_folder):
 		os.makedirs(peaks_folder)
 	# TODO: include the filepaths as caller-neutral positionals/keyword args
 	# TODO (cont.) once NGSTK API is tweaked.
+
 	peak_call_kwargs = {
-		"output_dir": peaks_folder,
-		"broad": broad_mode,
-		"qvalue": args.qvalue
-	}
+		"output_dir": peaks_folder, "broad": broad_mode, "qvalue": args.qvalue}
 	if args.peak_caller == "macs2":
 		cmd = tk.macs2_call_peaks(
 				treatment_bams=treatment_file, control_bams=control_file,
@@ -772,7 +799,8 @@ def process(sample, pipe_manager, args):
 				treatment_name=sample.name, control_name=comparison,
 				cpus=args.cpus, **peak_call_kwargs)
 	pipe_manager.run(cmd, target=sample.peaks, shell=True)
-	report_dict(pipe_manager, parse_peak_number(sample.peaks))
+	num_peaks = parse_peak_number(sample.peaks)
+	pipe_manager.report_result("peaks", num_peaks)
 
 	# Do plotting as desired.
 	if args.peak_caller == "macs2" and not broad_mode:

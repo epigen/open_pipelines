@@ -352,6 +352,7 @@ def process(sample, pipe_manager, args):
 	pipe_manager.stop_pipeline()
 
 
+
 if __name__ == '__main__':
 	try:
 		sys.exit(main())
