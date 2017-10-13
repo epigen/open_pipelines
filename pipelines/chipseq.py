@@ -86,6 +86,28 @@ class ChIPseqSample(Sample):
 		return "ChIP-seq sample '%s'" % self.sample_name
 
 
+	@property
+	def background_sample_name(self):
+		"""
+		Determine the name of the background sample for this sample.
+
+		:return str | NoneType: name of sample used as background/control
+			for this one, perhaps null if this sample itself represents a
+			background/control.
+		"""
+		return getattr(self, CHIP_COMPARE_COLUMN)
+
+
+	@property
+	def is_control(self):
+		"""
+		Determine whether this sample is a ChIP background/control.
+
+		:return bool: whether this sample is a ChIP background/control
+		"""
+		return self.background_sample_name in [None, "", "NA"]
+
+
 	def set_file_paths(self, project):
 		"""
 		Sets the paths of all files for this sample.
@@ -493,7 +515,16 @@ def parse_nsc_rsc(nsc_rsc_file):
 
 
 class ChipseqPipeline(pypiper.Pipeline):
-	pass
+	""" Definition of the ChIP-seq pipeline in terms of processing stages. """
+	
+	def stages(self):
+		"""
+		The processing stages/phases that define the ChIP-seq pipeline.
+		
+		:return: 
+		"""
+		pass
+		
 
 
 
@@ -575,6 +606,174 @@ def arg_parser(parser):
 
 
 
+def fastqc(sample, pipeline_manager, ngstk):
+	"""
+	Run fastqc for the given sample, governed by configured ngstk instance.
+
+	:param looper.models.Sample sample:
+	:param pypiper.PipelineManager pipeline_manager: execution supervisor and 
+		metadata manager for a pipeline instance
+	:param pypiper.NGSTk ngstk: NGS toolkit; specifically, an object providing 
+		a method for running fastqc, that accepts a BAM file, and folder name 
+		or path for fastqc output, and a sample name.
+	"""
+	pipeline_manager.timestamp("Measuring sample quality with Fastqc")
+	fastqc_folder = os.path.join(sample.paths.sample_root, "fastqc")
+	cmd = ngstk.fastqc_rename(
+		input_bam=sample.data_source,
+		output_dir=fastqc_folder,
+		sample_name=sample.sample_name
+	)
+	fastqc_target = os.path.join(fastqc_folder,
+								 sample.sample_name + "_fastqc.zip")
+	pipeline_manager.run(cmd, fastqc_target, shell=True)
+	report_dict(pipeline_manager, parse_fastqc(fastqc_target, prefix="fastqc_"))
+
+
+
+def convert_reads_format(sample, pipeline_manager, ngstk):
+	# Convert bam to fastq
+	pipeline_manager.timestamp("Converting to Fastq format")
+	cmd = tk.bam2fastq(
+		input_bam=sample.data_source,
+		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
+		output_fastq2=sample.fastq2 if sample.paired else None,
+		unpaired_fastq=sample.fastq_unpaired if sample.paired else None
+	)
+	pipeline_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq,
+					 shell=True)
+	if not sample.paired:
+		pipeline_manager.clean_add(sample.fastq, conditional=True)
+	if sample.paired:
+		pipeline_manager.clean_add(sample.fastq1, conditional=True)
+		pipeline_manager.clean_add(sample.fastq2, conditional=True)
+		pipeline_manager.clean_add(sample.fastq_unpaired, conditional=True)
+
+
+
+def trim_reads(sample, pipeline_manager, ngstk):
+	# Convert bam to fastq
+	pipeline_manager.timestamp("Converting to Fastq format")
+	cmd = ngstk.bam2fastq(
+		input_bam=sample.data_source,
+		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
+		output_fastq2=sample.fastq2 if sample.paired else None,
+		unpaired_fastq=sample.fastq_unpaired if sample.paired else None
+	)
+	pipeline_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq,
+					 shell=True)
+	if not sample.paired:
+		pipeline_manager.clean_add(sample.fastq, conditional=True)
+	if sample.paired:
+		pipeline_manager.clean_add(sample.fastq1, conditional=True)
+		pipeline_manager.clean_add(sample.fastq2, conditional=True)
+		pipeline_manager.clean_add(sample.fastq_unpaired, conditional=True)
+
+
+
+# TODO: how to communicate cores to this step once it's run-registered.
+def alignment(sample, pipeline_manager, ngstk, cores=4):
+	# Map
+	pipeline_manager.timestamp("Mapping reads with Bowtie2")
+	cmd = ngstk.bowtie2_map(
+		input_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+		input_fastq2=sample.trimmed2 if sample.paired else None,
+		output_bam=sample.mapped,
+		log=sample.aln_rates,
+		metrics=sample.aln_metrics,
+		genome_index=getattr(pipeline_manager.config.resources.genomes,
+							 sample.genome),
+		max_insert=pipeline_manager.config.parameters.max_insert,
+		cpus=cores
+	)
+	pipeline_manager.run(cmd, sample.mapped, shell=True)
+	mapstats = parse_mapping_stats(sample.aln_rates, paired_end=sample.paired)
+	report_dict(pipeline_manager, mapstats)
+
+
+# TODO: communicate cores
+def filter_reads(sample, pipeline_manager, ngstk, cores=4):
+	# Filter reads
+	pipeline_manager.timestamp("Filtering reads for quality")
+	cmd = ngstk.filter_reads(
+		input_bam=sample.mapped,
+		output_bam=sample.filtered,
+		metrics_file=sample.dups_metrics,
+		paired=sample.paired,
+		cpus=cores,
+		Q=pipeline_manager.config.parameters.read_quality
+	)
+	pipeline_manager.run(cmd, sample.filtered, shell=True)
+	report_dict(pipeline_manager, parse_duplicate_stats(sample.dups_metrics))
+
+
+
+def index_bams(sample, pipeline_manager, ngstk):
+	# Index bams
+	pipeline_manager.timestamp("Indexing bamfiles with samtools")
+	cmd = ngstk.index_bam(input_bam=sample.mapped)
+	pipeline_manager.run(cmd, sample.mapped + ".bai", shell=True)
+	cmd = ngstk.index_bam(input_bam=sample.filtered)
+	pipeline_manager.run(cmd, sample.filtered + ".bai", shell=True)
+
+
+
+def make_tracks(sample, pipeline_manager, ngstk):
+	# Make tracks
+	
+	track_dir = os.path.dirname(sample.bigwig)
+	if not os.path.exists(track_dir):
+		os.makedirs(track_dir)
+	
+	# right now tracks are only made for bams without duplicates
+	pipeline_manager.timestamp("Making bigWig tracks from bam file")
+	cmd = bam_to_bigwig(
+		input_bam=sample.filtered,
+		output_bigwig=sample.bigwig,
+		genome_sizes=getattr(pipeline_manager.config.resources.chromosome_sizes, sample.genome),
+		genome=sample.genome,
+		tagmented=pipeline_manager.config.parameters.tagmented,  # by default make extended tracks
+		normalize=pipeline_manager.config.parameters.normalize_tracks,
+		norm_factor=pipeline_manager.config.parameters.norm_factor
+	)
+	pipeline_manager.run(cmd, sample.bigwig, shell=True)
+
+
+
+# TODO: communicate cores
+def compute_metrics(sample, pipeline_manager, ngstk, cores=4):
+	# Plot fragment distribution
+	if sample.paired and not os.path.exists(sample.insertplot):
+		pipeline_manager.timestamp("Plotting insert size distribution")
+		ngstk.plot_atacseq_insert_sizes(
+			bam=sample.filtered,
+			plot=sample.insertplot,
+			output_csv=sample.insertdata
+		)
+
+	# Count coverage genome-wide
+	pipeline_manager.timestamp("Calculating genome-wide coverage")
+	cmd = ngstk.genome_wide_coverage(
+		input_bam=sample.filtered,
+		genome_windows=getattr(pipeline_manager.config.resources.genome_windows,
+							   sample.genome),
+		output=sample.coverage
+	)
+	pipeline_manager.run(cmd, sample.coverage, shell=True)
+
+	# Calculate NSC, RSC
+	pipeline_manager.timestamp("Assessing signal/noise in sample")
+	cmd = ngstk.run_spp(
+		input_bam=sample.filtered,
+		output=sample.qc,
+		plot=sample.qc_plot,
+		cpus=cores
+	)
+	pipeline_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
+	report_dict(pipeline_manager, parse_nsc_rsc(sample.qc))
+
+
+
 def process(sample, pipe_manager, args):
 	"""
 	This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
@@ -587,7 +786,7 @@ def process(sample, pipe_manager, args):
 	:param argparse.Namespace args: binding between command-line option and
 		argument, for specifying values various pipeline parameters
 	"""
-	print("Start processing ChIP-seq sample %s." % sample.name)
+	print("Start processing ChIP-seq sample: '{}'.".format(sample.name))
 
 	for path in ["sample_root"] + sample.paths.__dict__.keys():
 		try:
@@ -597,7 +796,8 @@ def process(sample, pipe_manager, args):
 		if not exists:
 			try:
 				os.mkdir(sample.paths[path])
-			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
+			except OSError("Cannot create '{}' path: "
+						   "{}".format(path, sample.paths[path])):
 				raise
 
 	# Create NGSTk instance
@@ -766,12 +966,12 @@ def process(sample, pipe_manager, args):
 	# If the sample is a control, we're finished.
 	# The type/value for the comparison Sample in this case should be either
 	# absent or a null-indicative/-suggestive value.
-	comparison = getattr(sample, CHIP_COMPARE_COLUMN, None)
-	if comparison in [None, "", "NA"]:
+	if sample.is_control:
 		pipe_manager.stop_pipeline()
 		print("Finished processing sample {}".format(sample.name))
 		return
 
+	comparison = sample.background_sample_name
 	# The pipeline will now wait for the comparison sample file to be completed
 	pipe_manager._wait_for_file(sample.filtered.replace(sample.name, comparison))
 
