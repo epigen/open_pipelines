@@ -427,7 +427,7 @@ def main():
 		description="ATAC-seq pipeline."
 	)
 	parser = arg_parser(parser)
-	parser = pypiper.add_pypiper_args(parser, groups=["all"])
+	parser = pypiper.add_pypiper_args(parser, all_args=True)
 	args = parser.parse_args()
 	if args.sample_config is None:
 		parser.print_help()

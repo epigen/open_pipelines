@@ -104,7 +104,7 @@ def main():
         description="Amplicon pipeline."
     )
     parser = arg_parser(parser)
-    parser = pypiper.add_pypiper_args(parser, groups=["all"])
+    parser = pypiper.add_pypiper_args(parser, all_args=True)
     args = parser.parse_args()
 
     print("Processing sample {}.".format(args.sample_name))
