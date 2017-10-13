@@ -5,6 +5,7 @@ ChIP-seq pipeline
 """
 
 from argparse import ArgumentParser
+from functools import partial
 import os
 import re
 import sys
@@ -13,7 +14,8 @@ import pandas as pd
 import yaml
 
 import pypiper
-from pypiper.ngstk import NGSTk
+from pypiper import NGSTk, Stage
+from pypiper.utils import parse_cores
 from looper.models import AttributeDict, Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
 
@@ -27,6 +29,10 @@ __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
+
+
+# Default to 4 cores for each operation that supports core count specification.
+parse_cores = partial(parse_cores, default=4)
 
 
 # Allow the sample's 'ip' (or other attribute indicating the antiody target)
@@ -516,15 +522,70 @@ def parse_nsc_rsc(nsc_rsc_file):
 
 class ChipseqPipeline(pypiper.Pipeline):
 	""" Definition of the ChIP-seq pipeline in terms of processing stages. """
-	
+
+
+	def __init__(self, sample, manager, peak_caller=None, cores=None):
+		"""
+		Define the pipeline instance with a sample and manager.
+		
+		Optionally, a peak caller name, number of processing cores, and 
+
+		:param looper.models.Sample sample:
+		:param pypiper.manager.PipelineManager manager:
+		:param str peak_caller: name of peak caller to use, optional
+		:param str | int cores: number of cores to use for each pipeline
+			operation that supports core count specification, optional;
+			if this isn't specified, the value associated with the manager
+			or the default for this module will be used.
+		"""
+
+		pipe_name, _ = os.path.splitext(os.path.split(__file__)[1])
+		super(ChipseqPipeline, self).__init__(name=pipe_name)
+
+		# Essential pipeline attributes
+		self.sample = sample
+		self.manager = manager
+
+		# Pass cores to stages via manager.
+		if cores is not None:
+			self.manager.cores = cores
+
+		# Ensure that we have a peak caller set on manager.
+		if peak_caller:
+			try:
+				old_caller = manager.peak_caller
+			except AttributeError:
+				pass
+			else:
+				if old_caller and old_caller != peak_caller:
+					print("Replacing '{}' with '{}' as peak caller".
+						  format(old_caller, peak_caller))
+			manager.peak_caller = peak_caller
+		elif not getattr(manager, "peak_caller"):
+			raise ValueError("Name of peak caller must be passed directly "
+							 "to pipeline or via cmdl_args.")
+
+		# The pipeline manager contextualizes the NGSTk, providing the
+		# configuration data as well as I/O and logging infrastructure,
+		# and a framework within which to run relevant commands.
+		self.ngstk = NGSTk(pm=manager)
+
+
 	def stages(self):
 		"""
 		The processing stages/phases that define the ChIP-seq pipeline.
 		
-		:return: 
+		:return list[pypiper.Stage]: sequence of pipeline phases/stages
 		"""
-		pass
-		
+		always = [fastqc, convert_reads_format, trim_reads, alignment,
+				  filter_reads, index_bams, make_tracks, compute_metrics]
+		f_args = (self.sample, self.manager, self.ngstk)
+		invariant = [Stage(f, f_args, {}) for f in always]
+		if self.sample.is_control:
+			return invariant
+		else:
+			conditional = [wait_for_control, call_peaks, calc_frip]
+			return [Stage(f, f_args, {}) for f in conditional]
 
 
 
@@ -573,10 +634,15 @@ def main():
 	# Start Pypiper object
 	# Best practice is to name the pipeline with the name of the script;
 	# or put the name in the pipeline interface.
-	pipe_manager = pypiper.PipelineManager(name="chipseq", outfolder=sample.paths.sample_root, args=args)
+	pl_mgr = pypiper.PipelineManager(
+		name="chipseq", outfolder=sample.paths.sample_root, args=args)
+
+	# With the sample and the manager created, we're ready to run the pipeline.
+	pipeline = ChipseqPipeline(sample, pl_mgr)
+	pipeline.run()
 
 	# Start main function
-	process(sample, pipe_manager, args)
+	#process(sample, pl_mgr, args)
 
 
 
@@ -632,9 +698,18 @@ def fastqc(sample, pipeline_manager, ngstk):
 
 
 def convert_reads_format(sample, pipeline_manager, ngstk):
-	# Convert bam to fastq
+	"""
+	Convert a sequencing reads file to another format.
+
+	:param looper.models.Sample sample: sample for which to convert reads file
+	:param pypiper.PipelineManager pipeline_manager: execution manager
+	:param pypiper.NGSTk ngstk: configured NGS processing framework;
+		required if and only if conversion function is not provided.
+	"""
+
+	# Convert BAM to FASTQ.
 	pipeline_manager.timestamp("Converting to Fastq format")
-	cmd = tk.bam2fastq(
+	cmd = ngstk.bam2fastq(
 		input_bam=sample.data_source,
 		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
 		output_fastq2=sample.fastq2 if sample.paired else None,
@@ -642,6 +717,8 @@ def convert_reads_format(sample, pipeline_manager, ngstk):
 	)
 	pipeline_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq,
 					 shell=True)
+
+	# Update cleanup registry.
 	if not sample.paired:
 		pipeline_manager.clean_add(sample.fastq, conditional=True)
 	if sample.paired:
@@ -671,8 +748,7 @@ def trim_reads(sample, pipeline_manager, ngstk):
 
 
 
-# TODO: how to communicate cores to this step once it's run-registered.
-def alignment(sample, pipeline_manager, ngstk, cores=4):
+def alignment(sample, pipeline_manager, ngstk, cores=None):
 	# Map
 	pipeline_manager.timestamp("Mapping reads with Bowtie2")
 	cmd = ngstk.bowtie2_map(
@@ -684,15 +760,15 @@ def alignment(sample, pipeline_manager, ngstk, cores=4):
 		genome_index=getattr(pipeline_manager.config.resources.genomes,
 							 sample.genome),
 		max_insert=pipeline_manager.config.parameters.max_insert,
-		cpus=cores
+		cpus=parse_cores(cores, pipeline_manager)
 	)
 	pipeline_manager.run(cmd, sample.mapped, shell=True)
 	mapstats = parse_mapping_stats(sample.aln_rates, paired_end=sample.paired)
 	report_dict(pipeline_manager, mapstats)
 
 
-# TODO: communicate cores
-def filter_reads(sample, pipeline_manager, ngstk, cores=4):
+
+def filter_reads(sample, pipeline_manager, ngstk, cores=None):
 	# Filter reads
 	pipeline_manager.timestamp("Filtering reads for quality")
 	cmd = ngstk.filter_reads(
@@ -700,7 +776,7 @@ def filter_reads(sample, pipeline_manager, ngstk, cores=4):
 		output_bam=sample.filtered,
 		metrics_file=sample.dups_metrics,
 		paired=sample.paired,
-		cpus=cores,
+		cpus=parse_cores(cores, pipeline_manager),
 		Q=pipeline_manager.config.parameters.read_quality
 	)
 	pipeline_manager.run(cmd, sample.filtered, shell=True)
@@ -740,8 +816,7 @@ def make_tracks(sample, pipeline_manager, ngstk):
 
 
 
-# TODO: communicate cores
-def compute_metrics(sample, pipeline_manager, ngstk, cores=4):
+def compute_metrics(sample, pipeline_manager, ngstk, cores=None):
 	# Plot fragment distribution
 	if sample.paired and not os.path.exists(sample.insertplot):
 		pipeline_manager.timestamp("Plotting insert size distribution")
@@ -767,10 +842,112 @@ def compute_metrics(sample, pipeline_manager, ngstk, cores=4):
 		input_bam=sample.filtered,
 		output=sample.qc,
 		plot=sample.qc_plot,
-		cpus=cores
+		cpus=parse_cores(cores, pipeline_manager)
 	)
 	pipeline_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
 	report_dict(pipeline_manager, parse_nsc_rsc(sample.qc))
+
+
+
+def wait_for_control(sample, pipeline_manager, ngstk):
+	comparison = sample.background_sample_name
+	# The pipeline will now wait for the comparison sample file to be completed
+	path_block_file = sample.filtered.replace(sample.name, comparison)
+	pipeline_manager._wait_for_file(path_block_file)
+
+
+
+# TODO: need to receive comparison sample name and args from caller.
+# TODO: spin off the plotting functionality into its own stage, or use a
+# TODO (cont.): substage mechanism if implemented
+def call_peaks(sample, pipeline_manager, ngstk, cores=None, caller=None):
+	"""
+	Perform the pipeline's peak calling operation.
+
+	:param looper.models.Sample sample: the sample for which to call peaks
+	:param pypiper.PipelineManager pipeline_manager: the manager for a
+		pipeline instance
+	:param pypiper.NGSTk ngstk: configured NGS functions framework
+	:param str | int cores: number of processing cores available for use
+	:param str caller: name of the peak caller to use
+	"""
+
+	comparison = sample.background_sample_name
+
+	# Call peaks.
+	broad_mode = sample.broad
+	peaks_folder = sample.paths.peaks
+	treatment_file = sample.filtered
+	control_file = sample.filtered.replace(sample.name, comparison)
+
+	if not os.path.exists(peaks_folder):
+		os.makedirs(peaks_folder)
+	# TODO: include the filepaths as caller-neutral positionals/keyword args
+	# TODO (cont.) once NGSTK API is tweaked.
+
+	peak_call_kwargs = {"output_dir": peaks_folder,
+						"broad": broad_mode, "qvalue": pipeline_manager.qvalue}
+
+	# Allow SPP but lean heavily toward MACS2.
+	caller = caller or getattr(pipeline_manager, "peak_caller", "macs2")
+	if caller not in ["spp", "macs2"]:
+		raise ValueError("Unsupported peak caller: {}".format(caller))
+	if caller == "spp":
+		cmd = ngstk.spp_call_peaks(
+			treatment_bam=treatment_file, control_bam=control_file,
+			treatment_name=sample.name, control_name=comparison,
+			cpus=parse_cores(cores, pipeline_manager), **peak_call_kwargs)
+	else:
+		cmd = ngstk.macs2_call_peaks(
+			treatment_bams=treatment_file, control_bams=control_file,
+			sample_name=sample.name, pvalue=pipeline_manager.pvalue,
+			genome=sample.genome, paired=sample.paired, **peak_call_kwargs)
+
+	pipeline_manager.run(cmd, target=sample.peaks, shell=True)
+	num_peaks = parse_peak_number(sample.peaks)
+	pipeline_manager.report_result("peaks", num_peaks)
+
+	if caller == "macs2" and not broad_mode:
+		pipeline_manager.timestamp("Plotting MACS2 model")
+		model_files_base = sample.name + "_model"
+
+		# Create the command to run the model script.
+		name_model_script = model_files_base + ".r"
+		path_model_script = os.path.join(peaks_folder, name_model_script)
+		exec_model_script = \
+			"{} {}".format(pipeline_manager.config.tools.Rscript,
+						   path_model_script)
+
+		# Create the command to create and rename the model plot.
+		plot_name = model_files_base + ".pdf"
+		src_plot_path = os.path.join(os.getcwd(), plot_name)
+		dst_plot_path = os.path.join(peaks_folder, plot_name)
+		rename_model_plot = "mv {} {}".format(src_plot_path, dst_plot_path)
+
+		# Run the model script and rename the model plot.
+		pipeline_manager.run([exec_model_script, rename_model_plot],
+						 target=dst_plot_path, shell=True, nofail=True)
+
+
+
+def calc_frip(sample, pipeline_manager, ngstk, cores=None):
+	# Calculate fraction of reads in peaks (FRiP)
+	pipeline_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
+	cmd = ngstk.calculate_frip(
+		input_bam=sample.filtered,
+		input_bed=sample.peaks,
+		output=sample.frip,
+		cpus=parse_cores(cores, pipeline_manager)
+	)
+	pipeline_manager.run(cmd, sample.frip, shell=True)
+	reads_SE = float(pipeline_manager.get_stat("filtered_single_ends"))
+	reads_PE = float(pipeline_manager.get_stat("filtered_paired_ends"))
+	total = 0.5 * (reads_SE + reads_PE)
+	frip = parse_frip(sample.frip, total)
+	pipeline_manager.report_result("frip", frip)
+
+	print("Finished processing sample %s." % sample.name)
+	pipeline_manager.stop_pipeline()
 
 
 
