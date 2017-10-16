@@ -571,6 +571,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		self.ngstk = NGSTk(pm=manager)
 
 
+	@property
 	def stages(self):
 		"""
 		The processing stages/phases that define the ChIP-seq pipeline.
