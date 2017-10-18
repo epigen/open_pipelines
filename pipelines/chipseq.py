@@ -540,11 +540,17 @@ class ChipseqPipeline(pypiper.Pipeline):
 		"""
 
 		pipe_name, _ = os.path.splitext(os.path.split(__file__)[1])
-		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
 		# Essential pipeline attributes
 		self.sample = sample
 		self.manager = manager
+
+		# The pipeline manager contextualizes the NGSTk, providing the
+		# configuration data as well as I/O and logging infrastructure,
+		# and a framework within which to run relevant commands.
+		self.tk = NGSTk(pm=manager)
+
+		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
 		# Pass cores to stages via manager.
 		if cores is not None:
@@ -565,11 +571,6 @@ class ChipseqPipeline(pypiper.Pipeline):
 			raise ValueError("Name of peak caller must be passed directly "
 							 "to pipeline or via cmdl_args.")
 
-		# The pipeline manager contextualizes the NGSTk, providing the
-		# configuration data as well as I/O and logging infrastructure,
-		# and a framework within which to run relevant commands.
-		self.ngstk = NGSTk(pm=manager)
-
 
 	def stages(self):
 		"""
@@ -579,7 +580,8 @@ class ChipseqPipeline(pypiper.Pipeline):
 		"""
 		always = [fastqc, convert_reads_format, trim_reads, alignment,
 				  filter_reads, index_bams, make_tracks, compute_metrics]
-		f_args = (self.sample, self.manager, self.ngstk)
+
+		f_args = (self.sample, self.manager, self.tk)
 		invariant = [Stage(f, f_args, {}) for f in always]
 		if self.sample.is_control:
 			return invariant
