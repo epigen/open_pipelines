@@ -540,7 +540,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		"""
 
 		pipe_name, _ = os.path.splitext(os.path.split(__file__)[1])
-		super(ChipseqPipeline, self).__init__(name=pipe_name)
+		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
 		# Essential pipeline attributes
 		self.sample = sample
@@ -591,12 +591,15 @@ class ChipseqPipeline(pypiper.Pipeline):
 
 
 def main():
+
 	# Parse command-line arguments
 	parser = ArgumentParser(
 		prog="chipseq-pipeline",
 		description="ChIP-seq pipeline."
 	)
 	parser = arg_parser(parser)
+
+	print("Adding pypiper arguments")
 	parser = pypiper.add_pypiper_args(parser, all_args=True)
 	args = parser.parse_args()
 	if args.sample_config is None:
