@@ -543,7 +543,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
 		# Essential pipeline attributes
-		self.sample = sample
+		self._sample = sample
 		self.manager = manager
 
 		# Pass cores to stages via manager.
@@ -569,6 +569,11 @@ class ChipseqPipeline(pypiper.Pipeline):
 		# configuration data as well as I/O and logging infrastructure,
 		# and a framework within which to run relevant commands.
 		self.ngstk = NGSTk(pm=manager)
+
+
+	@property
+	def sample(self):
+		return self._sample
 
 
 	@property
