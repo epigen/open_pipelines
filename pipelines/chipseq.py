@@ -567,7 +567,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 					print("Replacing '{}' with '{}' as peak caller".
 						  format(old_caller, peak_caller))
 			manager.peak_caller = peak_caller
-		elif not getattr(manager, "peak_caller"):
+		elif not getattr(manager.params, "peak_caller", None):
 			raise ValueError("Name of peak caller must be passed directly "
 							 "to pipeline or via cmdl_args.")
 
