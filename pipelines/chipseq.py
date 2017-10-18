@@ -640,7 +640,8 @@ def main():
 
 	# With the sample and the manager created, we're ready to run the pipeline.
 	pipeline = ChipseqPipeline(sample, pl_mgr)
-	pipeline.run()
+	pipeline.run(start=args.start,
+				 stop_at=args.stop_at, stop_after=args.stop_after)
 
 	# Start main function
 	#process(sample, pl_mgr, args)
