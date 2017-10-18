@@ -574,7 +574,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 			return invariant
 		else:
 			conditional = [wait_for_control, call_peaks, calc_frip]
-			return [Stage(f, f_args, {}) for f in conditional]
+			return [Stage(f, f_args, {}) for f in invariant + conditional]
 
 
 
