@@ -657,23 +657,22 @@ def arg_parser(parser):
 	Global options for pipeline.
 	"""
 	parser.add_argument(
-		"-y", "--sample-yaml",
-		dest="sample_config",
+		"--sample-yaml", dest="sample_config",
 		help="Yaml config file with sample attributes; in addition to "
 			"sample_name, this should define '{rt}', as 'single' or "
 			"'paired'; 'ip', with the mark analyzed in a sample, and "
 			"'{comparison}' with the name of a control sample (if the "
-			"sample itself is not a control.)".format(rt="read_type", comparison=CHIP_COMPARE_COLUMN)
+			"sample itself is not a control.)".format(
+			rt="read_type", comparison=CHIP_COMPARE_COLUMN)
 	)
 	parser.add_argument(
-		"-p", "--peak-caller",
-		dest="peak_caller",
-		choices=["macs2", "spp"],
-		help="Peak caller algorithm.",
-		default="macs2"
+		"--peak-caller", choices=["macs2", "spp"], default="macs2",
+		help="Name of peak calling program.",
 	)
-	parser.add_argument("--pvalue", type=float, default=0.001, help="MACS2 p-value")
-	parser.add_argument("--qvalue", type=float, help="Q-value for peak calling")
+	parser.add_argument(
+		"--pvalue", type=float, default=0.001, help="MACS2 p-value")
+	parser.add_argument(
+		"--qvalue", type=float, help="Q-value for peak calling")
 	return parser
 
 
@@ -699,7 +698,8 @@ def fastqc(sample, pipeline_manager, ngstk):
 	fastqc_target = os.path.join(fastqc_folder,
 								 sample.sample_name + "_fastqc.zip")
 	pipeline_manager.run(cmd, fastqc_target, shell=True)
-	report_dict(pipeline_manager, parse_fastqc(fastqc_target, prefix="fastqc_"))
+	fastqc_result = parse_fastqc(fastqc_target, prefix="fastqc_")
+	report_dict(pipeline_manager, fastqc_result)
 
 
 
