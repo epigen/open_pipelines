@@ -524,7 +524,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 	""" Definition of the ChIP-seq pipeline in terms of processing stages. """
 
 
-	def __init__(self, sample, manager, peak_caller=None, cores=None):
+	def __init__(self, sample, manager, peak_caller, cores=None):
 		"""
 		Define the pipeline instance with a sample and manager.
 		
@@ -532,7 +532,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 
 		:param looper.models.Sample sample:
 		:param pypiper.manager.PipelineManager manager:
-		:param str peak_caller: name of peak caller to use, optional
+		:param str peak_caller: name of peak caller to use
 		:param str | int cores: number of cores to use for each pipeline
 			operation that supports core count specification, optional;
 			if this isn't specified, the value associated with the manager
@@ -550,26 +550,13 @@ class ChipseqPipeline(pypiper.Pipeline):
 		# and a framework within which to run relevant commands.
 		self.tk = NGSTk(pm=manager)
 
+		self.peak_caller = peak_caller
+
 		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
 		# Pass cores to stages via manager.
 		if cores is not None:
 			self.manager.cores = cores
-
-		# Ensure that we have a peak caller set on manager.
-		if peak_caller:
-			try:
-				old_caller = manager.peak_caller
-			except AttributeError:
-				pass
-			else:
-				if old_caller and old_caller != peak_caller:
-					print("Replacing '{}' with '{}' as peak caller".
-						  format(old_caller, peak_caller))
-			manager.peak_caller = peak_caller
-		elif not getattr(manager.params, "peak_caller", None):
-			raise ValueError("Name of peak caller must be passed directly "
-							 "to pipeline or via cmdl_args.")
 
 
 	def stages(self):
@@ -643,7 +630,7 @@ def main():
 		name="chipseq", outfolder=sample.paths.sample_root, args=args)
 
 	# With the sample and the manager created, we're ready to run the pipeline.
-	pipeline = ChipseqPipeline(sample, pl_mgr)
+	pipeline = ChipseqPipeline(sample, pl_mgr, peak_caller=args.peak_caller)
 	pipeline.run(start=args.start,
 				 stop_at=args.stop_at, stop_after=args.stop_after)
 
