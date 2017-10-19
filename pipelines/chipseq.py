@@ -701,9 +701,20 @@ def fastqc(sample, pipeline_manager, ngstk):
 	:param pypiper.NGSTk ngstk: NGS toolkit; specifically, an object providing 
 		a method for running fastqc, that accepts a BAM file, and folder name 
 		or path for fastqc output, and a sample name.
+	:raise ValueError: if path determined for fastqc folder exists but is
+		not a directory
 	"""
 	pipeline_manager.timestamp("Measuring sample quality with Fastqc")
 	fastqc_folder = os.path.join(sample.paths.sample_root, "fastqc")
+
+	if not os.path.exists(fastqc_folder):
+		os.makedirs(fastqc_folder)
+	elif os.path.isdir(fastqc_folder):
+		print("Warning: fastqc folder already exists: '{}'".format(fastqc_folder))
+	else:
+		raise ValueError("Path for fastqc folder exists but is not directory: "
+						 "'{}'".format(fastqc_folder))
+
 	cmd = ngstk.fastqc_rename(
 		input_bam=sample.data_source,
 		output_dir=fastqc_folder,
