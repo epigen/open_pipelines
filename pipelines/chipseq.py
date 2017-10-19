@@ -568,14 +568,10 @@ class ChipseqPipeline(pypiper.Pipeline):
 		always = [merge_input, fastqc, convert_reads_format,
 				  trim_reads, alignment, filter_reads,
 				  index_bams, make_tracks, compute_metrics]
-
+		treatment_only = [wait_for_control, call_peaks, calc_frip]
 		f_args = (self.sample, self.manager, self.ngstk)
-		invariant = [Stage(f, f_args, {}) for f in always]
-		if self.sample.is_control:
-			return invariant
-		else:
-			conditional = [wait_for_control, call_peaks, calc_frip]
-			return [Stage(f, f_args, {}) for f in invariant + conditional]
+		funcs = always if self.sample.is_control else always + treatment_only
+		return [Stage(f, f_args, {}) for f in funcs]
 
 
 
