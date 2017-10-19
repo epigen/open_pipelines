@@ -565,6 +565,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		
 		:return list[pypiper.Stage]: sequence of pipeline phases/stages
 		"""
+		# TODO: why fastqc before trimming (as it's been)?
 		always = [merge_input, fastqc, convert_reads_format,
 				  trim_reads, alignment, filter_reads,
 				  index_bams, make_tracks, compute_metrics]
@@ -735,15 +736,15 @@ def convert_reads_format(sample, pipeline_manager, ngstk):
 	"""
 
 	# Convert BAM to FASTQ.
-	pipeline_manager.timestamp("Converting to Fastq format")
+	pipeline_manager.timestamp("Converting from BAM to FASTQ")
 	cmd = ngstk.bam2fastq(
 		input_bam=sample.data_source,
 		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
 		output_fastq2=sample.fastq2 if sample.paired else None,
 		unpaired_fastq=sample.fastq_unpaired if sample.paired else None
 	)
-	pipeline_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq,
-					 shell=True)
+	pipeline_manager.run(
+		cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
 
 	# Update cleanup registry.
 	if not sample.paired:
@@ -755,23 +756,63 @@ def convert_reads_format(sample, pipeline_manager, ngstk):
 
 
 
-def trim_reads(sample, pipeline_manager, ngstk):
-	# Convert bam to fastq
-	pipeline_manager.timestamp("Converting to Fastq format")
-	cmd = ngstk.bam2fastq(
-		input_bam=sample.data_source,
-		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
-		output_fastq2=sample.fastq2 if sample.paired else None,
-		unpaired_fastq=sample.fastq_unpaired if sample.paired else None
-	)
-	pipeline_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq,
-					 shell=True)
-	if not sample.paired:
-		pipeline_manager.clean_add(sample.fastq, conditional=True)
-	if sample.paired:
-		pipeline_manager.clean_add(sample.fastq1, conditional=True)
-		pipeline_manager.clean_add(sample.fastq2, conditional=True)
-		pipeline_manager.clean_add(sample.fastq_unpaired, conditional=True)
+# TODO: why are we only reporting trimming stats for skewer, not trimmomatic?
+def trim_reads(sample, pipeline_manager, ngstk, cores=None):
+	"""
+	Perform read trimming.
+
+	:param looper.models.Sample sample: sample for which to convert reads file
+	:param pypiper.PipelineManager pipeline_manager: execution manager
+	:param pypiper.NGSTk ngstk: configured NGS processing framework
+	:param int | str cores: number of CPUs to allow for read trimming process
+	"""
+	pipeline_manager.timestamp("Trimming adapters from sample")
+	if pipeline_manager.config.parameters.trimmer == "trimmomatic":
+		cmd = ngstk.trimmomatic(
+			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+			input_fastq2=sample.fastq2 if sample.paired else None,
+			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			output_fastq1_unpaired=sample.trimmed1_unpaired if sample.paired else None,
+			output_fastq2=sample.trimmed2 if sample.paired else None,
+			output_fastq2_unpaired=sample.trimmed2_unpaired if sample.paired else None,
+			cpus=parse_cores(cores, pipeline_manager),
+			adapters=pipeline_manager.config.resources.adapters,
+			log=sample.trimlog
+		)
+		pipeline_manager.run(cmd,
+						 sample.trimmed1 if sample.paired else sample.trimmed,
+						 shell=True)
+		if not sample.paired:
+			pipeline_manager.clean_add(sample.trimmed, conditional=True)
+		else:
+			pipeline_manager.clean_add(sample.trimmed1, conditional=True)
+			pipeline_manager.clean_add(sample.trimmed1_unpaired, conditional=True)
+			pipeline_manager.clean_add(sample.trimmed2, conditional=True)
+			pipeline_manager.clean_add(sample.trimmed2_unpaired, conditional=True)
+
+	elif pipeline_manager.config.parameters.trimmer == "skewer":
+		cmd = ngstk.skewer(
+			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+			input_fastq2=sample.fastq2 if sample.paired else None,
+			output_prefix=os.path.join(sample.paths.unmapped,
+									   sample.sample_name),
+			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+			output_fastq2=sample.trimmed2 if sample.paired else None,
+			trim_log=sample.trimlog,
+			cpus=parse_cores(cores, pipeline_manager),
+			adapters=pipeline_manager.config.resources.adapters
+		)
+		pipeline_manager.run(cmd,
+						 sample.trimmed1 if sample.paired else sample.trimmed,
+						 shell=True)
+		if not sample.paired:
+			pipeline_manager.clean_add(sample.trimmed, conditional=True)
+		else:
+			pipeline_manager.clean_add(sample.trimmed1, conditional=True)
+			pipeline_manager.clean_add(sample.trimmed2, conditional=True)
+		report_dict(pipeline_manager,
+					parse_trim_stats(sample.trimlog, prefix="trim_",
+									 paired_end=sample.paired))
 
 
 
