@@ -548,7 +548,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		# The pipeline manager contextualizes the NGSTk, providing the
 		# configuration data as well as I/O and logging infrastructure,
 		# and a framework within which to run relevant commands.
-		self.tk = NGSTk(pm=manager)
+		self.ngstk = NGSTk(pm=manager)
 
 		self.peak_caller = peak_caller
 
@@ -565,10 +565,11 @@ class ChipseqPipeline(pypiper.Pipeline):
 		
 		:return list[pypiper.Stage]: sequence of pipeline phases/stages
 		"""
-		always = [fastqc, convert_reads_format, trim_reads, alignment,
-				  filter_reads, index_bams, make_tracks, compute_metrics]
+		always = [merge_input, fastqc, convert_reads_format,
+				  trim_reads, alignment, filter_reads,
+				  index_bams, make_tracks, compute_metrics]
 
-		f_args = (self.sample, self.manager, self.tk)
+		f_args = (self.sample, self.manager, self.ngstk)
 		invariant = [Stage(f, f_args, {}) for f in always]
 		if self.sample.is_control:
 			return invariant
@@ -661,6 +662,32 @@ def arg_parser(parser):
 	parser.add_argument(
 		"--qvalue", type=float, help="Q-value for peak calling")
 	return parser
+
+
+
+def merge_input(sample, pipeline_manager, ngstk):
+	"""
+	Handle multiple input files for a single sample by merging.
+
+	Sometimes, a ChIP-seq sample will have a single input but other times we
+	want to merge input files (e.g., replicates). A call to this function
+	handles either case, acting only if the given sample has multiple input
+	files defined. If so, this call designates the sample's 'unmapped'
+	attribute (a filepath) as its 'data_source.'
+
+	:param looper.models.Sample sample: the being processed, for which to
+		merge input files if needed.
+	:param pypiper.PipelineManager pipeline_manager: Handler of control flow
+		and data management for a running pipeline.
+	:param pypiper.NGSTk ngstk: collection of NGS utility functions
+	"""
+	# Merge Bam files if more than one technical replicate
+	if len(sample.input_file_paths) > 1:
+		pipeline_manager.timestamp("Merging bam files from replicates")
+		cmd = ngstk.merge_bams(
+			input_bams=sample.input_file_paths, merged_bam=sample.unmapped)
+		pipeline_manager.run(cmd, sample.unmapped, shell=True)
+		sample.data_source = sample.unmapped
 
 
 
