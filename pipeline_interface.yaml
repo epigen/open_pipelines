@@ -1,140 +1,159 @@
-# The protocol mappings explains how the looper should map from a sample protocol
-# (like RNA-seq) to a particular pipeline (like rnaseq.py), or group of pipelines.
-# You can map multiple pipelines to a single protocol if you want samples of a
-# type to kick of more than one pipeline run
-
 protocol_mapping:
-  ATAC: atacseq.py
-  ATAC-SEQ: atacseq.py
-  CHIP: chipseq.py
-  CHIP-SEQ: chipseq.py
-  CHIPMENTATION: chipseq.py
-  STARR: starrseq.py
-  STARR-SEQ: starrseq.py
-  ChIA-PET: chiapet.py
-  QUANT-SEQ: quantseq.py
-  Amplicon: amplicon_simple.py
-
-# The pipelines section describes how looper, which submits jobs, knows
-# what resources to request for a pipeline, and what arguments to pass to the
-# pipeline. For each pipeline, you specify two components: an arguments list,
-# and a resources list, like so:
+    AMPLICON: amplicon_simple
+    ATAC-SEQ: atacseq
+    ATACSEQ: atacseq
+    ATAC: atacseq
+    CHIP-SEQ: chipseq
+    CHIPSEQ: chipseq
+    CHIP: chipseq
+    CHIPMENTATION: chipseq
+    DNASE-SEQ: atacseq
+    DNASESEQ: atacseq
+    DNASE: atacseq
+    DROP-SEQ: dropseq
+    DROPSEQ: dropseq
+    QUANT-SEQ: quantseq
+    QUANTSEQ: quantseq
+    STARR-SEQ: starrseq
+    STARRSEQ: starrseq
+    STARR: starrseq
 
 pipelines:
-  atacseq.py:
-    name: ATAC-SEQ
-    path: pipelines/atacseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "16000"
-        time: "08:00:00"
-      medium:
-        file_size: "1"
-        cores: "8"
-        mem: "32000"
-        time: "1-12:00:00"
-      high:
-        file_size: "2"
-        cores: "12"
-        mem: "64000"
-        time: "4-00:00:00"
-  chipseq.py:
-    path: pipelines/chipseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "16000"
-        time: "08:00:00"
-      medium:
-        file_size: "1"
-        cores: "8"
-        mem: "32000"
-        time: "1-12:00:00"
-      high:
-        file_size: "2"
-        cores: "12"
-        mem: "64000"
-        time: "4-00:00:00"
-  starrseq.py:
-    path: pipelines/starrseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "16000"
-        time: "08:00:00"
-      medium:
-        file_size: "1"
-        cores: "8"
-        mem: "32000"
-        time: "1-12:00:00"
-      high:
-        file_size: "2"
-        cores: "12"
-        mem: "64000"
-        time: "4-00:00:00"
-  quantseq.py:
-    path: pipelines/quantseq.py
-    name: QUANT-SEQ
-    looper_args: True
-    arguments:
-      "--sample-name": sample_name
-      "--genome": genome
-      "--input": data_path
-      "--single-or-paired": read_type
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "12000"
-        time: "12-00:00:00"
-  amplicon_simple.py:
-    path: pipelines/amplicon_simple.py
-    arguments:
-      "-n": sample_name
-      "-i": data_path
-      "-a": amplicon
-      "-g": guide_rna
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "1"
-        mem: "8000"
-        time: "0:30:00"
-  dropseq.py:
-    path: pipelines/dropseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "8"
-        mem: "60000"
-        time: "1-12:00:00"
-      high:
-        file_size: "4"
-        cores: "8"
-        mem: "80000"
-        time: "3-12:00:00"
+    amplicon_simple:
+        name: amplicon_simple
+        path: pipelines/amplicon_simple.py
+        arguments:
+            "-n": sample_name
+            "-i": data_path
+            "-a": amplicon
+            "-g": guide_rna
+        looper_args: True
+        resources:
+            default:
+                file_size: "0"
+                cores: "1"
+                mem: "8000"
+                time: "0:30:00"
+
+    atacseq:
+        name: ATAC-seq
+        sample_subtypes: 
+            ATAC-seq: ATACseqSample
+            DNASE-SEQ: DNaseSample
+            ATAC: ATACseqSample
+            DNASE: DNaseSample
+        path: pipelines/atacseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-I": sample_name
+            "-G": genome
+        looper_args: True
+        required_input_files: [data_path]
+        ngs_input_files: [data_path]
+        resources:
+            default:
+                file_size: "0"
+                cores: "4"
+                mem: "16000"
+                time: "08:00:00"
+            medium:
+                file_size: "1"
+                cores: "8"
+                mem: "32000"
+                time: "1-12:00:00"
+            high:
+                file_size: "2"
+                cores: "12"
+                mem: "64000"
+                time: "4-00:00:00"
+
+    chipseq:
+        name: ChIP-seq
+        sample_subtypes: ChIPseqSample
+        path: pipelines/chipseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-I": sample_name
+            "-G": genome
+        looper_args: True
+        required_input_files: [data_path]
+        ngs_input_files: [data_path]
+        resources:
+            default:
+                file_size: "0"
+                cores: "4"
+                mem: "16000"
+                time: "08:00:00"
+            medium:
+                file_size: "1"
+                cores: "8"
+                mem: "32000"
+                time: "1-12:00:00"
+            high:
+                file_size: "2"
+                cores: "12"
+                mem: "64000"
+                time: "4-00:00:00"
+
+    dropseq:
+        name: Drop-seq
+        path: pipelines/dropseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-I": sample_name
+            "-G": genome
+        looper_args: True
+        resources:
+            default:
+                file_size: "0"
+                cores: "8"
+                mem: "60000"
+                time: "1-12:00:00"
+            high:
+                file_size: "4"
+                cores: "8"
+                mem: "80000"
+                time: "3-12:00:00"
+
+    quantseq:
+        name: Quant-seq
+        sample_subtypes: QuantseqSample
+        path: pipelines/quantseq.py
+        looper_args: True
+        arguments:
+            "--sample-name": sample_name
+            "--genome": genome
+            "--input": data_path
+            "--single-or-paired": read_type
+        resources:
+            default:
+                file_size: "0"
+                cores: "4"
+                mem: "12000"
+                time: "12-00:00:00"
+
+    starrseq:
+        name: STARR-seq
+        sample_subtypes: STARRseqSample
+        path: pipelines/starrseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-I": sample_name
+            "-G": genome
+        looper_args: True
+        resources:
+            default:
+                file_size: "0"
+                cores: "4"
+                mem: "16000"
+                time: "08:00:00"
+            medium:
+                file_size: "1"
+                cores: "8"
+                mem: "32000"
+                time: "1-12:00:00"
+            high:
+                file_size: "2"
+                cores: "12"
+                mem: "64000"
+                time: "4-00:00:00"
