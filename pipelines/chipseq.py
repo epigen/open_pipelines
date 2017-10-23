@@ -14,7 +14,7 @@ import pandas as pd
 import yaml
 
 import pypiper
-from pypiper import NGSTk, Stage
+from pypiper import build_command, NGSTk, Stage
 from pypiper.utils import parse_cores
 from looper.models import AttributeDict, Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
@@ -565,9 +565,8 @@ class ChipseqPipeline(pypiper.Pipeline):
 		
 		:return list[pypiper.Stage]: sequence of pipeline phases/stages
 		"""
-		# TODO: why fastqc before trimming (as it's been)?
-		always = [merge_input, fastqc, convert_reads_format,
-				  trim_reads, alignment, filter_reads,
+		always = [merge_input, convert_reads_format,
+				  trim_reads, align_reads, filter_reads,
 				  index_bams, make_tracks, compute_metrics]
 		treatment_only = [wait_for_control, call_peaks, calc_frip]
 		f_args = (self.sample, self.manager, self.ngstk)
@@ -756,8 +755,9 @@ def convert_reads_format(sample, pipeline_manager, ngstk):
 
 
 
-# TODO: why are we only reporting trimming stats for skewer, not trimmomatic?
-def trim_reads(sample, pipeline_manager, ngstk, cores=None):
+# TODO: why were we only reporting trimming stats for skewer, not trimmomatic?
+def trim_reads(sample, pipeline_manager, ngstk,
+			   cores=None, fastqc_folder="fastqc"):
 	"""
 	Perform read trimming.
 
@@ -765,58 +765,68 @@ def trim_reads(sample, pipeline_manager, ngstk, cores=None):
 	:param pypiper.PipelineManager pipeline_manager: execution manager
 	:param pypiper.NGSTk ngstk: configured NGS processing framework
 	:param int | str cores: number of CPUs to allow for read trimming process
+	:param str fastqc_folder: name of folder for fastqc output
 	"""
+
 	pipeline_manager.timestamp("Trimming adapters from sample")
-	if pipeline_manager.config.parameters.trimmer == "trimmomatic":
-		cmd = ngstk.trimmomatic(
-			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
-			input_fastq2=sample.fastq2 if sample.paired else None,
-			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			output_fastq1_unpaired=sample.trimmed1_unpaired if sample.paired else None,
-			output_fastq2=sample.trimmed2 if sample.paired else None,
-			output_fastq2_unpaired=sample.trimmed2_unpaired if sample.paired else None,
-			cpus=parse_cores(cores, pipeline_manager),
-			adapters=pipeline_manager.config.resources.adapters,
-			log=sample.trimlog
-		)
-		pipeline_manager.run(cmd,
-						 sample.trimmed1 if sample.paired else sample.trimmed,
-						 shell=True)
-		if not sample.paired:
-			pipeline_manager.clean_add(sample.trimmed, conditional=True)
-		else:
-			pipeline_manager.clean_add(sample.trimmed1, conditional=True)
-			pipeline_manager.clean_add(sample.trimmed1_unpaired, conditional=True)
-			pipeline_manager.clean_add(sample.trimmed2, conditional=True)
-			pipeline_manager.clean_add(sample.trimmed2_unpaired, conditional=True)
 
-	elif pipeline_manager.config.parameters.trimmer == "skewer":
-		cmd = ngstk.skewer(
-			input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
-			input_fastq2=sample.fastq2 if sample.paired else None,
-			output_prefix=os.path.join(sample.paths.unmapped,
-									   sample.sample_name),
-			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-			output_fastq2=sample.trimmed2 if sample.paired else None,
-			trim_log=sample.trimlog,
-			cpus=parse_cores(cores, pipeline_manager),
-			adapters=pipeline_manager.config.resources.adapters
-		)
-		pipeline_manager.run(cmd,
-						 sample.trimmed1 if sample.paired else sample.trimmed,
-						 shell=True)
-		if not sample.paired:
-			pipeline_manager.clean_add(sample.trimmed, conditional=True)
-		else:
-			pipeline_manager.clean_add(sample.trimmed1, conditional=True)
-			pipeline_manager.clean_add(sample.trimmed2, conditional=True)
-		report_dict(pipeline_manager,
-					parse_trim_stats(sample.trimlog, prefix="trim_",
-									 paired_end=sample.paired))
+	# Collect trimmer-agnostic keyword arguments.
+	if sample.paired:
+		in_fq1 = sample.fastq1
+		in_fq2 = sample.fastq2
+		out_fq1 = sample.trimmed1
+		out_fq2 = sample.trimmed2
+	else:
+		in_fq1 = sample.fastq
+		in_fq2 = None
+		out_fq1 = sample.trimmed
+		out_fq2 = None
+	cores = parse_cores(cores, pipeline_manager)
+	kwargs = {"input_fastq1": in_fq1, "input_fastq2": in_fq2,
+			  "output_fastq1": out_fq1, "output_fastq2": out_fq2,
+			  "cpus": cores,
+			  "adapters": pipeline_manager.config.resources.adapters,
+			  "log": sample.trimlog}
+
+	# Collect trimmer-specific keyword arguments and files to clean.
+	trimmer = pipeline_manager.config.parameters.trimmer
+	if trimmer == "trimmomatic":
+		build_trim_cmd = ngstk.trimmomatic
+		out_fq1_unpaired = getattr(sample, "trimmed1_unpaired", None)
+		out_fq2_unpaired = getattr(sample, "trimmed2_unpaired", None)
+		trimmer_specific_kwargs = {"output_fastq1_unpaired": out_fq1_unpaired,
+				 				   "output_fastq2_unpaired": out_fq2_unpaired}
+		clean_files = [sample.trimmed1, sample.trimmed1_unpaired,
+					   sample.trimmed2, sample.trimmed2_unpaired] \
+			if sample.paired else [sample.trimmed]
+	elif trimmer == "skewer":
+		build_trim_cmd = ngstk.skewer
+		out_pre = os.path.join(sample.paths.unmapped, sample.sample_name)
+		trimmer_specific_kwargs = {"output_prefix": out_pre}
+		clean_files = [sample.trimmed1, sample.trimmed2] \
+			if sample.paired else [sample.trimmed]
+	else:
+		raise ValueError("Unsupported read trimmer: {}".format(trimmer))
+
+	# Create the command and the path to the output target.
+	kwargs.update(trimmer_specific_kwargs)
+	cmd = build_trim_cmd(**kwargs)
+	target = sample.trimmed1 if sample.paired else sample.trimmed
+
+	# Run, clean, and report.
+	run_fastqc = ngstk.check_trim(
+		target, paired_end=sample.paired, trimmed_fastq_R2=out_fq2,
+		fastqc_folder=fastqc_folder)
+	pipeline_manager.run(cmd, target, follow=run_fastqc, shell=True)
+	for f in clean_files:
+		pipeline_manager.clean_add(f, conditional=True)
+	trim_stat = parse_trim_stats(
+		sample.trimlog, prefix="trim_", paired_end=sample.paired)
+	report_dict(pipeline_manager, trim_stat)
 
 
 
-def alignment(sample, pipeline_manager, ngstk, cores=None):
+def align_reads(sample, pipeline_manager, ngstk, cores=None):
 	# Map
 	pipeline_manager.timestamp("Mapping reads with Bowtie2")
 	cmd = ngstk.bowtie2_map(
@@ -1114,7 +1124,7 @@ def process(sample, pipe_manager, args):
 			output_prefix=os.path.join(sample.paths.unmapped, sample.sample_name),
 			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
 			output_fastq2=sample.trimmed2 if sample.paired else None,
-			trim_log=sample.trimlog,
+			log=sample.trimlog,
 			cpus=args.cores,
 			adapters=pipe_manager.config.resources.adapters
 		)

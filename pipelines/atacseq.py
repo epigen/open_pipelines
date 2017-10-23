@@ -570,7 +570,7 @@ def process(sample, pipe_manager, args):
 			output_prefix=os.path.join(sample.paths.unmapped, sample.sample_name),
 			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
 			output_fastq2=sample.trimmed2 if sample.paired else None,
-			trim_log=sample.trimlog,
+			log=sample.trimlog,
 			cpus=args.cores,
 			adapters=pipe_manager.config.resources.adapters
 		)

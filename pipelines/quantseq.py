@@ -217,7 +217,7 @@ def process(sample, pipe_manager, args):
 			output_prefix=os.path.join(sample.paths.unmapped, sample.sample_name),
 			output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
 			output_fastq2=sample.trimmed2 if sample.paired else None,
-			trim_log=sample.trimlog,
+			log=sample.trimlog,
 			cpus=args.cores,
 			adapters=pipe_manager.resources.adapters
 		)
@@ -231,11 +231,11 @@ def process(sample, pipe_manager, args):
 	# With kallisto from unmapped reads
 	pipe_manager.timestamp("Quantifying read counts with kallisto")
 	cmd = tk.kallisto(
-		inputFastq=sample.trimmed1 if sample.paired else sample.trimmed,
+		input_fastq=sample.trimmed1 if sample.paired else sample.trimmed,
 		input_fastq2=sample.trimmed1 if sample.paired else None,
 		output_dir=sample.paths.quant,
 		output_bam=sample.pseudomapped,
-		transcriptomeIndex=pipe_manager.resources.genome_index[sample.transcriptome],
+		transcriptome_index=pipe_manager.resources.genome_index[sample.transcriptome],
 		cpus=args.cores
 	)
 	pipe_manager.run(cmd, sample.kallisto_quant, shell=True, nofail=True)
