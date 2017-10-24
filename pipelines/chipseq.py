@@ -14,7 +14,7 @@ import pandas as pd
 import yaml
 
 import pypiper
-from pypiper import build_command, NGSTk, Stage
+from pypiper import NGSTk, Stage
 from pypiper.utils import parse_cores
 from looper.models import AttributeDict, Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
@@ -88,10 +88,6 @@ class ChIPseqSample(Sample):
 								for histone_code in HISTONE_CODES])
 
 
-	def __repr__(self):
-		return "ChIP-seq sample '%s'" % self.sample_name
-
-
 	@property
 	def background_sample_name(self):
 		"""
@@ -123,56 +119,58 @@ class ChIPseqSample(Sample):
 		super(ChIPseqSample, self).set_file_paths(project)
 
 		# Files in the root of the sample dir
-		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
-		self.trimlog = os.path.join(self.paths.sample_root, self.sample_name + ".trimlog.txt")
-		self.aln_rates = os.path.join(self.paths.sample_root, self.sample_name + ".aln_rates.txt")
-		self.aln_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".aln_metrics.txt")
-		self.dups_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".dups_metrics.txt")
+		self.fastqc = os.path.join(self.paths.sample_root, self.name + ".fastqc.zip")
+		self.trimlog = os.path.join(self.paths.sample_root, self.name + ".trimlog.txt")
+		self.aln_rates = os.path.join(self.paths.sample_root, self.name + ".aln_rates.txt")
+		self.aln_metrics = os.path.join(self.paths.sample_root, self.name + ".aln_metrics.txt")
+		self.dups_metrics = os.path.join(self.paths.sample_root, self.name + ".dups_metrics.txt")
 
 		# Unmapped: merged bam, fastq, trimmed fastq
 		self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
-		self.unmapped = os.path.join(self.paths.unmapped, self.sample_name + ".bam")
-		self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
-		self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
-		self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
-		self.fastq_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
-		self.trimmed = os.path.join(self.paths.unmapped, self.sample_name + ".trimmed.fastq")
-		self.trimmed1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
-		self.trimmed2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
-		self.trimmed1_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
-		self.trimmed2_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+		self.unmapped = os.path.join(self.paths.unmapped, self.name + ".bam")
+		self.fastq = os.path.join(self.paths.unmapped, self.name + ".fastq")
+		self.fastq1 = os.path.join(self.paths.unmapped, self.name + ".1.fastq")
+		self.fastq2 = os.path.join(self.paths.unmapped, self.name + ".2.fastq")
+		self.fastq_unpaired = os.path.join(self.paths.unmapped, self.name + ".unpaired.fastq")
+		self.trimmed = os.path.join(self.paths.unmapped, self.name + ".trimmed.fastq")
+		self.trimmed1 = os.path.join(self.paths.unmapped, self.name + ".1.trimmed.fastq")
+		self.trimmed2 = os.path.join(self.paths.unmapped, self.name + ".2.trimmed.fastq")
+		self.trimmed1_unpaired = os.path.join(self.paths.unmapped, self.name + ".1_unpaired.trimmed.fastq")
+		self.trimmed2_unpaired = os.path.join(self.paths.unmapped, self.name + ".2_unpaired.trimmed.fastq")
 
 		# Mapped: mapped, duplicates marked, removed, reads shifted
 		self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
-		self.mapped = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.bam")
-		self.filtered = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.filtered.bam")
+		self.mapped = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.bam")
+		self.filtered = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.filtered.bam")
 
 		# Files in the root of the sample dir
-		self.frip = os.path.join(self.paths.sample_root, self.sample_name + "_FRiP.txt")
+		self.frip = os.path.join(self.paths.sample_root, self.name + "_FRiP.txt")
 
 		# Coverage: read coverage in windows genome-wide
 		self.paths.coverage = os.path.join(self.paths.sample_root, "coverage")
-		self.coverage = os.path.join(self.paths.coverage, self.sample_name + ".cov")
+		self.coverage = os.path.join(self.paths.coverage, self.name + ".cov")
 
 		self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
 		self.insertdata = os.path.join(self.paths.sample_root, self.name + "_insertLengths.csv")
 
-		self.qc = os.path.join(self.paths.sample_root, self.sample_name + "_qc.tsv")
-		self.qc_plot = os.path.join(self.paths.sample_root, self.sample_name + "_qc.pdf")
+		self.qc = os.path.join(self.paths.sample_root, self.name + "_qc.tsv")
+		self.qc_plot = os.path.join(self.paths.sample_root, self.name + "_qc.pdf")
 
 		bigwig_subfolder = "bigwig_{}".format(self.genome)
 		bigwig_folder = os.path.join(
 				self.prj.metadata.results_subdir, self.name, bigwig_subfolder)
-		bigwig_file = "CHIP_{}.bw".format(self.sample_name)
+		bigwig_file = "CHIP_{}.bw".format(self.name)
 		self.bigwig = os.path.join(bigwig_folder, bigwig_file)
 
-		# Peaks: peaks called and derivate files
+		# Peak-related paths
 		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
-		self.peaks = os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
+		type_peaks_file = "broadPeak" if self.broad else "narrowPeak"
+		peaks_fname = "{}_peaks.{}".format(self.name, type_peaks_file)
+		self.peaks = os.path.join(self.paths.peaks, peaks_fname)
 
 
 
-class ChIPmentation(ChIPseqSample):
+class ChIPmentationSample(ChIPseqSample):
 	"""
 	Class to model ChIPmentation samples based on the ChIPseqSample class.
 
@@ -184,17 +182,8 @@ class ChIPmentation(ChIPseqSample):
 
 
 	def __init__(self, series):
-		super(ChIPmentation, self).__init__(series)
+		super(ChIPmentationSample, self).__init__(series)
 		self.tagmented = True
-
-
-	def __repr__(self):
-		return "ChIPmentation sample '%s'" % self.sample_name
-
-
-	def set_file_paths(self, project):
-		super(ChIPmentation, self).set_file_paths(project)
-
 
 
 # TODO: remove and use the pypiper version once it supports normalization factor.
@@ -734,16 +723,27 @@ def convert_reads_format(sample, pipeline_manager, ngstk):
 		required if and only if conversion function is not provided.
 	"""
 
+	if sample.paired:
+		out_fq1 = sample.fastq1
+		out_fq2 = sample.fastq2
+		outfiles = [out_fq1, out_fq2]
+		unpaired_fq = sample.fastq_unpaired
+	else:
+		out_fq1 = sample.fastq
+		out_fq2 = None
+		outfiles = [out_fq1]
+		unpaired_fq = None
+
+	kwargs = {"input_bam": sample.data_source, "output_fastq": out_fq1,
+			  "output_fastq2": out_fq2, "unpaired_fastq": unpaired_fq}
+
 	# Convert BAM to FASTQ.
 	pipeline_manager.timestamp("Converting from BAM to FASTQ")
-	cmd = ngstk.bam2fastq(
-		input_bam=sample.data_source,
-		output_fastq=sample.fastq1 if sample.paired else sample.fastq,
-		output_fastq2=sample.fastq2 if sample.paired else None,
-		unpaired_fastq=sample.fastq_unpaired if sample.paired else None
-	)
-	pipeline_manager.run(
-		cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
+	cmd = ngstk.bam2fastq(**kwargs)
+	validate = ngstk.check_fastq(
+			input_files=sample.data_source.split(" "),
+			output_files=outfiles, paired_end=sample.paired)
+	pipeline_manager.run(cmd, target=out_fq1, follow=validate, shell=True)
 
 	# Update cleanup registry.
 	if not sample.paired:
