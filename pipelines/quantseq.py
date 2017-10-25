@@ -51,12 +51,12 @@ class QuantseqSample(Sample):
 	def __repr__(self):
 		return "Quant-seq sample '%s'" % self.sample_name
 
-	def set_file_paths(self):
+	def set_file_paths(self, project=None):
 		"""
 		Sets the paths of all files for this sample.
 		"""
 		# Inherit paths from Sample by running Sample's set_file_paths()
-		super(QuantseqSample, self).set_file_paths()
+		super(QuantseqSample, self).set_file_paths(project)
 
 		# Files in the root of the sample dir
 		self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
