@@ -46,7 +46,7 @@ class ATACseqSample(Sample):
 	def __repr__(self):
 		return "ATAC-seq sample '%s'" % self.sample_name
 
-	def set_file_paths(self, project):
+	def set_file_paths(self, project=None):
 		"""
 		Sets the paths of all files for this sample.
 		"""
@@ -123,7 +123,7 @@ class DNaseSample(ATACseqSample):
 	def __repr__(self):
 		return "DNase-seq sample '%s'" % self.sample_name
 
-	def set_file_paths(self, project):
+	def set_file_paths(self, project=None):
 		super(DNaseSample, self).set_file_paths(project)
 
 

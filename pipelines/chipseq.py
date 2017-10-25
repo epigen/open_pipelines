@@ -110,9 +110,12 @@ class ChIPseqSample(Sample):
 		return self.background_sample_name in [None, "", "NA"]
 
 
-	def set_file_paths(self, project):
+	def set_file_paths(self, project=None):
 		"""
 		Sets the paths of all files for this sample.
+
+		:param AttributeDict project: Project or its metadata, from the
+			Project instance that generated this sample
 		"""
 
 		# Get paths container structure and any contents used by any Sample.
