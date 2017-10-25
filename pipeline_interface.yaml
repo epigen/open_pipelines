@@ -24,7 +24,7 @@ pipelines:
         path: pipelines/amplicon_simple.py
         arguments:
             "-n": sample_name
-            "-i": data_path
+            "-i": data_source
             "-a": amplicon
             "-g": guide_rna
         looper_args: True
@@ -48,8 +48,8 @@ pipelines:
             "-I": sample_name
             "-G": genome
         looper_args: True
-        required_input_files: [data_path]
-        ngs_input_files: [data_path]
+        required_input_files: [data_source]
+        ngs_input_files: [data_source]
         resources:
             default:
                 file_size: "0"
@@ -76,8 +76,8 @@ pipelines:
             "-I": sample_name
             "-G": genome
         looper_args: True
-        required_input_files: [data_path]
-        ngs_input_files: [data_path]
+        required_input_files: [data_source]
+        ngs_input_files: [data_source]
         resources:
             default:
                 file_size: "0"
@@ -123,7 +123,7 @@ pipelines:
         arguments:
             "--sample-name": sample_name
             "--genome": genome
-            "--input": data_path
+            "--input": data_source
             "--single-or-paired": read_type
         resources:
             default:
