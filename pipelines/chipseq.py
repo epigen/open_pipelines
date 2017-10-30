@@ -49,10 +49,10 @@ HISTONE_CODES = ["H3", "H2A", "H2B", "H4"]
 
 class ChIPseqSample(Sample):
 	"""
-	Class to model ChIP-seq samples based on the generic Sample class (itself a pandas.Series).
+	Class to model ChIP-seq samples based on the generic Sample class.
 
-	:param series: Pandas `Series` object.
-	:type series: pandas.Series
+	:param series: Collection of sample attributes.
+	:type series: Mapping | pandas.Series
 
 	:Example:
 
@@ -177,8 +177,8 @@ class ChIPmentationSample(ChIPseqSample):
 	"""
 	Class to model ChIPmentation samples based on the ChIPseqSample class.
 
-	:param series: Pandas `Series` object.
-	:type series: pandas.Series
+	:param series: Collection of sample attributes.
+	:type series: Mapping | pandas.Series
 	"""
 
 	__library__ = "ChIPmentation"
@@ -584,11 +584,10 @@ def main():
 		return 1
 
 	# Read in yaml configs
-	series = pd.Series(yaml.load(open(args.sample_config, "r")))
-	sample = Sample(series)
+	sample = Sample(yaml.load(open(args.sample_config, "r")))
 	# Create Sample object
 	if sample.protocol == "ChIPmentation":
-		sample = ChIPmentation(sample)
+		sample = ChIPmentationSample(sample)
 	else:
 		sample = ChIPseqSample(sample)
 

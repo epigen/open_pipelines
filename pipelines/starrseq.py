@@ -12,8 +12,6 @@ import pypiper
 from pypiper.ngstk import NGSTk
 from looper.models import AttributeDict, Sample
 
-import pandas as pd
-
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
@@ -25,24 +23,19 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
+
 class STARRseqSample(Sample):
 	"""
 	Class to model STARR-seq samples based on the ChIPseqSample class.
 
-	:param series: Pandas `Series` object.
-	:type series: pandas.Series
+	:param series: Collection of sample attributes.
+	:type series: Mapping | pandas.core.series.Series
 	"""
 	__library__ = "STARR-seq"
 
 	def __init__(self, series):
-
-		# Use pd.Series object to have all sample attributes
-		if not isinstance(series, pd.Series):
-			raise TypeError("Provided object is not a pandas Series.")
 		super(STARRseqSample, self).__init__(series)
-
 		self.tagmented = False
-
 		self.make_sample_dirs()
 
 	def __repr__(self):
@@ -118,7 +111,7 @@ def main():
 		return 1
 
 	# Read in yaml config and create Sample object
-	sample = STARRseqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
+	sample = STARRseqSample(yaml.load(open(args.sample_config, "r")))
 
 	# Check if merged
 	if len(sample.data_source.split(" ")) > 1:

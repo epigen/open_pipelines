@@ -25,22 +25,18 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
+
 class ATACseqSample(Sample):
 	"""
 	Class to model ATAC-seq samples based on the ChIPseqSample class.
 
-	:param series: Pandas `Series` object.
-	:type series: pandas.Series
+	:param series: Collection of sample attributes.
+	:type series: Mapping | pandas.core.series.Series
 	"""
 	__library__ = "ATAC-seq"
 
 	def __init__(self, series):
-
-		# Use pd.Series object to have all sample attributes
-		if not isinstance(series, pd.Series):
-			raise TypeError("Provided object is not a pandas Series.")
 		super(ATACseqSample, self).__init__(series)
-
 		self.tagmented = True
 
 	def __repr__(self):
@@ -97,7 +93,7 @@ class ATACseqSample(Sample):
 		self.qc = os.path.join(self.paths.sample_root, self.name + "_qc.tsv")
 		self.qc_plot = os.path.join(self.paths.sample_root, self.name + "_qc.pdf")
 
-		# Peaks: peaks called and derivate files
+		# Peaks: peaks called and associated files
 		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
 		self.peaks = os.path.join(self.paths.peaks, self.name + "_peaks.narrowPeak")
 		self.summits = os.path.join(self.paths.peaks, self.name + "_summits.bed")
@@ -108,23 +104,11 @@ class DNaseSample(ATACseqSample):
 	"""
 	Class to model DNase-seq samples based on the ChIPseqSample class.
 
-	:param series: Pandas `Series` object.
-	:type series: pandas.Series
 	"""
 	__library__ = "DNase-seq"
 
-	def __init__(self, series):
-
-		# Use pd.Series object to have all sample attributes
-		if not isinstance(series, pd.Series):
-			raise TypeError("Provided object is not a pandas Series.")
-		super(DNaseSample, self).__init__(series)
-
 	def __repr__(self):
 		return "DNase-seq sample '%s'" % self.sample_name
-
-	def set_file_paths(self, project=None):
-		super(DNaseSample, self).set_file_paths(project)
 
 
 def report_dict(pipe, stats_dict):
@@ -434,7 +418,7 @@ def main():
 		return 1
 
 	# Read in yaml configs
-	series = pd.Series(yaml.load(open(args.sample_config, "r")))
+	series = yaml.load(open(args.sample_config, "r"))
 	# Create Sample object
 	if series["library"] != "DNase-seq":
 		sample = ATACseqSample(series)

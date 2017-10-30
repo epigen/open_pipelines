@@ -12,8 +12,6 @@ import pypiper
 from pypiper.ngstk import NGSTk
 from looper.models import AttributeDict, Sample
 
-import pandas as pd
-
 
 __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2015, Andre Rendeiro"
@@ -25,12 +23,10 @@ __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
 
 
+
 class QuantseqSample(Sample):
 	"""
-	Class to model Quant-seq samples based on the generic Sample class (itself a pandas.Series).
-
-	:param series: Pandas `Series` object.
-	:type series: pandas.Series
+	Class to model Quant-seq samples based on the generic Sample class.
 
 	:Example:
 
@@ -40,13 +36,6 @@ class QuantseqSample(Sample):
 	s1 = QuantseqSample(sheet.ix[0])
 	"""
 	__library__ = "Quant-seq"
-
-	def __init__(self, series):
-
-		# Passed series must either be a pd.Series or a daugther class
-		if not isinstance(series, pd.Series):
-			raise TypeError("Provided object is not a pandas Series.")
-		super(QuantseqSample, self).__init__(series)
 
 	def __repr__(self):
 		return "Quant-seq sample '%s'" % self.sample_name
@@ -95,7 +84,7 @@ def main():
 	args = parser.parse_args()
 
 	# Read in yaml config and create Sample object
-	sample = QuantseqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
+	sample = QuantseqSample(yaml.load(open(args.sample_config, "r")))
 
 	# Check if merged
 	if len(sample.data_source.split(" ")) > 1:
