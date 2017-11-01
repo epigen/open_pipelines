@@ -3,8 +3,10 @@
 import sys
 import os
 
+
 # take care of extra required modules depending on Python version
 extra = {}
+
 
 try:
 	from setuptools import setup
@@ -18,25 +20,23 @@ except ImportError:
 		extra['dependencies'] = ['argparse']
 
 
+def get_static(name, keep=None):
+	""" Determine additional files to include with the package. """
+	pkg_path = os.path.dirname(os.path.realpath(__file__))
+	static = [os.path.join(name, f) for f in
+			  os.listdir(os.path.join(pkg_path, name))]
+	return static if keep is None else list(filter(keep, static))
+
 # Additional files to include with package
-def get_static(name, condition=None):
-	static = [os.path.join(name, f) for f in os.listdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), name))]
-	if condition is None:
-		return static
-	else:
-		return filter(lambda x: eval(condition), static)
+pipeline_configs = get_static("pipelines",
+	keep=lambda fpath: os.path.splitext(fpath)[1] in [".yaml", ".yml"])
+scripts = get_static(
+	os.path.join("pipelines", "tools"), keep=lambda fpath: '.' in fpath)
 
-# looper configs from /config
-looper_configs = get_static("config")
-# pipeline configs from /pipelines/.*\.yaml
-pipeline_configs = get_static("pipelines", condition="'yaml' in x")
-
-# scripts to be added to the $PATH
-scripts = get_static("pipelines/tools", condition="'.' in x")
 
 version = open("VERSION").read().strip()
 
-# setup
+
 setup(
 	name="pipelines",
 	packages=["pipelines"],
