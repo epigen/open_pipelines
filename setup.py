@@ -34,7 +34,12 @@ scripts = get_static(
 	os.path.join("pipelines", "tools"), keep=lambda fpath: '.' in fpath)
 
 
-version = open("VERSION").read().strip()
+with open("VERSION", 'r') as versionfile:
+	version = versionfile.read().strip()
+
+
+with open("requirements-pypi.txt", 'r') as reqs_file:
+	reqs = [l.rstrip() for l in reqs_file.readlines() if not l.startswith("#")]
 
 
 setup(
@@ -53,7 +58,7 @@ setup(
 	url="https://github.com/epigen/pipelines",
 	author=u"Nathan Sheffield, Johanna Klughammer, Andre Rendeiro, Charles Dietz",
 	license="GPL2",
-	install_requires=["pyyaml", "pandas"],
+	install_requires=reqs,
 	entry_points={
 		"console_scripts": [
 			'atacseq_pipeline = pipelines.atacseq:main',

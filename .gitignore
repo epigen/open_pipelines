@@ -29,5 +29,11 @@ pipelines/pypiper
 !*.yaml
 !*.tsv
 
-#make sure to track .gitignore
+# Make sure to track .gitignore and requirements file(s).
 !.gitignore
+!requirements*.txt
+!requirements/*.txt
+
+# Ignore installation stuff
+build/
+
