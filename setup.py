@@ -63,9 +63,7 @@ setup(
 		],
 	},
 	scripts=scripts,
-	data_files=[
-		("configs", looper_configs + pipeline_configs)
-	],
+	data_files=[("configs", pipeline_configs)],
 	include_package_data=True,
 	**extra
 )
