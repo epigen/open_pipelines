@@ -5,7 +5,6 @@ ChIP-seq pipeline
 """
 
 from argparse import ArgumentParser
-from collections import defaultdict
 from functools import partial
 import os
 import re
@@ -572,7 +571,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		
 		:return list[pypiper.Stage]: sequence of pipeline phases/stages
 		"""
-		always = [merge_input, convert_reads_format,
+		always = [merge_input, ensure_fastq,
 				  trim_reads, align_reads, filter_reads,
 				  index_bams, make_tracks, compute_metrics]
 		treatment_only = [wait_for_control, call_peaks, calc_frip]
@@ -774,7 +773,7 @@ def fastqc(sample, pipeline_manager, ngstk):
 
 
 
-def convert_reads_format(sample, pipeline_manager, ngstk):
+def ensure_fastq(sample, pipeline_manager, ngstk):
 	"""
 	Convert a sequencing reads file to another format.
 
@@ -783,6 +782,16 @@ def convert_reads_format(sample, pipeline_manager, ngstk):
 	:param pypiper.NGSTk ngstk: configured NGS processing framework;
 		required if and only if conversion function is not provided.
 	"""
+
+	clean_files = [sample.fastq1, sample.fastq2, sample.fastq_unpaired] \
+		if sample.paired else [sample.fastq]
+	def update_clean_list():
+		for f in clean_files:
+			pipeline_manager.clean_add(f, conditional=True)
+
+	_, unmapped_ext = os.path.splitext(sample.unmapped)
+	if unmapped_ext == ".fastq":
+		update_clean_list()
 
 	if sample.paired:
 		out_fq1 = sample.fastq1
@@ -800,19 +809,15 @@ def convert_reads_format(sample, pipeline_manager, ngstk):
 
 	# Convert BAM to FASTQ.
 	pipeline_manager.timestamp("Converting from BAM to FASTQ")
+
 	cmd = ngstk.bam2fastq(**kwargs)
 	validate = ngstk.check_fastq(
 			input_files=sample.input_file_paths,
 			output_files=outfiles, paired_end=sample.paired)
+
 	pipeline_manager.run(cmd, target=out_fq1, follow=validate, shell=True)
 
-	# Update cleanup registry.
-	if not sample.paired:
-		pipeline_manager.clean_add(sample.fastq, conditional=True)
-	if sample.paired:
-		pipeline_manager.clean_add(sample.fastq1, conditional=True)
-		pipeline_manager.clean_add(sample.fastq2, conditional=True)
-		pipeline_manager.clean_add(sample.fastq_unpaired, conditional=True)
+	update_clean_list()
 
 
 
