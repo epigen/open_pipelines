@@ -18,7 +18,7 @@ from pypiper import NGSTk, Stage
 from pypiper.utils import parse_cores
 from looper.models import AttributeDict, Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
-from .exceptions import InvalidFiletypeException
+from pipelines.exceptions import InvalidFiletypeException
 
 
 __author__ = "Andre Rendeiro"
@@ -719,7 +719,7 @@ def merge_input(sample, pipeline_manager, ngstk):
 			sample.input_file_paths, merge_target, run=False)
 		pipeline_manager.run(merge_cmd, target=merge_target, shell=True)
 		if ngstk.is_gzipped_fastq(first_input):
-			unzip_cmd = "{} {}".format(pipeline_manager.ziptool, merge_target)
+			unzip_cmd = "{} {}".format(ngstk.ziptool, merge_target)
 			pipeline_manager.run(unzip_cmd, target=sample.unmapped, shell=True)
 	else:
 		assert ".bam" == unmapped_ext, "Non-FASTQ input must have .bam target"
