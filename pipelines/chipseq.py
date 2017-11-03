@@ -125,7 +125,6 @@ class ChIPseqSample(Sample):
 		super(ChIPseqSample, self).set_file_paths(project)
 
 		# Files in the root of the sample dir
-		self.fastqc = os.path.join(self.paths.sample_root, self.name + ".fastqc.zip")
 		self.trimlog = os.path.join(self.paths.sample_root, self.name + ".trimlog.txt")
 		self.aln_rates = os.path.join(self.paths.sample_root, self.name + ".aln_rates.txt")
 		self.aln_metrics = os.path.join(self.paths.sample_root, self.name + ".aln_metrics.txt")
@@ -152,6 +151,10 @@ class ChIPseqSample(Sample):
 		self.merged_input_path = merged_path
 		unmapped_name = self.name + unmapped_ext
 		self.unmapped = os.path.join(self.paths.unmapped, unmapped_name)
+
+		self.paths.fastqc = os.path.join(self.paths.sample_root, "fastqc")
+		self.paths.fastqc_aligned = os.path.join(
+			self.paths.sample_root, "aligned_fastqc")
 
 		self.fastq = os.path.join(self.paths.unmapped, self.name + ".fastq")
 		self.fastq1 = os.path.join(self.paths.unmapped, self.name + ".1.fastq")
@@ -584,6 +587,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		"""
 		always = [merge_input, ensure_fastq,
 				  trim_reads, align_reads, filter_reads,
+				  post_align_fastqc,
 				  index_bams, make_tracks, compute_metrics]
 		treatment_only = [wait_for_control, call_peaks, calc_frip]
 		f_args = (self.sample, self.manager, self.ngstk)
@@ -732,42 +736,6 @@ def merge_input(sample, pipeline_manager, ngstk):
 
 
 
-def fastqc(sample, pipeline_manager, ngstk):
-	"""
-	Run fastqc for the given sample, governed by configured ngstk instance.
-
-	:param looper.models.Sample sample:
-	:param pypiper.PipelineManager pipeline_manager: execution supervisor and 
-		metadata manager for a pipeline instance
-	:param pypiper.NGSTk ngstk: NGS toolkit; specifically, an object providing 
-		a method for running fastqc, that accepts a BAM file, and folder name 
-		or path for fastqc output, and a sample name.
-	:raise ValueError: if path determined for fastqc folder exists but is
-		not a directory
-	"""
-	pipeline_manager.timestamp("Measuring sample quality with Fastqc")
-	fastqc_folder = os.path.join(sample.paths.sample_root, "fastqc")
-
-	if not os.path.exists(fastqc_folder):
-		os.makedirs(fastqc_folder)
-	elif os.path.isdir(fastqc_folder):
-		print("Warning: fastqc folder already exists: '{}'".format(fastqc_folder))
-	else:
-		raise ValueError("Path for fastqc folder exists but is not directory: "
-						 "'{}'".format(fastqc_folder))
-
-	cmd = ngstk.fastqc_rename(
-		input_bam=sample.data_source,
-		output_dir=fastqc_folder,
-		sample_name=sample.sample_name
-	)
-	fastqc_target = os.path.join(fastqc_folder, sample.name + "_fastqc.zip")
-	pipeline_manager.run(cmd, fastqc_target, shell=True)
-	fastqc_result = parse_fastqc(fastqc_target, prefix="fastqc_")
-	report_dict(pipeline_manager, fastqc_result)
-
-
-
 def ensure_fastq(sample, pipeline_manager, ngstk):
 	"""
 	Convert a sequencing reads file to another format.
@@ -903,7 +871,16 @@ def trim_reads(sample, pipeline_manager, ngstk,
 
 
 
+
 def align_reads(sample, pipeline_manager, ngstk, cores=None):
+	"""
+	Align sequencing reads.
+
+	:param looper.models.Sample sample: sample for which to align reads
+	:param pypiper.PipelineManager pipeline_manager: execution manager
+	:param pypiper.NGSTk ngstk: configured NGS processing framework
+	:param int | str cores: number of cores allowed to be used for alignment
+	"""
 	# Map
 	pipeline_manager.timestamp("Mapping reads with Bowtie2")
 	cmd = ngstk.bowtie2_map(
@@ -924,6 +901,14 @@ def align_reads(sample, pipeline_manager, ngstk, cores=None):
 
 
 def filter_reads(sample, pipeline_manager, ngstk, cores=None):
+	"""
+	Filter sequencing reads.
+
+	:param looper.models.Sample sample: sample for which to filter reads
+	:param pypiper.PipelineManager pipeline_manager: execution manager
+	:param pypiper.NGSTk ngstk: configured NGS processing framework
+	:param int | str cores: number of cores allowed to be used for filtration
+	"""
 	# Filter reads
 	pipeline_manager.timestamp("Filtering reads for quality")
 	cmd = ngstk.filter_reads(
@@ -936,6 +921,21 @@ def filter_reads(sample, pipeline_manager, ngstk, cores=None):
 	)
 	pipeline_manager.run(cmd, sample.filtered, shell=True)
 	report_dict(pipeline_manager, parse_duplicate_stats(sample.dups_metrics))
+
+
+
+def post_align_fastqc(sample, pipeline_manager, ngstk):
+	"""
+	Post-alignment quality control.
+
+	:param looper.models.Sample sample: sample for which to run QC
+	:param pypiper.PipelineManager pipeline_manager: execution manager
+	:param pypiper.NGSTk ngstk: configured NGS processing framework
+	"""
+	cmd = ngstk.fastqc(sample.filtered, sample.paths.fastqc_aligned)
+	fastqc_name = "{}_fastqc-aligned.zip".format(sample.name)
+	fastqc_target = os.path.join(sample.paths.fastqc_aligned, fastqc_name)
+	pipeline_manager.run(cmd, target=fastqc_target, shell=True)
 
 
 
