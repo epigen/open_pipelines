@@ -565,13 +565,13 @@ class ChipseqPipeline(pypiper.Pipeline):
 			self.manager.cores = cores
 
 		print("Ensuring necessary paths for sample processing")
-		build_sample_paths(self)
+		build_sample_paths(sample)
 
 
 	def stages(self):
 		"""
 		The processing stages/phases that define the ChIP-seq pipeline.
-		
+		Gq
 		:return list[pypiper.Stage]: sequence of pipeline phases/stages
 		"""
 		always = [merge_input, ensure_fastq,
