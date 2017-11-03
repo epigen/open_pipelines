@@ -15,7 +15,7 @@ import yaml
 
 import pypiper
 from pypiper import NGSTk, Stage
-from pypiper.utils import parse_cores
+from pypiper.utils import build_sample_paths, parse_cores
 from looper.models import AttributeDict, Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
 from pipelines.exceptions import InvalidFiletypeException
@@ -563,6 +563,9 @@ class ChipseqPipeline(pypiper.Pipeline):
 		# Pass cores to stages via manager.
 		if cores is not None:
 			self.manager.cores = cores
+
+		print("Ensuring necessary paths for sample processing")
+		build_sample_paths(self)
 
 
 	def stages(self):
