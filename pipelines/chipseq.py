@@ -14,8 +14,10 @@ import pandas as pd
 import yaml
 
 import pypiper
-from pypiper import NGSTk, Stage
-from pypiper.utils import build_sample_paths, parse_cores
+from pypiper import NGSTk, PipelineError, Stage
+from pypiper.utils import \
+	build_sample_paths, is_fastq, is_unzipped_fastq, is_gzipped_fastq, \
+	parse_cores
 from looper.models import AttributeDict, Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
 from pipelines.exceptions import InvalidFiletypeException
@@ -122,8 +124,6 @@ class ChIPseqSample(Sample):
 		# Get paths container structure and any contents used by any Sample.
 		super(ChIPseqSample, self).set_file_paths(project)
 
-
-
 		# Files in the root of the sample dir
 		self.fastqc = os.path.join(self.paths.sample_root, self.name + ".fastqc.zip")
 		self.trimlog = os.path.join(self.paths.sample_root, self.name + ".trimlog.txt")
@@ -134,16 +134,24 @@ class ChIPseqSample(Sample):
 		# Unmapped: merged bam, fastq, trimmed fastq
 		self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
 		first_input = self.input_file_paths[0]
-		if first_input.endswith(".fq.gz") or first_input.endswith(".fastq.gz"):
-			unmapped_file_ext = ".fastq"
+		if is_fastq(first_input):
+			if self.paired:
+				raise PipelineError(
+					"For paired-end reads, only BAM input is supported.")
+			unmapped_ext = ".fastq"
+			merge_ext = ".fastq.gz" if is_gzipped_fastq(first_input) \
+					else ".fastq"
 		else:
-			input_ext = os.path.splitext(first_input)[1].lower()
-			if input_ext in [".fq", ".fastq"]:
-				unmapped_file_ext = ".fastq"
-			else:
-				unmapped_file_ext = ".bam"
-		self.unmapped = os.path.join(
-			self.paths.unmapped, self.name + unmapped_file_ext)
+			unmapped_ext = ".bam"
+			merge_ext = ".bam"
+
+		if len(self.input_file_paths) > 1:
+			merged_path = self.name + merge_ext
+		else:
+			merged_path = self.input_file_paths[0]
+		self.merged_input_path = merged_path
+		unmapped_name = self.name + unmapped_ext
+		self.unmapped = os.path.join(self.paths.unmapped, unmapped_name)
 
 		self.fastq = os.path.join(self.paths.unmapped, self.name + ".fastq")
 		self.fastq1 = os.path.join(self.paths.unmapped, self.name + ".1.fastq")
@@ -688,15 +696,18 @@ def merge_input(sample, pipeline_manager, ngstk):
 
 	pipeline_manager.timestamp("Merging input files")
 
-	if len(sample.input_file_paths) < 1:
-		assert os.path.isfile(sample.unmapped), \
+	def ensure_merged():
+		assert os.path.isfile(sample.merged_input_path), \
 			"Upon completion of input merger step, sample's unmapped reads " \
 			"file must exist."
+
+	if len(sample.input_file_paths) < 2:
+		ensure_merged()
 		return
 
 	# Validate filetype validity and homogeneity.
 	first_input = sample.input_file_paths[0]
-	file_type_funcs = [ngstk.is_gzipped_fastq, ngstk.is_unzipped_fastq,
+	file_type_funcs = [is_gzipped_fastq, is_unzipped_fastq,
 					   lambda f: os.path.splitext(f)[1].lower() == ".bam",
 					   lambda f: os.path.splitext(f)[1].lower() == ".sam"]
 	for i, ft_func in enumerate(file_type_funcs):
@@ -712,30 +723,12 @@ def merge_input(sample, pipeline_manager, ngstk):
 
 	# Build merger command based on (homogeneous) type of input files.
 	_, unmapped_ext = os.path.splitext(sample.unmapped)
-	if ngstk.is_fastq(first_input):
-		assert ".fastq" == unmapped_ext, "FASTQ input must have .fastq target"
-		if ngstk.is_gzipped_fastq(first_input):
-			merge_target = os.path.splitext(sample.unmapped)[0] + ".fastq.gz"
-		else:
-			merge_target = sample.unmapped
-		merge_cmd = ngstk.merge_fastq(
-			sample.input_file_paths, merge_target, run=False)
-		pipeline_manager.run(merge_cmd, target=merge_target, shell=True)
-		if ngstk.is_gzipped_fastq(first_input):
-			unzip_cmd = "{} {}".format(ngstk.ziptool, merge_target)
-			pipeline_manager.run(unzip_cmd, target=sample.unmapped, shell=True)
-	else:
-		assert ".bam" == unmapped_ext, "Non-FASTQ input must have .bam target"
-
-		cmd = ngstk.merge_bams(
-			input_bams=sample.input_file_paths, merged_bam=sample.unmapped)
-		pipeline_manager.run(cmd, sample.unmapped, shell=True)
-
-	assert os.path.isfile(sample.unmapped), \
-		"Upon completion of input merger step, sample's unmapped reads file " \
-		"must exist."
-
-	sample.data_source = sample.unmapped
+	get_merge_cmd = ngstk.merge_fastq if is_fastq(first_input) else ngstk.merge_bams
+	merge_target = sample.merged_input_path
+	# TODO: note that this assumes R1 + R2 in same file for paired-end.
+	cmd = get_merge_cmd(sample.input_file_paths, merge_target)
+	pipeline_manager.run(cmd, target=merge_target, shell=True)
+	ensure_merged()
 
 
 
@@ -768,8 +761,7 @@ def fastqc(sample, pipeline_manager, ngstk):
 		output_dir=fastqc_folder,
 		sample_name=sample.sample_name
 	)
-	fastqc_target = os.path.join(fastqc_folder,
-								 sample.sample_name + "_fastqc.zip")
+	fastqc_target = os.path.join(fastqc_folder, sample.name + "_fastqc.zip")
 	pipeline_manager.run(cmd, fastqc_target, shell=True)
 	fastqc_result = parse_fastqc(fastqc_target, prefix="fastqc_")
 	report_dict(pipeline_manager, fastqc_result)
@@ -786,41 +778,57 @@ def ensure_fastq(sample, pipeline_manager, ngstk):
 		required if and only if conversion function is not provided.
 	"""
 
-	clean_files = [sample.fastq1, sample.fastq2, sample.fastq_unpaired] \
-		if sample.paired else [sample.fastq]
-	def update_clean_list():
-		for f in clean_files:
-			pipeline_manager.clean_add(f, conditional=True)
+	def link_fastq(real, link):
+		if not os.path.isfile(sample.fastq):
+			link = "ln -ns {} {}".format(real, link)
+			print("Linking standard FASTQ path to the merged path.")
+			pipeline_manager.run(link, target=sample.fastq, shell=True)
+		else:
+			print("Sample's single FASTQ exists.")
 
-	_, unmapped_ext = os.path.splitext(sample.unmapped)
-	if unmapped_ext == ".fastq":
-		update_clean_list()
-
-	if sample.paired:
-		out_fq1 = sample.fastq1
-		out_fq2 = sample.fastq2
-		outfiles = [out_fq1, out_fq2]
-		unpaired_fq = sample.fastq_unpaired
+	# If we already have fastq, short-circuit and return early.
+	if is_unzipped_fastq(sample.merged_input_path):
+		link_fastq(real=sample.merged_input_path, link=sample.unmapped)
+		link_fastq(real=sample.merged_input_path, link=sample.fastq)
+		clean_files = []
+	elif is_gzipped_fastq(sample.merged_input_path):
+		assert not os.path.isfile(sample.unmapped), \
+			"Decompressed output must not exist prior to decompression."
+		unzip = "{} -d -c {} > {}".format(
+			ngstk.ziptool, sample.merged_input_path, sample.unmapped)
+		pipeline_manager.run(unzip, target=sample.unmapped, shell=True)
+		link_fastq(real=sample.unmapped, link=sample.fastq)
+		clean_files = []
 	else:
-		out_fq1 = sample.fastq
-		out_fq2 = None
-		outfiles = [out_fq1]
-		unpaired_fq = None
+		# Read type determines which paths to pass to the conversion call.
+		if sample.paired:
+			out_fq1 = sample.fastq1
+			out_fq2 = sample.fastq2
+			outfiles = [out_fq1, out_fq2]
+			unpaired_fq = sample.fastq_unpaired
+			clean_files = [sample.fastq1, sample.fastq2, sample.unpaired]
+		else:
+			out_fq1 = sample.fastq
+			out_fq2 = None
+			outfiles = [out_fq1]
+			unpaired_fq = None
+			clean_files = [sample.fastq]
+		kwargs = {"input_bam": sample.data_source, "output_fastq": out_fq1,
+				  "output_fastq2": out_fq2, "unpaired_fastq": unpaired_fq}
 
-	kwargs = {"input_bam": sample.data_source, "output_fastq": out_fq1,
-			  "output_fastq2": out_fq2, "unpaired_fastq": unpaired_fq}
+		# Convert BAM to FASTQ.
+		pipeline_manager.timestamp("Converting from BAM to FASTQ")
 
-	# Convert BAM to FASTQ.
-	pipeline_manager.timestamp("Converting from BAM to FASTQ")
+		# Perform and validate the reads file format conversion.
+		cmd = ngstk.bam2fastq(**kwargs)
+		validate = ngstk.check_fastq(
+				input_files=sample.input_file_paths,
+				output_files=outfiles, paired_end=sample.paired)
+		pipeline_manager.run(cmd, target=out_fq1, follow=validate, shell=True)
 
-	cmd = ngstk.bam2fastq(**kwargs)
-	validate = ngstk.check_fastq(
-			input_files=sample.input_file_paths,
-			output_files=outfiles, paired_end=sample.paired)
-
-	pipeline_manager.run(cmd, target=out_fq1, follow=validate, shell=True)
-
-	update_clean_list()
+	for f in clean_files:
+		pipeline_manager.clean_add(f, conditional=True)
+	sample.data_source = sample.unmapped
 
 
 
