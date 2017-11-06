@@ -541,7 +541,8 @@ class ChipseqPipeline(pypiper.Pipeline):
 	""" Definition of the ChIP-seq pipeline in terms of processing stages. """
 
 
-	def __init__(self, sample, manager, peak_caller, cores=None):
+	def __init__(self, sample, manager, peak_caller,
+				 cores=None, **caller_kwargs):
 		"""
 		Define the pipeline instance with a sample and manager.
 		
@@ -554,6 +555,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 			operation that supports core count specification, optional;
 			if this isn't specified, the value associated with the manager
 			or the default for this module will be used.
+		:param dict caller_kwargs: extra keyword arguments for peak calling
 		"""
 
 		pipe_name, _ = os.path.splitext(os.path.split(__file__)[1])
@@ -568,6 +570,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		self.ngstk = NGSTk(pm=manager)
 
 		self.peak_caller = peak_caller
+		self._caller_kwargs = caller_kwargs
 
 		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
@@ -592,7 +595,8 @@ class ChipseqPipeline(pypiper.Pipeline):
 		treatment_only = [wait_for_control, call_peaks, calc_frip]
 		f_args = (self.sample, self.manager, self.ngstk)
 		funcs = always if self.sample.is_control else always + treatment_only
-		return [Stage(f, f_args, {}) for f in funcs]
+		return [Stage(f, f_args, self._caller_kwargs if f == call_peaks else {})
+				for f in funcs]
 
 
 
@@ -647,7 +651,8 @@ def main():
 		name="chipseq", outfolder=sample.paths.sample_root, args=args)
 
 	# With the sample and the manager created, we're ready to run the pipeline.
-	pipeline = ChipseqPipeline(sample, pl_mgr, peak_caller=args.peak_caller)
+	pipeline = ChipseqPipeline(sample, pl_mgr, peak_caller=args.peak_caller,
+							   pvalue=args.pvalue, qvalue=args.qvalue)
 	pipeline.run(start=args.start,
 				 stop_at=args.stop_at, stop_after=args.stop_after)
 
@@ -674,7 +679,7 @@ def arg_parser(parser):
 		help="Name of peak calling program.",
 	)
 	parser.add_argument(
-		"--pvalue", type=float, default=0.001, help="MACS2 p-value")
+		"--pvalue", type=float, default=0.00001, help="MACS2 p-value")
 	parser.add_argument(
 		"--qvalue", type=float, help="Q-value for peak calling")
 	return parser
@@ -1015,7 +1020,7 @@ def wait_for_control(sample, pipeline_manager, ngstk):
 # TODO: need to receive comparison sample name and args from caller.
 # TODO: spin off the plotting functionality into its own stage, or use a
 # TODO (cont.): substage mechanism if implemented
-def call_peaks(sample, pipeline_manager, ngstk, cores=None, caller=None):
+def call_peaks(sample, pipeline_manager, ngstk, cores=None, caller=None, **caller_kwargs):
 	"""
 	Perform the pipeline's peak calling operation.
 
@@ -1041,7 +1046,8 @@ def call_peaks(sample, pipeline_manager, ngstk, cores=None, caller=None):
 	# TODO (cont.) once NGSTK API is tweaked.
 
 	peak_call_kwargs = {"output_dir": peaks_folder,
-						"broad": broad_mode, "qvalue": pipeline_manager.qvalue}
+						"broad": broad_mode,
+						"qvalue": caller_kwargs.get("qvalue")}
 
 	# Allow SPP but lean heavily toward MACS2.
 	caller = caller or getattr(pipeline_manager, "peak_caller", "macs2")
@@ -1055,7 +1061,7 @@ def call_peaks(sample, pipeline_manager, ngstk, cores=None, caller=None):
 	else:
 		cmd = ngstk.macs2_call_peaks(
 			treatment_bams=treatment_file, control_bams=control_file,
-			sample_name=sample.name, pvalue=pipeline_manager.pvalue,
+			sample_name=sample.name, pvalue=caller_kwargs.get("pvalue"),
 			genome=sample.genome, paired=sample.paired, **peak_call_kwargs)
 
 	pipeline_manager.run(cmd, target=sample.peaks, shell=True)
