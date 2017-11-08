@@ -451,7 +451,7 @@ def parse_mapping_stats(stats_file, prefix="", paired_end=True):
 
 
 
-def parse_duplicate_stats(stats_file, prefix=""):
+def parse_sambamba_duplicate_file(stats_file, prefix=""):
 	"""
 	Parses sambamba markdup output, returns series with values.
 
@@ -472,16 +472,30 @@ def parse_duplicate_stats(stats_file, prefix=""):
 		return error_dict
 
 	try:
+
+		# Note that each comprehension assumes exactly 1 match for the line to parse.
+
+		# First, parse number of single-end reads.
 		line = [i for i in range(len(content)) if "single ends (among them " in content[i]][0]
 		single_ends = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-		line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
+
+		# Then, parse number of paired-end reads.
+		# Version of sambamba before 0.6.6, maybe 0.5?
+		#line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
+		line = [i for i in range(len(content)) if "sorted" in content[i] and "end pairs" in content[i]][0]
 		paired_ends = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
-		line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
+
+		# Parse the duplicates.
+		# Version of sambamba before 0.6.6, maybe 0.5?
+		#line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
+		line = [i for i in range(len(content)) if "found" in content[i] and "duplicates" in content[i]][0]
 		duplicates = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
+
 		return {
 			prefix + "filtered_single_ends": single_ends,
 			prefix + "filtered_paired_ends": paired_ends,
 			prefix + "duplicate_percentage": (float(duplicates) / (single_ends + paired_ends * 2)) * 100}
+
 	except IndexError:
 		return error_dict
 
@@ -935,7 +949,8 @@ def filter_reads(sample, pipeline_manager, ngstk, cores=None):
 		Q=pipeline_manager.config.parameters.read_quality
 	)
 	pipeline_manager.run(cmd, sample.filtered, shell=True)
-	report_dict(pipeline_manager, parse_duplicate_stats(sample.dups_metrics))
+	filter_stats = parse_sambamba_duplicate_file(sample.dups_metrics)
+	report_dict(pipeline_manager, filter_stats)
 
 
 
@@ -1114,7 +1129,10 @@ def calc_frip(sample, pipeline_manager, ngstk, cores=None):
 	reads_SE = float(pipeline_manager.get_stat("filtered_single_ends"))
 	reads_PE = float(pipeline_manager.get_stat("filtered_paired_ends"))
 	total = 0.5 * (reads_SE + reads_PE)
-	frip = parse_frip(sample.frip, total)
+	if not total or pd.np.isnan(total):
+		frip = pd.np.nan
+	else:
+		frip = parse_frip(sample.frip, total)
 	pipeline_manager.report_result("frip", frip)
 
 
@@ -1252,7 +1270,7 @@ def process(sample, pipe_manager, args):
 		Q=pipe_manager.config.parameters.read_quality
 	)
 	pipe_manager.run(cmd, sample.filtered, shell=True)
-	report_dict(pipe_manager, parse_duplicate_stats(sample.dups_metrics))
+	report_dict(pipe_manager, parse_sambamba_duplicate_file(sample.dups_metrics))
 
 	# Index bams
 	pipe_manager.timestamp("Indexing bamfiles with samtools")
