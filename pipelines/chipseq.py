@@ -1002,6 +1002,18 @@ def make_tracks(sample, pipeline_manager, ngstk):
 
 
 def compute_metrics(sample, pipeline_manager, ngstk, cores=None):
+	"""
+	Determine fragment size distribution, genome-wide coverage, and NSC/RSC.
+
+	:param looper.models.Sample sample: the sample undergoing processing and
+		being analyzed
+	:param pypiper.PipelineManager pipeline_manager: overseer of resources
+		and other settings for a pipeline
+	:param pypiper.NGSTk ngstk: Suite of common NGS tools, configured with
+		a pipeline manager
+	:param int | str cores: number of cores available for use in this
+		phase of the pipeline
+	"""
 	# Plot fragment distribution
 	if sample.paired and not os.path.exists(sample.insertplot):
 		pipeline_manager.timestamp("Plotting insert size distribution")
@@ -1030,7 +1042,8 @@ def compute_metrics(sample, pipeline_manager, ngstk, cores=None):
 		cpus=parse_cores(cores, pipeline_manager)
 	)
 	pipeline_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
-	report_dict(pipeline_manager, parse_nsc_rsc(sample.qc))
+	nsc_rsc_stats = parse_nsc_rsc(sample.qc)
+	report_dict(pipeline_manager, nsc_rsc_stats)
 
 
 
