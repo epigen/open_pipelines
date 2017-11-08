@@ -504,9 +504,9 @@ def parse_sambamba_duplicate_file(stats_file, prefix=""):
 def parse_peak_number(peak_file):
 	from subprocess import check_output
 	try:
-		return {"peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
+		return int(check_output(["wc", "-l", peak_file]).split(" ")[0])
 	except:
-		return {"peaks": pd.np.nan}
+		return pd.np.nan
 
 
 
