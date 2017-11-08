@@ -599,6 +599,12 @@ class ChipseqPipeline(pypiper.Pipeline):
 				for f in funcs]
 
 
+	def wrapup(self):
+		""" Print completion message before stopping pipeline. """
+		print("Finished processing sample {}.".format(self.sample.name))
+		super(ChipseqPipeline, self).wrapup()
+
+
 
 def main():
 
@@ -1106,9 +1112,6 @@ def calc_frip(sample, pipeline_manager, ngstk, cores=None):
 	total = 0.5 * (reads_SE + reads_PE)
 	frip = parse_frip(sample.frip, total)
 	pipeline_manager.report_result("frip", frip)
-
-	print("Finished processing sample %s." % sample.name)
-	pipeline_manager.stop_pipeline()
 
 
 
