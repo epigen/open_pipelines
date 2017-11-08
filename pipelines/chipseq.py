@@ -512,12 +512,16 @@ def parse_frip(frip_file, total_reads):
 		with open(frip_file, "r") as handle:
 			content = handle.readlines()
 	except:
+		print("Failed to read FRIP file: '{}'".format(frip_file))
 		return pd.np.nan
+
 	if content[0].strip() == "":
+		print("Empty first line of FRIP file: '{}'".format(frip_file))
 		return pd.np.nan
 
 	reads_in_peaks = int(re.sub("\D", "", content[0]))
 	frip = reads_in_peaks / float(total_reads)
+
 	return frip
 
 
