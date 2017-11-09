@@ -564,10 +564,13 @@ class ChipseqPipeline(pypiper.Pipeline):
 		"""
 		Define the pipeline instance with a sample and manager.
 		
-		Optionally, a peak caller name, number of processing cores, and 
+		Optionally, a peak caller name, number of processing cores, and peak
+		calling keyword arguments.
 
-		:param looper.models.Sample sample:
-		:param pypiper.manager.PipelineManager manager:
+		:param looper.models.Sample sample: the sample being processed by
+			the pipeline
+		:param pypiper.manager.PipelineManager manager: the collection of
+			monitoring and resource specifications for the pipeline
 		:param str peak_caller: name of peak caller to use
 		:param str | int cores: number of cores to use for each pipeline
 			operation that supports core count specification, optional;
