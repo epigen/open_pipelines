@@ -145,7 +145,8 @@ class ChIPseqSample(Sample):
 			merge_ext = ".bam"
 
 		if len(self.input_file_paths) > 1:
-			merged_path = self.name + merge_ext
+			merged_name = self.name + merge_ext
+			merged_path = os.path.join(self.paths.sample_root, merged_name)
 		else:
 			merged_path = self.input_file_paths[0]
 		self.merged_input_path = merged_path
