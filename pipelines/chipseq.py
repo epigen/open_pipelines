@@ -742,16 +742,21 @@ def merge_input(sample, pipeline_manager, ngstk):
 		return
 
 	# Validate filetype validity and homogeneity.
-	first_input = sample.input_file_paths[0]
+	first_input = sample.input_file_paths[0]    # Path to first input file.
+	# Candidate functions for file type homogeneity check.
 	file_type_funcs = [is_gzipped_fastq, is_unzipped_fastq,
 					   lambda f: os.path.splitext(f)[1].lower() == ".bam",
 					   lambda f: os.path.splitext(f)[1].lower() == ".sam"]
+	# The boolean function with which to check all files is the first one
+	# that evaluates to true when passed the first input file's path.
 	for i, ft_func in enumerate(file_type_funcs):
 		if ft_func(first_input):
 			match = ft_func
 			break
 	else:
 		raise InvalidFiletypeException(first_input)
+
+	# See if we have any mismatches.
 	mismatched = [f for f in sample.input_file_paths if not match(f)]
 	if mismatched:
 		raise ValueError("Not all input file types match that of '{}': {}".
