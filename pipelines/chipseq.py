@@ -736,6 +736,7 @@ def merge_input(sample, pipeline_manager, ngstk):
 		assert os.path.isfile(sample.merged_input_path), \
 			"Upon completion of input merger step, sample's unmapped reads " \
 			"file must exist."
+		sample.data_source = sample.merged_input_path
 
 	if len(sample.input_file_paths) < 2:
 		ensure_merged()
