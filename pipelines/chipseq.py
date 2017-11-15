@@ -561,7 +561,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 
 
 	def __init__(self, sample, manager, peak_caller,
-				 cores=None, **caller_kwargs):
+				 cores=None, post_hoc_headcrop=None, **caller_kwargs):
 		"""
 		Define the pipeline instance with a sample and manager.
 		
@@ -577,6 +577,9 @@ class ChipseqPipeline(pypiper.Pipeline):
 			operation that supports core count specification, optional;
 			if this isn't specified, the value associated with the manager
 			or the default for this module will be used.
+		:param int | NoneType post_hoc_headcrop: number of bases to trim from
+			head of read starts after initial trimming; if unspecified, no
+			additional read head trimming is done.
 		:param dict caller_kwargs: extra keyword arguments for peak calling
 		"""
 
@@ -592,7 +595,9 @@ class ChipseqPipeline(pypiper.Pipeline):
 		self.ngstk = NGSTk(pm=manager)
 
 		self.peak_caller = peak_caller
-		self._caller_kwargs = caller_kwargs
+		self._kwargs_by_func = {
+			call_peaks: caller_kwargs,
+			trim_reads: {"post_hoc_headcrop": post_hoc_headcrop}}
 
 		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
@@ -617,7 +622,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		treatment_only = [wait_for_control, call_peaks, calc_frip]
 		f_args = (self.sample, self.manager, self.ngstk)
 		funcs = always if self.sample.is_control else always + treatment_only
-		return [Stage(f, f_args, self._caller_kwargs if f == call_peaks else {})
+		return [Stage(f, f_args, self._kwargs_by_func.get(f, {}))
 				for f in funcs]
 
 
@@ -679,8 +684,10 @@ def main():
 		name="chipseq", outfolder=sample.paths.sample_root, args=args)
 
 	# With the sample and the manager created, we're ready to run the pipeline.
-	pipeline = ChipseqPipeline(sample, pl_mgr, peak_caller=args.peak_caller,
-							   pvalue=args.pvalue, qvalue=args.qvalue)
+	pipeline = ChipseqPipeline(
+		sample, pl_mgr, peak_caller=args.peak_caller,
+		pvalue=args.pvalue, qvalue=args.qvalue,
+		headcrop=args.post_hoc_headcrop)
 	pipeline.run(start=args.start,
 				 stop_at=args.stop_at, stop_after=args.stop_after)
 
@@ -702,6 +709,10 @@ def arg_parser(parser):
 			"sample itself is not a control.)".format(
 			rt="read_type", comparison=CHIP_COMPARE_COLUMN)
 	)
+	parser.add_argument(
+		"--post-hoc-headcrop", type=int,
+		help="Number of bases to trim from read starts after adapter "
+			 "trimming itself")
 	parser.add_argument(
 		"--peak-caller", choices=["macs2", "spp"], default="macs2",
 		help="Name of peak calling program.",
@@ -841,7 +852,7 @@ def ensure_fastq(sample, pipeline_manager, ngstk):
 
 # TODO: why were we only reporting trimming stats for skewer, not trimmomatic?
 def trim_reads(sample, pipeline_manager, ngstk,
-			   cores=None, fastqc_folder="fastqc"):
+			   cores=None, fastqc_folder="fastqc", post_hoc_headcrop=None):
 	"""
 	Perform read trimming.
 
@@ -850,6 +861,9 @@ def trim_reads(sample, pipeline_manager, ngstk,
 	:param pypiper.NGSTk ngstk: configured NGS processing framework
 	:param int | str cores: number of CPUs to allow for read trimming process
 	:param str fastqc_folder: name of folder for fastqc output
+	:param int | NoneType post_hoc_headcrop: number of bases to chop from
+		read head after initial trimming, optional; if unspecified, no
+		additional trimming is done; only compatible with skewer
 	"""
 
 	pipeline_manager.timestamp("Trimming adapters from sample")
@@ -895,6 +909,8 @@ def trim_reads(sample, pipeline_manager, ngstk,
 	# Create the command and the path to the output target.
 	kwargs.update(trimmer_specific_kwargs)
 	cmd = build_trim_cmd(**kwargs)
+	if post_hoc_headcrop and trimmer == "trimmomatic":
+		cmd += " HEADCROP:{}".format(post_hoc_headcrop)
 	target = sample.trimmed1 if sample.paired else sample.trimmed
 
 	# Run, clean, and report.
