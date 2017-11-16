@@ -687,7 +687,7 @@ def main():
 	pipeline = ChipseqPipeline(
 		sample, pl_mgr, peak_caller=args.peak_caller,
 		pvalue=args.pvalue, qvalue=args.qvalue,
-		headcrop=args.post_hoc_headcrop)
+		post_hoc_headcrop=args.post_hoc_headcrop)
 	pipeline.run(start=args.start,
 				 stop_at=args.stop_at, stop_after=args.stop_after)
 
