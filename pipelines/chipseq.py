@@ -596,8 +596,8 @@ class ChipseqPipeline(pypiper.Pipeline):
 
 		self.peak_caller = peak_caller
 		self._kwargs_by_func = {
-			call_peaks: caller_kwargs,
-			trim_reads: {"post_hoc_headcrop": post_hoc_headcrop}}
+			"call_peaks": caller_kwargs,
+			"trim_reads": {"post_hoc_headcrop": post_hoc_headcrop}}
 
 		super(ChipseqPipeline, self).__init__(pipe_name, manager)
 
@@ -622,7 +622,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		treatment_only = [wait_for_control, call_peaks, calc_frip]
 		f_args = (self.sample, self.manager, self.ngstk)
 		funcs = always if self.sample.is_control else always + treatment_only
-		return [Stage(f, f_args, self._kwargs_by_func.get(f, {}))
+		return [Stage(f, f_args, self._kwargs_by_func.get(f.__name__, {}))
 				for f in funcs]
 
 
