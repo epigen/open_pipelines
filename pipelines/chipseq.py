@@ -652,6 +652,7 @@ def main():
 	# Read in yaml configs
 	sample = Sample(yaml.load(open(args.sample_config, "r")))
 	# Create Sample object
+
 	if sample.protocol == "ChIPmentation":
 		sample = ChIPmentationSample(sample)
 	else:
@@ -1190,7 +1191,7 @@ def process(sample, pipe_manager, args):
 	"""
 	print("Start processing ChIP-seq sample: '{}'.".format(sample.name))
 
-	for path in ["sample_root"] + sample.paths.__dict__.keys():
+	for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
 		try:
 			exists = os.path.exists(sample.paths[path])
 		except TypeError:

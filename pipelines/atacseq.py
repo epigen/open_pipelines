@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 ATAC-seq pipeline
@@ -420,7 +420,7 @@ def main():
 	# Read in yaml configs
 	series = yaml.load(open(args.sample_config, "r"))
 	# Create Sample object
-	if series["library"] != "DNase-seq":
+	if series["protocol"] != "DNase-seq":
 		sample = ATACseqSample(series)
 	else:
 		sample = DNaseSample(series)
@@ -474,7 +474,7 @@ def process(sample, pipe_manager, args):
 	"""
 	print("Start processing ATAC-seq sample %s." % sample.sample_name)
 
-	for path in ["sample_root"] + sample.paths.__dict__.keys():
+	for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
 		try:
 			exists = os.path.exists(sample.paths[path])
 		except TypeError:
