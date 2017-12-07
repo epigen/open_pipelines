@@ -3,10 +3,10 @@
 [More thorough documentation of each pipeline and its outputs will follow soon.]
 
 This repository contains pipelines for processing NGS data and associated scripts used by them (in the [/pipelines/tools](pipelines/tools) subdirectory).
-Pipelines here are configured to work with [`looper`](https://github.com/epigen/looper/) and use [`pypiper`](https://github.com/epigen/pypiper/) (see the corresponding repositories).
+Pipelines here are configured to work with [`looper`](http://looper.readthedocs.io) and use [`pypiper`](http://pypiper.readthedocs.io) (see the corresponding repositories). These pipelines work with metadata formatted as a [portable encapsulated project](http://pepkit.github.io).
 
 # Installing
-1. Install [`looper`](https://github.com/epigen/looper/) and [`pypiper`](https://github.com/epigen/pypiper/): 
+1. Install [`looper`](http://looper.readthedocs.io) and [`pypiper`](http://pypiper.readthedocs.io): 
   - `pip install https://github.com/epigen/looper/zipball/master`
   - `pip install https://github.com/epigen/pypiper/zipball/master`
 2. Clone this repository:
