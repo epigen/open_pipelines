@@ -74,7 +74,7 @@ For genomes with annotation available, I strongly recommend filtering the peak c
 #### bigWig file
 
 A bigWig file with signal along the genome will be produced which can be used for visualizations in genome browsers. This requires some [UCSC tools](http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/) to be available, particularly `bedGraphToBigWig`.
-This file can be normalized to the total library size if specified in the [pipeline configuration file](atacseq.yaml) under `parameters: normalize_tracks`. The normalization can take a normalization factor `parameters: norm_factor` under consideration which will make the scalling of the bigWig file comparable between samples.
+This file can be normalized to the total library size if specified in the [pipeline configuration file](atacseq.yaml) under `parameters: normalize_tracks`. The normalization can take a normalization factor `parameters: norm_factor` under consideration which will make the scalling of the bigWig file comparable between samples. This can however create files with numerical scales which are impractical and therefore producing unnormalized bigWig files or making a posterior normalization with all samples jointly can sometimes be preferable.
 
 #### Fragment distributions
 
@@ -90,6 +90,9 @@ Two additional quality metric will be computed: the normalized strand cross-corr
 
 
 ## Collecting statistics from pipeline runs
+
+You can easily collect statistics from all runs using looper: `lopper summarize project_config.yaml`
+
 
 ### Statistics
 
@@ -120,6 +123,16 @@ Two additional quality metric will be computed: the normalized strand cross-corr
  - `Time`: pipeline run time 
  - `Success`: time pipeline run finished
 
+
+## Sample quality, wet lab troubleshooting and advice
+
+
+Here are a few comments on issues that can condition the quality of an ATAC-seq library by our experience (by rough order of importance):
+ - A crucial factor for a successful library is the quality of the starting sample. ATAC-seq requires viable cells, so make sure to use only living cells by either sorting (good to increase purity too) or simply careful decantation - even if processing a fresh sample. Some cell types/lines are more sensitive to freezing/thawing and this should be done with great care.
+ - One issue that can reduce the efficiency of the experiment considerably is the amount of mitochondrial DNA that is tagmented, specially in cell types with high mitochondrial content. This has been improved in the FastATAC protocol (Corces et al, 2016) by the use of digitonin as a permeabilizing agent as opposed to more harsher detergents which often lyse mitochondria too. High DNA mitochondrial content will not increase noise levels in the experiment but will reduce the amount of useful nuclear reads. Typical mitochondrial read fractions in the first protocol version were between 20-40% and with the FastATAC protocol have been dramatically reduced to 1-8%.
+ - Another issue that sometimes occurs (specially for new users) is how to size select the libraries. This can often be the confluence point of several factors/problems: too small fragments can have origin in some adapter dimers or from genomic DNA that has been too tagmented. The first case is the most serious as these fragments are not alignable and easily outcompete larger fragments for sequencing - this can be easily spotted by assessing the quality of the raw reads with FASTQC for example. The later is not necessarily a problem since the smallest sequencable fragment from an ATAC-seq library is usually larger than 28-31bp which is mappable. It can however reduce the return of sequencing with large read lengths in paired-end mode. This can also be monitored by observing the abundance of Illumina Nextera sequences in the reads starting with basepair ~30 and progressively increasing. Another source of small fragments can be the tagmentation of naked DNA due to excessive cell lysis or death and is easy to spot on a bioanalyzer. A good library will contain an initial negative exponential distribution of nucleosome free fragments and a series of gaussian-like distributions of nucleossomal fragments (see Buenrostro et al Nat Methods 2013).
+ - PCR overamplification of a library will result in a low complexity library (high redundancy) and should be avoided. Always perform an initial qPCR amplification of an aliquot of the library to estimate the number of cycles needed to amplify each individual library. While cumbersome (each library may need a specific number of cycles), this process is quite crucial.
+ - Lastly, the type of Tn5 enzyme used can also be a source of biases in the data. The standard protocol uses the Tn5 enzyme from the Illumina Nextera kit, but one can also use Tn5 recombinant protein produced in-house. The later has to be loaded with adapters which adds a few extra steps to the protocol including an important step of removal of unloaded adapter sequences. If excess adapters are present this will greatly reduce the efficiency of the experiment. However, when comparing the quality (in quantitative but also qualitative terms) of the Illumina or in-house Tn5, we have detectable but only subtle differences, which indicated that both could be used for profiling accessible chromatin. However, avoid using the two types of enzyme in a given project to minimize bias just to be on the safe side. Monitor also the date of use of the transposase enzyme as its efficiency tends to decay with time.
 
 ## Contributing
 
