@@ -1,6 +1,6 @@
 # ATAC-seq pipeline
 
-The [ATAC-seq pipeline](atacseq.py) processes ATAC-seq and DNA-seq data.
+The [ATAC-seq pipeline](atacseq.py) processes ATAC-seq and DNAse-seq data.
 It does adapter trimming, mapping, peak calling, and creates a bigwig file for visualization. For each step statistics are collected and several library quality metrics are computed.
 
 
