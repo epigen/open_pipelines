@@ -1,6 +1,7 @@
 # ATAC-seq pipeline
 
-This repository contains a pipeline to process ATAC-seq data. It does adapter trimming, mapping, peak calling, and creates bigwig tracks, TSS enrichment files, and other outputs. You can download the latest version from the [releases page](https://github.com/databio/ATACseq/releases) and a history of version changes is in the [CHANGELOG](CHANGELOG.md).
+The [ATAC-seq pipeline](atacseq.py) processes ATAC-seq and DNA-seq data.
+It does adapter trimming, mapping, peak calling, and creates a bigwig file for visualization. For each step statistics are collected and several library quality metrics are computed.
 
 
 ## Installation and configuration
