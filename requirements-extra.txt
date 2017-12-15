@@ -1,2 +1,2 @@
 git+https://github.com/epigen/pypiper/#egg=pypiper
-git+https://github.com/epigen/looper/#egg=looper
+git+https://github.com/pepkit/pep/#egg=pep

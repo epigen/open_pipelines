@@ -18,7 +18,7 @@ from pypiper import NGSTk, PipelineError, Stage
 from pypiper.utils import \
 	build_sample_paths, is_fastq, is_unzipped_fastq, is_gzipped_fastq, \
 	parse_cores
-from looper.models import AttributeDict, Sample
+from pep import AttributeDict, Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
 from pipelines.exceptions import InvalidFiletypeException
 
@@ -89,7 +89,7 @@ def merge_input(sample, pipeline_manager, ngstk):
 	files defined. If so, this call designates the sample's 'unmapped'
 	attribute (a filepath) as its 'data_source.'
 
-	:param looper.models.Sample sample: the being processed, for which to
+	:param pep.Sample sample: the being processed, for which to
 		merge input files if needed.
 	:param pypiper.PipelineManager pipeline_manager: Handler of control flow
 		and data management for a running pipeline.
@@ -146,7 +146,7 @@ def ensure_fastq(sample, pipeline_manager, ngstk):
 	"""
 	Convert a sequencing reads file to another format.
 
-	:param looper.models.Sample sample: sample for which to convert reads file
+	:param pep.Sample sample: sample for which to convert reads file
 	:param pypiper.PipelineManager pipeline_manager: execution manager
 	:param pypiper.NGSTk ngstk: configured NGS processing framework;
 		required if and only if conversion function is not provided.
@@ -214,7 +214,7 @@ def trim_reads(sample, pipeline_manager, ngstk,
 	"""
 	Perform read trimming.
 
-	:param looper.models.Sample sample: sample for which to convert reads file
+	:param pep.Sample sample: sample for which to convert reads file
 	:param pypiper.PipelineManager pipeline_manager: execution manager
 	:param pypiper.NGSTk ngstk: configured NGS processing framework
 	:param int | str cores: number of CPUs to allow for read trimming process
@@ -288,7 +288,7 @@ def align_reads(sample, pipeline_manager, ngstk, cores=None):
 	"""
 	Align sequencing reads.
 
-	:param looper.models.Sample sample: sample for which to align reads
+	:param pep.Sample sample: sample for which to align reads
 	:param pypiper.PipelineManager pipeline_manager: execution manager
 	:param pypiper.NGSTk ngstk: configured NGS processing framework
 	:param int | str cores: number of cores allowed to be used for alignment
@@ -316,7 +316,7 @@ def filter_reads(sample, pipeline_manager, ngstk, cores=None):
 	"""
 	Filter sequencing reads.
 
-	:param looper.models.Sample sample: sample for which to filter reads
+	:param pep.Sample sample: sample for which to filter reads
 	:param pypiper.PipelineManager pipeline_manager: execution manager
 	:param pypiper.NGSTk ngstk: configured NGS processing framework
 	:param int | str cores: number of cores allowed to be used for filtration
@@ -340,7 +340,7 @@ def post_align_fastqc(sample, pipeline_manager, ngstk):
 	"""
 	Post-alignment quality control.
 
-	:param looper.models.Sample sample: sample for which to run QC
+	:param pep.Sample sample: sample for which to run QC
 	:param pypiper.PipelineManager pipeline_manager: execution manager
 	:param pypiper.NGSTk ngstk: configured NGS processing framework
 	"""
@@ -387,7 +387,7 @@ def compute_metrics(sample, pipeline_manager, ngstk, cores=None):
 	"""
 	Determine fragment size distribution, genome-wide coverage, and NSC/RSC.
 
-	:param looper.models.Sample sample: the sample undergoing processing and
+	:param pep.Sample sample: the sample undergoing processing and
 		being analyzed
 	:param pypiper.PipelineManager pipeline_manager: overseer of resources
 		and other settings for a pipeline
@@ -445,7 +445,7 @@ def call_peaks(sample, pipeline_manager, ngstk, cores=None, caller=None,
 	"""
 	Call peaks.
 
-	:param looper.models.Sample sample: the sample for which to call peaks
+	:param pep.Sample sample: the sample for which to call peaks
 	:param pypiper.PipelineManager pipeline_manager: the manager for a
 		pipeline instance
 	:param pypiper.NGSTk ngstk: configured NGS functions framework
@@ -515,7 +515,7 @@ def calc_frip(sample, pipeline_manager, ngstk, cores=None):
 	"""
 	Calculate the fraction of reads in called peaks (FRIP).
 
-	:param looper.models.Sample sample: the sample for which to call peaks
+	:param pep.Sample sample: the sample for which to call peaks
 	:param pypiper.PipelineManager pipeline_manager: the manager for a
 		pipeline instance
 	:param pypiper.NGSTk ngstk: configured NGS functions framework
@@ -552,13 +552,13 @@ class ChIPseqSample(Sample):
 	:Example:
 
 	# create Samples through a project object
-	from looper.models import Project
+	from pep import Project
 	prj = Project("project_config.yaml")
 	prj.add_sample_sheet()
 	s0 = prj.samples[0]  # here's a Sample
 
 	# create Samples through a SampleSheet object
-	from looper.models import SampleSheet, Sample
+	from pep import SampleSheet, Sample
 	sheet = SampleSheet("project_sheet.csv")
 	s1 = Sample(sheet.ix[0])  # here's a Sample too
 	"""
@@ -720,7 +720,7 @@ class ChipseqPipeline(pypiper.Pipeline):
 		Optionally, a peak caller name, number of processing cores, and peak
 		calling keyword arguments.
 
-		:param looper.models.Sample sample: the sample being processed by
+		:param pep.Sample sample: the sample being processed by
 			the pipeline
 		:param pypiper.manager.PipelineManager manager: the collection of
 			monitoring and resource specifications for the pipeline

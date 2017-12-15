@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
-from looper.models import AttributeDict, Sample
+from pep import AttributeDict, Sample
 
 import pandas as pd
 
