@@ -68,7 +68,7 @@ The minimum accepted mapping quality in 30 (phred scale) and in paired-end mode 
 Peaks can be called with [MACS2](https://github.com/taoliu/MACS) or [spp](https://github.com/kundajelab/phantompeakqualtools) but since ATAC-seq peak calling with MACS2 works (surprisingly) very well and spp is not really a command-line program but a script, I strongly recommend using MACS2 only.
 
 MACS2 is run with the `--no-model --extsize 147` parameters and outputs peak calls in the `$sample_name/peaks` directory in both narrowPeak and excel formats.
-For genomes with annotation available, I strongly recommend filtering the peak calls using a blacklist file such as the ENCODE (https://sites.google.com/site/anshulkundaje/projects/blacklists).
+For genomes with annotation available, I strongly recommend filtering the peak calls using a blacklist file such as the ENCODE (https://sites.google.com/site/anshulkundaje/projects/blacklists) - this is performed if such a list is provided in the pipeline's configuration file.
 
 ### Quality control
 
@@ -83,7 +83,7 @@ Libray fragment distribution can be an indicator of library quality and refects 
 
 #### FRiP
 
-One of the most used measures of signal-to-noise ratio in an ATAC-seq library is the fraction of reads in peaks (FRiP). This is simply the fraction of filtered reads that is overlapping peaks (from the own sample) over all filtered reads. For a more complete description and reasoning behind this metric see [Landt et al 2012](https://dx.doi.org/doi:10.1101/gr.136184.111). A file holding the number of reads overlapping peaks will be output in the sample's root directory and the actual FRiP value will be reported in the statistics.
+One of the most used measures of signal-to-noise ratio in an ATAC-seq library is the fraction of reads in peaks (FRiP). This is simply the fraction of filtered reads that is overlapping peaks (from the own sample or from an oracle region list) over all filtered reads. For a more complete description and reasoning behind this metric see [Landt et al 2012](https://dx.doi.org/doi:10.1101/gr.136184.111). Files holding the number of reads overlapping peaks will be output in the sample's root directory and the actual FRiP value(s) will be reported in the statistics. This is calculated from an oracle peak regions (e.g. Ensembl regulatory build annotations) if provide in the pipeline's configuration file.
 
 #### Cross-correlation enrichment
 
@@ -120,7 +120,9 @@ You can easily collect statistics from all runs using looper: `lopper summarize 
  - `NSC`: normalized strand cross-correlation
  - `RSC`: relative strand cross-correlation
  - `peaks`: number of called peaks
- - `frip`: fraction of reads in peaks (FRiP)
+ - `filtered_peaks`: number of called peaks filtered from genome-specific blacklisted regions, if provided
+ - `frip`: fraction of reads in peaks (FRiP) called from the sample
+ - `oracle_frip`: fraction of reads in peaks (FRiP) from an external oracle region set
  - `Time`: pipeline run time 
  - `Success`: time pipeline run finished
 

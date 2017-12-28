@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
 ATAC-seq pipeline
@@ -82,6 +82,7 @@ class ATACseqSample(Sample):
 
 		# Files in the root of the sample dir
 		self.frip = os.path.join(self.paths.sample_root, self.name + "_FRiP.txt")
+		self.oracle_frip = os.path.join(self.paths.sample_root, self.name + "_oracle_FRiP.txt")
 
 		# Mapped: mapped, duplicates marked, removed, reads shifted
 		# this will create additional bam files with reads shifted
@@ -101,7 +102,7 @@ class ATACseqSample(Sample):
 		self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
 		self.peaks = os.path.join(self.paths.peaks, self.name + "_peaks.narrowPeak")
 		self.summits = os.path.join(self.paths.peaks, self.name + "_summits.bed")
-		self.filteredPeaks = os.path.join(self.paths.peaks, self.name + "_peaks.filtered.bed")
+		self.filtered_peaks = os.path.join(self.paths.peaks, self.name + "_peaks.filtered.bed")
 
 
 class DNaseSample(ATACseqSample):
@@ -343,15 +344,15 @@ def parse_duplicate_stats(stats_file, prefix=""):
 		return error_dict
 
 
-def parse_peak_number(peak_file):
+def parse_peak_number(peak_file, prefix=""):
 	from subprocess import check_output
 	try:
-		return {"peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
+		return {prefix + "peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
 	except:
-		return {"peaks": pd.np.nan}
+		return {prefix + "peaks": pd.np.nan}
 
 
-def parse_FRiP(frip_file, total_reads):
+def parse_FRiP(frip_file, total_reads, prefix=""):
 	"""
 	Calculates the fraction of reads in peaks for a given sample.
 
@@ -362,7 +363,7 @@ def parse_FRiP(frip_file, total_reads):
 	"""
 	import re
 
-	error_dict = {"frip": pd.np.nan}
+	error_dict = {prefix + "frip": pd.np.nan}
 	try:
 		with open(frip_file, "r") as handle:
 			content = handle.readlines()
@@ -374,7 +375,7 @@ def parse_FRiP(frip_file, total_reads):
 
 	reads_in_peaks = int(re.sub("\D", "", content[0]))
 
-	return {"frip": reads_in_peaks / float(total_reads)}
+	return {prefix + "frip": reads_in_peaks / float(total_reads)}
 
 
 def parse_nsc_rsc(nsc_rsc_file):
@@ -429,14 +430,11 @@ def main():
 	parser = arg_parser(parser)
 	parser = pypiper.add_pypiper_args(parser, groups=["all"])
 	args = parser.parse_args()
-	if args.sample_config is None:
-		parser.print_help()
-		return 1
 
 	# Read in yaml configs
 	series = pd.Series(yaml.load(open(args.sample_config, "r")))
 	# Create Sample object
-	if series["protocol"] != "DNase-seq":
+	if series["library"] != "DNase-seq":
 		sample = ATACseqSample(series)
 	else:
 		sample = DNaseSample(series)
@@ -490,7 +488,7 @@ def process(sample, pipe_manager, args):
 	"""
 	print("Start processing ATAC-seq sample %s." % sample.sample_name)
 
-	for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
+	for path in ["sample_root"] + sample.paths.__dict__.keys():
 		try:
 			exists = os.path.exists(sample.paths[path])
 		except TypeError:
@@ -703,8 +701,20 @@ def process(sample, pipe_manager, args):
 	pipe_manager.run(cmd, sample.peaks, shell=True)
 	report_dict(pipe_manager, parse_peak_number(sample.peaks))
 
+	# Filter peaks
+	if hasattr(pipe_manager.config.resources.blacklisted_regions, sample.genome):
+		pipe_manager.timestamp("Filtering peaks from blacklisted regions")
+		cmd = filter_peaks(
+			peaks=sample.peaks,
+			exclude=getattr(pipe_manager.config.resources.blacklisted_regions, sample.genome),
+			filtered_peaks=sample.filtered_peaks
+		)
+		pipe_manager.run(cmd, sample.filtered_peaks, shell=True)
+		report_dict(pipe_manager, parse_peak_number(sample.filtered_peaks, prefix="filtered_"))
+
 	# Calculate fraction of reads in peaks (FRiP)
 	pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
+	# on the sample's peaks
 	cmd = tk.calculate_FRiP(
 		inputBam=sample.filtered,
 		inputBed=sample.peaks,
@@ -715,10 +725,27 @@ def process(sample, pipe_manager, args):
 	total = float(pipe_manager.stats_dict["filtered_single_ends"]) + (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.)
 	report_dict(pipe_manager, parse_FRiP(sample.frip, total))
 
+	# on an oracle peak list
+	if hasattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome):
+		cmd = tk.calculate_FRiP(
+			inputBam=sample.filtered,
+			inputBed=getattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome),
+			output=sample.oracle_frip,
+			cpus=args.cores
+		)
+		pipe_manager.run(cmd, sample.oracle_frip, shell=True)
+		report_dict(pipe_manager, parse_FRiP(sample.oracle_fripfrip, total, prefix="oracle_"))
+
+	# Finish up
 	print(pipe_manager.stats_dict)
 
 	pipe_manager.stop_pipeline()
 	print("Finished processing sample %s." % sample.sample_name)
+
+
+def filter_peaks(peaks, exclude, filtered_peaks):
+	return "bedtools intersect -v -wa -a {} -b {} > {}".format(
+		peaks, exclude, filtered_peaks)
 
 
 if __name__ == '__main__':
