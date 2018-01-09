@@ -433,8 +433,18 @@ def main():
 
 	# Read in yaml configs
 	series = pd.Series(yaml.load(open(args.sample_config, "r")))
+
+	# looper 0.6/0.7 compatibility:
+	if "protocol" in series.index:
+		key = "protocol"
+	elif "library" in series.index:
+		key = "library"
+	else:
+		raise KeyError(
+			"Sample does not contain either a 'protocol' or 'library' attribute!")
+
 	# Create Sample object
-	if series["library"] != "DNase-seq":
+	if series[key] != "DNase-seq":
 		sample = ATACseqSample(series)
 	else:
 		sample = DNaseSample(series)
@@ -446,6 +456,12 @@ def main():
 		sample.merged = False
 	sample.prj = AttributeDict(sample.prj)
 	sample.paths = AttributeDict(sample.paths.__dict__)
+
+	# Check read type if not provided
+	if not hasattr(sample, "ngs_inputs"):
+		sample.ngs_inputs = [sample.data_source]
+	if not hasattr(sample, "read_type"):
+		sample.set_read_type()
 
 	# Shorthand for read_type
 	if sample.read_type == "paired":
