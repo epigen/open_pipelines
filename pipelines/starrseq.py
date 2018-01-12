@@ -128,6 +128,13 @@ def main():
 	sample.prj = AttributeDict(sample.prj)
 	sample.paths = AttributeDict(sample.paths.__dict__)
 
+	# looper 0.6/0.7 compatibility:
+	# Check read type if not provided
+	if not hasattr(sample, "ngs_inputs"):
+		sample.ngs_inputs = [sample.data_source]
+	if not hasattr(sample, "read_type"):
+		sample.set_read_type()
+
 	# Shorthand for read_type
 	if sample.read_type == "paired":
 		sample.paired = True
