@@ -43,8 +43,6 @@ class STARRseqSample(Sample):
 
 		self.tagmented = False
 
-		self.make_sample_dirs()
-
 	def __repr__(self):
 		return "STARR-seq sample '%s'" % self.sample_name
 
@@ -111,14 +109,11 @@ def main():
 		description="STARR-seq pipeline."
 	)
 	parser = arg_parser(parser)
-	parser = pypiper.add_pypiper_args(parser, all_args=True)
+	parser = pypiper.add_pypiper_args(parser, groups=["all"])
 	args = parser.parse_args()
-	if args.sample_config is None:
-		parser.print_help()
-		return 1
 
-	# Read in yaml config and create Sample object
-	sample = STARRseqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
+	# Read in yaml configs
+	sample = STARRSeqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
 
 	# Check if merged
 	if len(sample.data_path.split(" ")) > 1:
@@ -128,7 +123,6 @@ def main():
 	sample.prj = AttributeDict(sample.prj)
 	sample.paths = AttributeDict(sample.paths.__dict__)
 
-	# looper 0.6/0.7 compatibility:
 	# Check read type if not provided
 	if not hasattr(sample, "ngs_inputs"):
 		sample.ngs_inputs = [sample.data_source]
@@ -143,16 +137,16 @@ def main():
 
 	# Set file paths
 	sample.set_file_paths()
-	sample.make_sample_dirs()
+	# sample.make_sample_dirs()  # should be fixed to check if values of paths are strings and paths indeed
 
 	# Start Pypiper object
 	# Best practice is to name the pipeline with the name of the script;
 	# or put the name in the pipeline interface.
 	pipe_manager = pypiper.PipelineManager(name="starrseq", outfolder=sample.paths.sample_root, args=args)
+	pipe_manager.config.tools.scripts_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tools")
 
 	# Start main function
 	process(sample, pipe_manager, args)
-
 
 def arg_parser(parser):
 	"""
@@ -177,7 +171,11 @@ def process(sample, pipe_manager, args):
 	print("Start processing STARR-seq sample %s." % sample.sample_name)
 
 	for path in ["sample_root"] + sample.paths.__dict__.keys():
-		if not os.path.exists(sample.paths[path]):
+		try:
+			exists = os.path.exists(sample.paths[path])
+		except TypeError:
+			continue
+		if not exists:
 			try:
 				os.mkdir(sample.paths[path])
 			except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
