@@ -750,7 +750,7 @@ def process(sample, pipe_manager, args):
             cpus=args.cores
         )
         pipe_manager.run(cmd, sample.oracle_frip, shell=True)
-        report_dict(pipe_manager, parse_FRiP(sample.oracle_fripfrip, total, prefix="oracle_"))
+        report_dict(pipe_manager, parse_FRiP(sample.oracle_frip, total, prefix="oracle_"))
 
     # Finish up
     print(pipe_manager.stats_dict)
