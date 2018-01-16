@@ -12,8 +12,9 @@ protocol_mapping:
     DNASE: atacseq
     DROP-SEQ: dropseq
     DROPSEQ: dropseq
-    QUANT-SEQ: quantseq
-    QUANTSEQ: quantseq
+    RNA-SEQ: rnaseq
+    RNASEQ: rnaseq
+    RNA: rnaseq
     STARR-SEQ: starrseq
     STARRSEQ: starrseq
     STARR: starrseq
@@ -118,22 +119,30 @@ pipelines:
                 mem: 80000
                 time: "3-12:00:00"
 
-    quantseq:
-        name: Quant-seq
-        sample_subtypes: QuantseqSample
-        path: pipelines/quantseq.py
-        looper_args: True
+    rnaseq:
+        name: RNA-seq
+        sample_subtypes: 
+            RNA-seq: rnaseqSample
+            RNA: rnaseqSample
+        path: pipelines/rnaseq.py
         arguments:
-            "--sample-name": sample_name
-            "--genome": genome
-            "--input": data_path
-            "--single-or-paired": read_type
+            "--sample-yaml": yaml_file
+            "-I": sample_name
+            "-G": genome
+        looper_args: True
+        required_input_files: [data_path]
+        ngs_input_files: [data_path]
         resources:
             default:
                 file_size: "0"
-                cores: 4
-                mem: 12000
-                time: "12-00:00:00"
+                cores: 1
+                mem: 8000
+                time: "01:00:00"
+            medium:
+                file_size: "1"
+                cores: 2
+                mem: 16000
+                time: "08:00:00"
 
     starrseq:
         name: STARR-seq
