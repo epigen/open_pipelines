@@ -30,12 +30,16 @@ If you are just _using a pipeline_ in a project, and you are not _developing the
 Small example data for several pipeline types is available in the [microtest repository](https://github.com/epigen/microtest/)
 
 
-## Pipeline steps and outputs
+# Pipeline documentation
+See the dedicated pages detailing the steps and output of each of the pipelines:
+ - [ATAC-seq and DNAse-seq](pipelines/atacseq.md)
+ - [ChIP-seq and ChIPmentation](pipelines/chipseq.md)
+ - [RNA-seq](pipelines/rnaseq.md)
 
-More thorough documentation of each pipeline and its outputs will follow soon.
+The remaining pipelines will get their dedicated documentation soon.
 
 
-## Contributing
+# Contributing
 
 We appreciate and encourage contributions to existing pipelines or submitions of new ones.
 
