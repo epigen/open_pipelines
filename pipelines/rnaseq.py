@@ -219,12 +219,18 @@ def parse_kallisto_stats(abundance):
     stats['transcripts'] = df.shape[0]
     stats['zero-count_transcripts'] = (df['est_counts'] == 0).sum()
     stats['non-zero-count_transcripts'] = (df['est_counts'] > 0).sum()
-    d = np.log2(df['tpm'].where(lambda x: x > 0)).dropna()
-    stats['non-zero_log2tpm_mean'] = d.mean()
+    log_tpm = np.log2(1 + df['tpm'])
+    stats['log2tpm_mean'] = log_tpm.mean()
+    stats['log2tpm_median'] = log_tpm.median()
+    p_log_tpm = np.log2(1 + df['tpm'].where(lambda x: x > 0)).dropna()
+    stats['non-zero_log2tpm_mean'] = p_log_tpm.mean()
+    stats['non-zero_log2tpm_median'] = p_log_tpm.median()
     try:
         import scipy
-        stats['non-zero_log2tpm_iqr'] = scipy.stats.iqr(d)
+        stats['log2tpm_iqr'] = scipy.stats.iqr(log_tpm)
+        stats['non-zero_log2tpm_iqr'] = scipy.stats.iqr(p_log_tpm)
     except ImportError:
+        stats['log2tpm_iqr'] = np.nan
         stats['non-zero_log2tpm_iqr'] = np.nan
 
     return stats

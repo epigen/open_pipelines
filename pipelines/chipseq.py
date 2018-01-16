@@ -27,23 +27,10 @@ __status__ = "Development"
 
 class ChIPseqSample(Sample):
     """
-    Class to model ChIP-seq samples based on the generic Sample class (itself a pandas.Series).
+    Class to model ChIP-seq samples based on the generic Sample class.
 
     :param series: Pandas `Series` object.
     :type series: pandas.Series
-
-    :Example:
-
-    # create Samples through a project object
-    from looper.models import Project
-    prj = Project("project_config.yaml")
-    prj.add_sample_sheet()
-    s0 = prj.samples[0]  # here's a Sample
-
-    # create Samples through a SampleSheet object
-    from looper.models import SampleSheet, Sample
-    sheet = SampleSheet("project_sheet.csv")
-    s1 = Sample(sheet.ix[0])  # here's a Sample too
     """
     __library__ = "ChIP-seq"
 

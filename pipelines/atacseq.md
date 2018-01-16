@@ -1,7 +1,8 @@
 # ATAC-seq pipeline
 
 The [ATAC-seq pipeline](atacseq.py) processes ATAC-seq and DNAse-seq data.
-It does adapter trimming, mapping, peak calling, and creates a bigwig file for visualization. For each step statistics are collected and several library quality metrics are computed.
+It does adapter trimming, mapping, peak calling, and creates a bigwig file for visualization.
+For each step statistics are collected and several library quality metrics are computed.
 
 
 ## Installation and configuration
@@ -23,7 +24,7 @@ pip install --user https://github.com/epigen/looper/zipball/v0.7.2
 ## Usage
 
  - Clone the pipeline repository: `git clone git@github.com:epigen/open_pipelines.git`;
- - Adapt the [pipeline configuration file](atacseq.yaml) to point to specific software if needed;
+ - Adapt the [pipeline configuration file](atacseq.yaml) to point to required software needed by the pipeline. All runnables are values under the "tools" section;
  - Create a sample annotation sheet containing the variables `sample_name`, `protocol`, and `organism`;
  - Create a project configuration file that points to the [pipeline interface file](../pipeline_interface.yaml) and the sample annotation sheet;
  - Run pipelines using looper `looper run project_config.yaml`.
@@ -63,6 +64,12 @@ Reads are filtered quite stringently, specially in paired-end mode. This fits th
 
 The minimum accepted mapping quality in 30 (phred scale) and in paired-end mode only concordant proper pairs are kept. In addition, optical duplicates are removed with [sambamba](http://lomereiter.github.io/sambamba/) and only nuclear genome reads are kept.
 
+### Transposition event reconstruction
+
+The location of Tn5 transposition events can be reconstituted by shifting the 5' position of the mapped reads by a known distance.
+The pipeline will perform this step and create a BAM file with shifted read positions which can be used for several downstream applications (e.g. footprinting).
+However, do not use this file for any other application.
+
 ### Peak calling
 
 Peaks can be called with [MACS2](https://github.com/taoliu/MACS) or [spp](https://github.com/kundajelab/phantompeakqualtools) but since ATAC-seq peak calling with MACS2 works (surprisingly) very well and spp is not really a command-line program but a script, I strongly recommend using MACS2 only.
@@ -79,11 +86,11 @@ This file can be normalized to the total library size if specified in the [pipel
 
 #### Fragment distributions
 
-Libray fragment distribution can be an indicator of library quality and refects the abundance of nucleosome-free or nucleosome fragments. **For paired-end samples** a plot of fragment distributions will be produced and stored in the sample's root directory. A mixture of distributions will try to be fit to the observed distribution: an inverse exponential distribution modeling the nucleosome-free fragments and four gaussians modeling various nucleosomal distributions.
+Library fragment distribution can be an indicator of library quality and refects the abundance of nucleosome-free or nucleosome fragments. **For paired-end samples** a plot of fragment distributions will be produced and stored in the sample's root directory. A mixture of distributions will try to be fit to the observed distribution: an inverse exponential distribution modeling the nucleosome-free fragments and four gaussians modeling various nucleosomal distributions.
 
 #### FRiP
 
-One of the most used measures of signal-to-noise ratio in an ATAC-seq library is the fraction of reads in peaks (FRiP). This is simply the fraction of filtered reads that is overlapping peaks (from the own sample or from an oracle region list) over all filtered reads. For a more complete description and reasoning behind this metric see [Landt et al 2012](https://dx.doi.org/doi:10.1101/gr.136184.111). Files holding the number of reads overlapping peaks will be output in the sample's root directory and the actual FRiP value(s) will be reported in the statistics. This is calculated from an oracle peak regions (e.g. Ensembl regulatory build annotations) if provide in the pipeline's configuration file.
+One of the most used measures of signal-to-noise ratio in an ChIP-seq library is the fraction of reads in peaks (FRiP). This is simply the fraction of filtered reads that is overlapping peaks (from the own sample or from an oracle region list) over all filtered reads. For a more complete description and reasoning behind this metric see [Landt et al 2012](https://dx.doi.org/doi:10.1101/gr.136184.111). Files holding the number of reads overlapping peaks will be output in the sample's root directory and the actual FRiP value(s) will be reported in the statistics. This can also be calculated from an oracle region set (e.g. Ensembl regulatory build annotations) if provided in the pipeline's configuration file.
 
 #### Cross-correlation enrichment
 
