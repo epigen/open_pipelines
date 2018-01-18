@@ -105,6 +105,7 @@ class ChIPseqSample(Sample):
         # Peaks: peaks called and derivate files
         self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
         self.peaks = os.path.join(self.paths.peaks, self.sample_name + ("_peaks.narrowPeak" if not self.broad else "_peaks.broadPeak"))
+        self.r_peak_model_file = os.path.join(self.paths.peaks, self.sample_name + "_model.r")
 
 
 class ChIPmentation(ChIPseqSample):
