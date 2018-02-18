@@ -122,8 +122,8 @@ pipelines:
     rnaseq:
         name: RNA-seq
         sample_subtypes: 
-            RNA-seq: rnaseqSample
-            RNA: rnaseqSample
+            RNA-seq: RNASeqSample
+            RNA: RNASeqSample
         path: pipelines/rnaseq.py
         arguments:
             "--sample-yaml": yaml_file
