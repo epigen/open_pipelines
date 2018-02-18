@@ -409,7 +409,7 @@ def process(sample, pipe_manager, args):
     # Quantify gene expression
     pipe_manager.timestamp("Quantifying expression with Kallisto")
     cmd = kallisto(
-        fastq_files=[sample.trimmed1, sample.trimmed2 if sample.paired else sample.trimmed],
+        fastq_files=[sample.trimmed1, sample.trimmed2] if sample.paired else [sample.trimmed],
         kallisto_index=getattr(pipe_manager.config.resources.kallisto_index, sample.genome),
         read_type=sample.read_type,
         output_dir=sample.kallisto_output_dir,
