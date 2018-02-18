@@ -226,9 +226,9 @@ def parse_kallisto_stats(abundance):
     stats['non-zero_log2tpm_mean'] = p_log_tpm.mean()
     stats['non-zero_log2tpm_median'] = p_log_tpm.median()
     try:
-        import scipy
-        stats['log2tpm_iqr'] = scipy.stats.iqr(log_tpm)
-        stats['non-zero_log2tpm_iqr'] = scipy.stats.iqr(p_log_tpm)
+        from scipy.stats import iqr
+        stats['log2tpm_iqr'] = iqr(log_tpm)
+        stats['non-zero_log2tpm_iqr'] = iqr(p_log_tpm)
     except ImportError:
         stats['log2tpm_iqr'] = np.nan
         stats['non-zero_log2tpm_iqr'] = np.nan
