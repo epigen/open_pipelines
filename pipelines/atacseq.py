@@ -738,7 +738,7 @@ def process(sample, pipe_manager, args):
         cpus=args.cores
     )
     pipe_manager.run(cmd, sample.frip, shell=True)
-    total = float(pipe_manager.stats_dict["filtered_single_ends"]) + (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.)
+    total = (float(pipe_manager.stats_dict["filtered_single_ends"]) + (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
     report_dict(pipe_manager, parse_FRiP(sample.frip, total))
 
     # on an oracle peak list
