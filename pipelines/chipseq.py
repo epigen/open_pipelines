@@ -51,7 +51,7 @@ class ChIPseqSample(Sample):
         try:
             self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
             self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
-        except:
+        except AttributeError:
             pass
 
     def __repr__(self):
@@ -670,6 +670,7 @@ def process(sample, pipe_manager, args):
             plot=sample.insertplot,
             output_csv=sample.insertdata
         )
+        pipe_manager.report_figure("insert_sizes", sample.insertplot)
 
     # Count coverage genome-wide
     pipe_manager.timestamp("Calculating genome-wide coverage")
@@ -690,6 +691,7 @@ def process(sample, pipe_manager, args):
     )
     pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
     report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
+    pipe_manager.report_figure("cross_correlation", sample.qc_plot)
 
     # If sample does not have "ctrl" attribute, finish processing it.
     if not hasattr(sample, "compare_sample"):

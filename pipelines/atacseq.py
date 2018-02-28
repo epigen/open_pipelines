@@ -681,6 +681,7 @@ def process(sample, pipe_manager, args):
             plot=sample.insertplot,
             output_csv=sample.insertdata
         )
+        pipe_manager.report_figure("insert_sizes", sample.insertplot)
 
     # Count coverage genome-wide
     pipe_manager.timestamp("Calculating genome-wide coverage")
@@ -701,6 +702,7 @@ def process(sample, pipe_manager, args):
     )
     pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
     report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
+    pipe_manager.report_figure("cross_correlation", sample.qc_plot)
 
     # Call peaks
     pipe_manager.timestamp("Calling peaks with MACS2")
