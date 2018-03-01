@@ -32,6 +32,8 @@ tools:
   trimmomatic: ${TRIMMOMATIC}
   skewer: skewer
   bedtools: bedtools
+  bedgraphtobigwig: bedgraphtobigwig  # You can find this here http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/
+  fix_bedfile_genome_boundaries.py: fix_bedfile_genome_boundaries.py   # You can find this here https://raw.githubusercontent.com/epigen/open_pipelines/master/pipelines/tools/fix_bedfile_genome_boundaries.py
   macs2: macs2
   # optional:
   Rscript: Rscript

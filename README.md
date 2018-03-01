@@ -2,17 +2,13 @@
 
 These are some of the NGS pipelines developed and used in the [Bock lab](http://medical-epigenomics.org) at [CeMM](http://cemm.at).
 
-This repository contains pipelines for processing NGS data and associated scripts used by them.
+This repository contains pipelines for processing NGS data and associated scripts used by them (in the [/pipelines/tools](pipelines/tools) subdirectory).
+Pipelines here are configured to work with [`looper`](http://looper.readthedocs.io) and use [`pypiper`](http://pypiper.readthedocs.io) (see the corresponding repositories). These pipelines work with metadata formatted as a [portable encapsulated project](http://pepkit.github.io).
 
-These pipelines are meant to work with [`looper`](https://github.com/epigen/looper/) and use [`pypiper`](https://github.com/epigen/pypiper/) (see the corresponding repositories).
-
-## Running pipelines with Looper
-
-If you have set up `looper` and `pypiper` and [set up your project configuration](http://looper.readthedocs.io/en/latest/define-your-project.html), you simply have to [link these pipelines to your project.](http://looper.readthedocs.io/en/latest/pipeline-interface.html) (step 4 in the following list).
-
-1. Install [`looper`](https://github.com/epigen/looper/) and [`pypiper`](https://github.com/epigen/pypiper/) (you might need to add the `--user` option in those pip commands): 
-  - `pip install https://github.com/epigen/looper/zipball/master`
-  - `pip install https://github.com/epigen/pypiper/zipball/master`
+# Installation and usage
+1. Install [`looper`](http://looper.readthedocs.io) and [`pypiper`](http://pypiper.readthedocs.io): 
+  - `pip install https://github.com/epigen/looper/zipball/v0.7.2`
+  - `pip install https://github.com/epigen/pypiper/zipball/v0.6`
 2. Clone this repository:
   - `git clone git@github.com:epigen/open_pipelines.git`
 3. Produce a configuration file for your project ([see here how to do it](http://looper.readthedocs.io/en/latest/define-your-project.html)).
@@ -34,12 +30,16 @@ If you are just _using a pipeline_ in a project, and you are not _developing the
 Small example data for several pipeline types is available in the [microtest repository](https://github.com/epigen/microtest/)
 
 
-## Pipeline steps and outputs
+# Pipeline documentation
+See the dedicated pages detailing the steps and output of each of the pipelines:
+ - [ATAC-seq and DNAse-seq](pipelines/atacseq.md)
+ - [ChIP-seq and ChIPmentation](pipelines/chipseq.md)
+ - [RNA-seq](pipelines/rnaseq.md)
 
-More thorough documentation of each pipeline and its outputs will follow soon.
+The remaining pipelines will get their dedicated documentation soon.
 
 
-## Contributing
+# Contributing
 
 We appreciate and encourage contributions to existing pipelines or submitions of new ones.
 
