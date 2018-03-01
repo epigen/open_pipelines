@@ -1,4 +1,4 @@
-# Reference genomes
+# The following section contains static files required by the pipeline
 resources:
   adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
   genomes:
@@ -26,10 +26,24 @@ resources:
       24: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign24mer.bed
       36: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign36mer.bed
       50: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign50mer.bed
+  blacklisted_regions:
+    hg38: /data/groups/lab_bock/shared/resources/regions/blacklists/hg38.blacklist.bed
+    hg19: /data/groups/lab_bock/shared/resources/regions/blacklists/wgEncodeMergedMapabilityRegionsExcludable.bed
+    mm10: /data/groups/lab_bock/shared/resources/regions/blacklists/mm10.blacklist.bed
+    mm9: /data/groups/lab_bock/shared/resources/regions/blacklists/mm9.blacklist.bed
+  oracle_peak_regions:
+    hg38: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh38.Regulatory_Build.regulatory_features.20161111.bed
+    hg19: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh19.RegulatoryFeatures_MultiCell.bed
+    mm10: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm38.Regulatory_Build.regulatory_features.20161111.bed
+    mm9: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm19.RegulatoryFeatures_MultiCell.bed
+  genomes_fasta:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.fa
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.fa
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.fa
 
+
+# The following section contains command-line tools used by the pipeline
 tools:
-  # in the tools section, you may provide the CpG-seq pipeline with the absolute path of the required bioinformatic tools
-  # set to 'java' or 'picard', to use the tool from your $PATH variable
   fastqc: fastqc
   java: java
   picard: /cm/shared/apps/picard-tools/1.140/picard.jar
@@ -38,12 +52,15 @@ tools:
   trimmomatic: trimmomatic
   skewer: skewer
   bedtools: /cm/shared/apps/bedtools/2.20.1/bedtools
+  bedgraphtobigwig: bedgraphtobigwig  # You can find this here http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/
+  fix_bedfile_genome_boundaries.py: fix_bedfile_genome_boundaries.py   # You can find this here https://raw.githubusercontent.com/epigen/open_pipelines/master/pipelines/tools/fix_bedfile_genome_boundaries.py
   macs2: macs2
   # optional:
-  # Rscript: Rscript
-  # spp: /home/arendeiro/.local/bin/run_spp.R
+  Rscript: Rscript
+  spp: /home/arendeiro/.local/bin/run_spp.R  # You can find this here: https://raw.githubusercontent.com/crazyhottommy/phantompeakqualtools/master/run_spp.R
 
-# the parameters section is intended for all parameters passed to bioinformatic tools
+
+# The following section parameters used to control pipeline behaviour
 parameters:
   # which trimmer to use:
   # choose between ["trimmomatic", "skewer"]

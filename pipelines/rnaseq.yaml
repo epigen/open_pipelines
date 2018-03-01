@@ -1,0 +1,34 @@
+# The following section contains static files required by the pipeline
+resources:
+  adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
+  kallisto_index:
+    hg38_cdna: /data/groups/lab_bock/shared/resources/genomes/hg38_cdna/indexed_kallisto/hg38_cdna.index
+    hg19_cdna: /data/groups/lab_bock/shared/resources/genomes/hg19_cdna/indexed_kallisto/hg19_cdna.index
+    mm10_cdna: /data/groups/lab_bock/shared/resources/genomes/mm10_cdna/indexed_kallisto/mm10_cdna.index
+    mm9_cdna: /data/prod/ngs_resources/genomes/mm9_cdna/indexed_kallisto/mm9_cdna.index
+    ercc_cdna: /data/groups/lab_bock/shared/resources/genomes/ERCC92_cdna/indexed_kallisto/ERCC92_cdna.index
+
+
+# The following section contains command-line tools used by the pipeline
+tools:
+  fastqc: fastqc
+  java: java
+  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  samtools: samtools
+  sambamba: sambamba
+  trimmomatic: trimmomatic
+  skewer: skewer
+  kallisto: kallisto
+
+
+# The following section parameters used to control pipeline behaviour
+parameters:
+  # which trimmer to use:
+  # choose between ["trimmomatic", "skewer"]
+  trimmer: "skewer"
+  # Number of sampling bootstraps to perform.
+  bootstrap_number: 100
+  # Mean fragment size of library. Only required if `read_type` is 'single'.
+  fragment_size: 300
+  # Standard deviation of libray fragment size. Only required if `read_type` is 'single'.
+  fragment_std: 200
