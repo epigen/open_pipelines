@@ -519,7 +519,6 @@ def arg_parser(parser):
         dest="only_peaks",
         help="Skip preprocessing and only call peaks.",
         action="store_true",
-        type=str
     )
     return parser
 
