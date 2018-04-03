@@ -198,10 +198,11 @@ def main():
 
     # Standardize input files
     # overwrite config values with args if provided
+    print(args)
     if args.sample_config is not None:
-        if sample.read1 is None:
+        if sample.read1 is not None:
             sample.read1_files = sample.read1.split(" ")
-        if sample.read2 is None:
+        if sample.read2 is not None:
             sample.read2_files = sample.read2.split(" ")
     if args.input is not None:
         sample.read1_files = args.input
@@ -296,13 +297,13 @@ def process(sample, pipe_manager, args):
     tk = NGSTk(pm=pipe_manager)
 
     # Merge input files if needed handling various input formats
+    pipe_manager.timestamp("Merging or linking input files")
     local_input_files = tk.merge_or_link(
         input_args=[sample.read1_files, sample.read2_files],
         raw_folder=sample.paths.unmapped)
 
-    print(sample.paired)
-
     # Convert to FASTQ
+    pipe_manager.timestamp("Converting to FASTQ format")
     cmd, out_fastq_prefix, unaligned_fastq = tk.input_to_fastq(
         input_file=local_input_files,
         sample_name=sample.sample_name,
@@ -319,13 +320,13 @@ def process(sample, pipe_manager, args):
         if not os.path.exists(fastq_file):
             continue
 
+        pipe_manager.timestamp("Running FastQC in file: '{}'".format(fastq_file))
         cmd = tk.fastqc(fastq_file, sample.paths.sample_root)
         pipe_manager.run(cmd, fastqc_file)
         report_dict(pipe_manager, parse_fastqc(fastqc_file, prefix=prefix))
 
     # report joint metrics
     m = pd.Series(pipe_manager.stats_dict).astype(float)
-    print(pipe_manager.stats_dict, m)
     for metric in ["total_pass_filter_reads"]:
         pipe_manager.report_result("fastqc_total_" + metric, m[m.index.str.contains(metric)].sum())
     for metric in ["read_length", "GC_perc", "poor_quality_perc"]:

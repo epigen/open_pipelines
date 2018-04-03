@@ -50,8 +50,8 @@ pipelines:
             "-S": sample_name
             "--input": read1
             "--input2": read2
-            "-O": "output_parent"
-            "-G": genome_assembly
+            "-O": "results_subdir"
+            "-G": genome
             "--protocol": protocol
             "--single-or-paired": read_type
         looper_args: True

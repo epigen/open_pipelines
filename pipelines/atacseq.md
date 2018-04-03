@@ -83,7 +83,8 @@ More detailed instructions or creating a project configuration file and sample a
 ### Input files
 
 The pipeline takes either FASTQ or BAM files from single- or paired-end sequencing as input.
-To specify paired FASTQ files, pass them as arguments to `read1` and `read2`. For paired BAM files where one file contains both reads simply specify the file to `read1`.
+To specify paired FASTQ files, pass them as arguments to `read1` and `read2`. Read type detection from FASTQ files is not yet implemented, so the used should specify the type of files (either `single` or `paired`) as a column in the annotation sheet named `read_type`.
+For paired BAM files where one file contains both reads simply specify the file to `read1`.
 
 ### Merging input files
 
