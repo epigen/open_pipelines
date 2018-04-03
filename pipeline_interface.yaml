@@ -46,11 +46,17 @@ pipelines:
         path: pipelines/atacseq.py
         arguments:
             "--sample-yaml": yaml_file
-            "-I": sample_name
-            "-G": genome
+        optional_arguments:
+            "-S": sample_name
+            "--input": read1
+            "--input2": read2
+            "-O": "output_parent"
+            "-G": genome_assembly
+            "--protocol": protocol
+            "--single-or-paired": read_type
         looper_args: True
-        required_input_files: [data_path]
-        ngs_input_files: [data_path]
+        required_input_files: [read1]
+        ngs_input_files: [read1, read2]
         resources:
             default:
                 file_size: "0"
@@ -77,7 +83,7 @@ pipelines:
         path: pipelines/chipseq.py
         arguments:
             "--sample-yaml": yaml_file
-            "-I": sample_name
+            "-S": sample_name
             "-G": genome
         looper_args: True
         required_input_files: [data_path]
@@ -104,7 +110,7 @@ pipelines:
         path: pipelines/dropseq.py
         arguments:
             "--sample-yaml": yaml_file
-            "-I": sample_name
+            "-S": sample_name
             "-G": genome
         looper_args: True
         resources:
@@ -127,7 +133,7 @@ pipelines:
         path: pipelines/rnaseq.py
         arguments:
             "--sample-yaml": yaml_file
-            "-I": sample_name
+            "-S": sample_name
             "-G": genome
         looper_args: True
         required_input_files: [data_path]
@@ -150,7 +156,7 @@ pipelines:
         path: pipelines/starrseq.py
         arguments:
             "--sample-yaml": yaml_file
-            "-I": sample_name
+            "-S": sample_name
             "-G": genome
         looper_args: True
         resources:
