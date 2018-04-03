@@ -16,6 +16,8 @@ pip install --user https://github.com/epigen/pypiper/zipball/v0.6
 pip install --user https://github.com/epigen/looper/zipball/v0.7.2
 ```
 
+currently these exact versions are needed.
+
 **Required executables**. You will need some common bioinformatics software installed. The list is specified in the pipeline configuration file ([atacseq.yaml](atacseq.yaml)) tools section.
 
 **Static files**. This pipeline requires static files which are specified in the [pipeline configuration file](atacseq.yaml).
@@ -23,26 +25,76 @@ pip install --user https://github.com/epigen/looper/zipball/v0.7.2
 
 ## Usage
 
+
+### Standalone usage
+
+This pipeline can be used on its own. For that you need to pass several inputs to the command-line interface (CLI):
+
+ - sample name
+ - input files (either one or more in either FASTQ or BAM format)
+ - a parent output directory
+ - a genome assembly
+
+Example with only one input BAM file:
+
+```bash
+python open_pipelines/pipelines/atacseq.py \
+--sample-name ATAC-seq_Sample1 \
+--input ATAC-seq_Sample1.raw_file.bam \
+--output-parent project/data/ \
+--genome hg38
+```
+
+Example with only two input BAM files (will be merged):
+
+```bash
+python open_pipelines/pipelines/atacseq.py \
+--sample-name ATAC-seq_Sample1 \
+--input ATAC-seq_Sample1.raw_file-lane1.bam ATAC-seq_Sample1.raw_file-lane2.bam \
+--output-parent project/data/ \
+--genome hg38
+```
+
+Example with paired FASTQ files:
+
+```bash
+python open_pipelines/pipelines/atacseq.py \
+--sample-name ATAC-seq_Sample1 \
+--input ATAC-seq_Sample1.raw_file.fastq.gz \
+--input2 ATAC-seq_Sample1.raw_file.fastq.gz \
+--output-parent project/data/ \
+--genome hg38
+```
+
+
+### With Looper
+
  - Clone the pipeline repository: `git clone git@github.com:epigen/open_pipelines.git`;
  - Adapt the [pipeline configuration file](atacseq.yaml) to point to required software needed by the pipeline. All runnables are values under the "tools" section;
- - Create a sample annotation sheet containing the variables `sample_name`, `protocol`, and `organism`;
+ - Create a sample annotation sheet containing the variables `sample_name`, `protocol`, `organism` and `read1` and `read2` (for paired FASTQ files if needed);
  - Create a project configuration file that points to the [pipeline interface file](../pipeline_interface.yaml) and the sample annotation sheet;
  - Run pipelines using looper `looper run project_config.yaml`.
 
-More detailed instructions or creating a project configuration file and sample annotation sheet canbe found in the [Looper documentation](http://looper.readthedocs.io).
+More detailed instructions or creating a project configuration file and sample annotation sheet can be found in the [Looper documentation](http://looper.readthedocs.io).
 
 
 ## Pipeline steps
 
+### Input files
+
+The pipeline takes either FASTQ or BAM files from single- or paired-end sequencing as input.
+To specify paired FASTQ files, pass them as arguments to `read1` and `read2`. For paired BAM files where one file contains both reads simply specify the file to `read1`.
+
 ### Merging input files
 
-If given more than one BAM file as input, the pipeline will merge them before begining processing. The merged, unmapped inpu BAM file will be output in `$sample_name/unmapped`. This file is temporary and will be removed if the pipeline finishes successfully.
+If given more than one file if given to each `input` parameter, the pipeline will merge them before begining processing. The merged, unmapped input BAM file will be output in `$sample_name/unmapped`. These files are temporary and will be removed if the pipeline finishes successfully.
 
 ### Sequencing read quality control with FASTQC
 
-[FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) is ran on the unaligned input BAM files for quality control.
+[FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) is ran on the unaligned input FASTQ files for quality control.
+HTML reports and accompaning zip files will be output in the root directory of each sample.
 
-An HTML report and accompaning zip file will be output in the root directory of each sample.
+In paired-end mode, a FastQC report for each read will be produced but aggregated statistics are also available.
 
 ### Read trimming
 
