@@ -51,7 +51,7 @@ class ChIPseqSample(Sample):
         try:
             self.broad = True if any([ip in self.ip.upper() for ip in ["H3K27me3", "H3K36me3"]]) else False
             self.histone = True if any([ip in self.ip.upper() for ip in ["H3", "H2A", "H2B", "H4"]]) else False
-        except:
+        except AttributeError:
             pass
 
     def __repr__(self):
@@ -486,7 +486,22 @@ def main():
     pipe_manager = pypiper.PipelineManager(name="chipseq", outfolder=sample.paths.sample_root, args=args)
 
     # Start main function
-    process(sample, pipe_manager, args)
+    if not args.only_peaks:
+        pipe_manager = process(sample, pipe_manager, args)
+    else:
+        print("Skipped processing sample '{}'.".format(sample.name))
+
+    # If sample does not have "ctrl" attribute, finish processing it.
+    if not hasattr(sample, "compare_sample"):
+        pipe_manager.stop_pipeline()
+        print("Finished processing sample '{}'.".format(sample.name))
+        return
+
+    # The pipeline will now wait for the comparison sample file to be completed
+    pipe_manager._wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
+
+    # Start peak calling function
+    call_peaks(sample, pipe_manager, args)
 
 
 def arg_parser(parser):
@@ -500,11 +515,10 @@ def arg_parser(parser):
         type=str
     )
     parser.add_argument(
-        "-p", "--peak-caller",
-        dest="peak_caller",
-        help="Peak caller algorithm.",
-        default="macs2",
-        type=str
+        "-p", "--only-call-peaks",
+        dest="only_peaks",
+        help="Skip preprocessing and only call peaks.",
+        action="store_true",
     )
     return parser
 
@@ -515,7 +529,7 @@ def process(sample, pipe_manager, args):
     and removed, indexed (and shifted if necessary) Bam files
     along with a UCSC browser track.
     """
-    print("Start processing ChIP-seq sample %s." % sample.name)
+    print("Start processing ChIP-seq sample '{}'.".format(sample.name))
 
     for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
         try:
@@ -670,6 +684,7 @@ def process(sample, pipe_manager, args):
             plot=sample.insertplot,
             output_csv=sample.insertdata
         )
+        pipe_manager.report_figure("insert_sizes", sample.insertplot)
 
     # Count coverage genome-wide
     pipe_manager.timestamp("Calculating genome-wide coverage")
@@ -690,17 +705,33 @@ def process(sample, pipe_manager, args):
     )
     pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
     report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
+    pipe_manager.report_figure("cross_correlation", sample.qc_plot)
 
-    # If sample does not have "ctrl" attribute, finish processing it.
-    if not hasattr(sample, "compare_sample"):
-        pipe_manager.stop_pipeline()
-        print("Finished processing sample %s." % sample.name)
-        return
+    print("Finished processing sample '{}'.".format(sample.name))
+    return pipe_manager
 
-    # The pipeline will now wait for the comparison sample file to be completed
-    pipe_manager._wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
 
-    if args.peak_caller == "macs2":
+def call_peaks(sample, pipe_manager, args):
+    """
+    Calls peaks for a sample give a control sample specified as a `compare_sample` attribute.
+    """
+    print("Start calling peaks for sample '{}'.".format(sample.name))
+
+    for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
+        try:
+            exists = os.path.exists(sample.paths[path])
+        except TypeError:
+            continue
+        if not exists:
+            try:
+                os.mkdir(sample.paths[path])
+            except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
+                raise
+
+    # Create NGSTk instance
+    tk = NGSTk(pm=pipe_manager)
+
+    if pipe_manager.config.parameters.peak_caller == "macs2":
         pipe_manager.timestamp("Calling peaks with MACS2")
         # make dir for output (macs fails if it does not exist)
         if not os.path.exists(sample.paths.peaks):
@@ -729,7 +760,7 @@ def process(sample, pipe_manager, args):
             )
             pipe_manager.run(cmd, os.path.join(sample.paths.peaks, sample.name + "_model.pdf"), shell=True, nofail=True)
 
-    elif args.peak_caller == "spp":
+    elif pipe_manager.config.parameters.peak_caller == "spp":
         pipe_manager.timestamp("Calling peaks with spp")
         # For point-source factors use default settings
         # For broad factors use broad settings
@@ -753,10 +784,12 @@ def process(sample, pipe_manager, args):
         cpus=args.cores
     )
     pipe_manager.run(cmd, sample.frip, shell=True)
-    total = float(pipe_manager.stats_dict["single_ends"]) + (float(pipe_manager.stats_dict["paired_ends"]) / 2.)
+    total = (
+        float(pipe_manager.stats_dict["filtered_single_ends"]) +
+        (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
     report_dict(pipe_manager, parse_FRiP(sample.frip, total))
 
-    print("Finished processing sample %s." % sample.name)
+    print("Finished calling peaks for sample '{}'.".format(sample.name))
     pipe_manager.stop_pipeline()
 
 

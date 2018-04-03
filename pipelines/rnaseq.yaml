@@ -2,11 +2,16 @@
 resources:
   adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
   kallisto_index:
-    hg38_cdna: /data/groups/lab_bock/shared/resources/genomes/hg38_cdna/indexed_kallisto/hg38_cdna.index
-    hg19_cdna: /data/groups/lab_bock/shared/resources/genomes/hg19_cdna/indexed_kallisto/hg19_cdna.index
-    mm10_cdna: /data/groups/lab_bock/shared/resources/genomes/mm10_cdna/indexed_kallisto/mm10_cdna.index
-    mm9_cdna: /data/prod/ngs_resources/genomes/mm9_cdna/indexed_kallisto/mm9_cdna.index
-    ercc_cdna: /data/groups/lab_bock/shared/resources/genomes/ERCC92_cdna/indexed_kallisto/ERCC92_cdna.index
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38_cdna/indexed_kallisto/hg38_cdna.idx
+    hg38_cdna: /data/groups/lab_bock/shared/resources/genomes/hg38_cdna/indexed_kallisto/hg38_cdna.idx
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19_cdna/indexed_kallisto/hg19_cdna.idx
+    hg19_cdna: /data/groups/lab_bock/shared/resources/genomes/hg19_cdna/indexed_kallisto/hg19_cdna.idx
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10_cdna/indexed_kallisto/mm10_cdna.idx
+    mm10_cdna: /data/groups/lab_bock/shared/resources/genomes/mm10_cdna/indexed_kallisto/mm10_cdna.idx
+    mm9: /data/prod/ngs_resources/genomes/mm9_cdna/indexed_kallisto/mm9_cdna.idx
+    mm9_cdna: /data/prod/ngs_resources/genomes/mm9_cdna/indexed_kallisto/mm9_cdna.idx
+    ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92_cdna/indexed_kallisto/ERCC92_cdna.idx
+    ercc_cdna: /data/groups/lab_bock/shared/resources/genomes/ERCC92_cdna/indexed_kallisto/ERCC92_cdna.idx
 
 
 # The following section contains command-line tools used by the pipeline
