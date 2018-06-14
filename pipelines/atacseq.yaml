@@ -33,9 +33,9 @@ resources:
     mm9: /data/groups/lab_bock/shared/resources/regions/blacklists/mm9.blacklist.bed
   oracle_peak_regions:
     hg38: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh38.Regulatory_Build.regulatory_features.20161111.bed
-    hg19: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh19.RegulatoryFeatures_MultiCell.bed
+    hg19: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh37.RegulatoryFeatures_MultiCell.bed
     mm10: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm38.Regulatory_Build.regulatory_features.20161111.bed
-    mm9: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm19.RegulatoryFeatures_MultiCell.bed
+    mm9: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm37.RegulatoryFeatures_MultiCell.bed
   genomes_fasta:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.fa
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.fa
