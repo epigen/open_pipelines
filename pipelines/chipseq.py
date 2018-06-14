@@ -211,7 +211,7 @@ def parse_trim_stats(stats_file, prefix="", paired_end=True):
     """
     import re
 
-    error_dict = {
+    stats_dict = {
         prefix + "surviving_perc": pd.np.nan,
         prefix + "short_perc": pd.np.nan,
         prefix + "empty_perc": pd.np.nan,
@@ -222,32 +222,47 @@ def parse_trim_stats(stats_file, prefix="", paired_end=True):
         with open(stats_file) as handle:
             content = handle.readlines()  # list of strings per line
     except:
-        return error_dict
+        return stats_dict
 
     suf = "s" if not paired_end else " pairs"
 
     try:
         line = [i for i in range(len(content)) if "read{} processed; of these:".format(suf) in content[i]][0]
         total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+    except IndexError:
+        return stats_dict
+    try:
         line = [i for i in range(len(content)) if "read{} available; of these:".format(suf) in content[i]][0]
         surviving = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+        stats_dict[prefix + "surviving_perc"] = (float(surviving) / total) * 100
+        stats_dict[prefix + "trim_loss_perc"] = ((total - float(surviving)) / total) * 100
+    except IndexError:
+        pass
+    try:
         line = [i for i in range(len(content)) if "short read{} filtered out after trimming by size control".format(suf) in content[i]][0]
         short = int(re.sub(" \(.*", "", content[line]).strip())
+        stats_dict[prefix + "short_perc"] = (float(short) / total) * 100
+    except IndexError:
+        pass
+    try:
         line = [i for i in range(len(content)) if "empty read{} filtered out after trimming by size control".format(suf) in content[i]][0]
         empty = int(re.sub(" \(.*", "", content[line]).strip())
+        stats_dict[prefix + "empty_perc"] = (float(empty) / total) * 100
+    except IndexError:
+        pass
+    try:
         line = [i for i in range(len(content)) if "trimmed read{} available after processing".format(suf) in content[i]][0]
         trimmed = int(re.sub(" \(.*", "", content[line]).strip())
+        stats_dict[prefix + "trimmed_perc"] = (float(trimmed) / total) * 100
+    except IndexError:
+        pass
+    try:
         line = [i for i in range(len(content)) if "untrimmed read{} available after processing".format(suf) in content[i]][0]
         untrimmed = int(re.sub(" \(.*", "", content[line]).strip())
-        return {
-            prefix + "surviving_perc": (float(surviving) / total) * 100,
-            prefix + "short_perc": (float(short) / total) * 100,
-            prefix + "empty_perc": (float(empty) / total) * 100,
-            prefix + "trimmed_perc": (float(trimmed) / total) * 100,
-            prefix + "untrimmed_perc": (float(untrimmed) / total) * 100,
-            prefix + "trim_loss_perc": ((total - float(surviving)) / total) * 100}
+        stats_dict[prefix + "untrimmed_perc"] = (float(untrimmed) / total) * 100
     except IndexError:
-        return error_dict
+        pass
+    return stats_dict
 
 
 def parse_mapping_stats(stats_file, prefix="", paired_end=True):
@@ -363,11 +378,11 @@ def parse_duplicate_stats(stats_file, prefix=""):
         return error_dict
 
     try:
-        line = [i for i in range(len(content)) if "single ends (among them " in content[i]][0]
+        line = [i for i in range(len(content)) if "single ends" in content[i]][0]
         single_ends = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-        line = [i for i in range(len(content)) if " end pairs...   done in " in content[i]][0]
+        line = [i for i in range(len(content)) if " end pairs" in content[i]][0]
         paired_ends = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
-        line = [i for i in range(len(content)) if " duplicates, sorting the list...   done in " in content[i]][0]
+        line = [i for i in range(len(content)) if " duplicates" in content[i]][0]
         duplicates = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
         return {
             prefix + "filtered_single_ends": single_ends,
@@ -661,6 +676,15 @@ def process(sample, pipe_manager, args):
     track_dir = os.path.dirname(sample.bigwig)
     if not os.path.exists(track_dir):
         os.makedirs(track_dir)
+
+    # Report total efficiency
+    usable = (
+        float(pipe_manager.stats_dict["filtered_single_ends"]) +
+        (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
+    total = pipe_manager.stats_dict['fastqc_total_pass_filter_reads']
+    report_dict(
+        pipe_manager,
+        {"total_efficiency": (usable / total) * 100})
 
     # Make tracks
     # right now tracks are only made for bams without duplicates
