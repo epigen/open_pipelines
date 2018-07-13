@@ -35,6 +35,7 @@ See the dedicated pages detailing the steps and output of each of the pipelines:
  - [ATAC-seq and DNAse-seq](pipelines/atacseq.md)
  - [ChIP-seq and ChIPmentation](pipelines/chipseq.md)
  - [RNA-seq](pipelines/rnaseq.md)
+ - [HiC and HiChIP](pipelines/rnaseq.md) - in development
 
 The remaining pipelines will get their dedicated documentation soon.
 
