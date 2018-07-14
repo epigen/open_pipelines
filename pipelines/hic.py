@@ -364,10 +364,10 @@ def process(sample, pipe_manager, args):
         pipe_manager.run(
             "cooler balance -p {} --blacklist {} {}::/resolutions/{}".format(
                 args.cores,
-                pipe_manager.config.resources.blacklisted_regions[sample.genome]
+                pipe_manager.config.resources.blacklisted_regions[sample.genome],
                 os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.multi.cool"),
                 resolution * 1000),
-            target=)
+            lock_name="cooler.balance.{}kb".format(resolution))
 
     # Call peaks with MACS2
     ## TODO: optimize parameters further

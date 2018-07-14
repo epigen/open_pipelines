@@ -12,6 +12,10 @@ protocol_mapping:
     DNASE: atacseq
     DROP-SEQ: dropseq
     DROPSEQ: dropseq
+    HI-C: hic
+    HIC: hic
+    HI-CHIP: hic
+    HICHIP: hic
     RNA-SEQ: rnaseq
     RNASEQ: rnaseq
     RNA: rnaseq
@@ -124,6 +128,38 @@ pipelines:
                 cores: 8
                 mem: 80000
                 time: "3-12:00:00"
+
+    hic:
+        name: Hi-C
+        sample_subtypes:
+            HiC: HiCSample
+            Hi-C: HiCSample
+            HiChIP: HiChIPSample
+            Hi-ChIP: HiChIPSample
+        path: pipelines/hic.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-I": sample_name
+            "-G": genome
+        looper_args: True
+        required_input_files: [data_path]
+        ngs_input_files: [data_path]
+        resources:
+            default:
+                file_size: "0"
+                cores: 4
+                mem: 16000
+                time: "08:00:00"
+            medium:
+                file_size: "1"
+                cores: 8
+                mem: 32000
+                time: "1-12:00:00"
+            high:
+                file_size: "2"
+                cores: 12
+                mem: 64000
+                time: "8-00:00:00"
 
     rnaseq:
         name: RNA-seq
