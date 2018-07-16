@@ -360,7 +360,7 @@ def process(sample, pipe_manager, args):
 
     ### make pairix indexed BEDPE
     pipe_manager.run(
-        "awk -v OFS='\\t' '{{print $2,$3,$3+1,$5,$6,$6+1,\".\",\".\",$4,$7}}' {} | sort -k1,1V -k4,4V -k2,2n -k5,5n | bgzip -@ {} > {}".format(
+        "awk -v OFS='\\t' '{{print $2,$3,$3+75,$5,$6,$6+75,\".\",\".\",$4,$7}}' {} | sort -k1,1V -k4,4V -k2,2n -k5,5n | bgzip -@ {} > {}".format(
             os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs"),
             args.cores,
             os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz")),
@@ -391,24 +391,26 @@ def process(sample, pipe_manager, args):
     ## TODO: optimize parameters further
     pipe_manager.run(
         "macs2 callpeak -t {} -f BEDPE --keep-dup auto --nomodel --extsize 147 -g hs -n {} --outdir {}".format(
-            os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.bed.gz"),
+            os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz"),
             sample.name,
             os.path.join(sample.paths.hicpro_output, "hic_results", "peaks")),
         target=os.path.join(sample.paths.hicpro_output, "hic_results", "peaks", sample.name + "_peaks.narrowPeak"), nofail=True)
 
     # Call loops
     ### with cLoops
+    if not os.path.exists(os.path.join(sample.paths.hicpro_output, "hic_results", "cLoops")):
+        os.makedirs(os.path.join(sample.paths.hicpro_output, "hic_results", "cLoops"))
     pipe_manager.run(
         "cLoops -f {} -o {} ".format(
-            os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.bed.gz"),
-            os.path.join(sample.paths.hicpro_output, "hic_results", "loops", sample.name)
+            os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz"),
+            os.path.join(sample.paths.hicpro_output, "hic_results", "cLoops", sample.name)
         ) +
         "-m 4 " +
         "-eps 5000,7500,10000 " +
         "-minPts 10,20,30,40,50 " +
         "-p {} ".format(args.cores) +
         "-w -j -s -hic",
-        target=os.path.join(sample.paths.hicpro_output, "hic_results", "loops", sample.name + ".loop"), nofail=True)
+        target=os.path.join(sample.paths.hicpro_output, "hic_results", "cLoops", sample.name + ".loop"), nofail=True)
 
     ### with hichipper
     #### make hichipper config file
@@ -421,8 +423,8 @@ def process(sample, pipe_manager, args):
      - {}""".format(
         os.path.join(sample.paths.hicpro_output, "hic_results", "peaks", sample.name + "_peaks.narrowPeak"),
         pipe_manager.config.resources.hicpro_restricion_fragments,
-        os.path.join(sample.paths.hicpro_output, "hic_results")
-    ))
+        os.path.join(sample.paths.hicpro_output, "hic_results")))
+
     if not os.path.exists(os.path.join(sample.paths.hicpro_output, "hic_results", "hichipper")):
         os.makedirs(os.path.join(sample.paths.hicpro_output, "hic_results", "hichipper"))
     hichipper_config = os.path.join(sample.paths.hicpro_output, "hic_results", "hichipper_config.yaml")
