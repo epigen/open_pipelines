@@ -183,6 +183,8 @@ def process(sample, pipe_manager, args):
     and removed, indexed, shifted Bam files along with a UCSC browser track.
     Peaks are called and filtered.
     """
+    import textwrap
+
     print("Start processing Hi-C sample %s." % sample.sample_name)
 
     for path in ["sample_root"] + sample.paths.__dict__.keys():
@@ -268,7 +270,10 @@ def process(sample, pipe_manager, args):
             """{} -i {} -o {} -c {}""".format(
             pipe_manager.config.tools.hicpro, sample.paths.hicpro_input,
             sample.paths.hicpro_output, sample.hicpro_config),
-            lock_name="hicpro")
+            target=os.path.join(
+                    sample.paths.hicpro_output,
+                    "hic_results", "data", sample.name,
+                    sample.name + "_allValidPairs"))
     else:
         # run each step in sequence
         pipe_manager.run(
@@ -279,8 +284,8 @@ def process(sample, pipe_manager, args):
                 sample.hicpro_config),
             target=os.path.join(
                 sample.paths.hicpro_output,
-                "bowtie_results", "bwt2", sample.name,
-                sample.name + ".bwt2pairs.pairstat"))
+                "bowtie_results", "bwt2_global", sample.name,
+                sample.name + "_R2_{}.bwt2glob.bam".format(sample.genome)))
 
         pipe_manager.run(
             "{} -s proc_hic -i {} -o {} -c {}".format(
@@ -288,7 +293,10 @@ def process(sample, pipe_manager, args):
                 os.path.join(sample.paths.hicpro_output, "bowtie_results", "bwt2"),
                 sample.paths.hicpro_output,
                 sample.hicpro_config),
-            lock_name="hicpro.proc_hic")
+            target=os.path.join(
+                sample.paths.hicpro_output,
+                "bowtie_results", "bwt2", sample.name,
+                sample.name + "_{}.bwt2pairs.bam".format(sample.genome)))
 
         pipe_manager.run(
             "{} -s quality_checks -i {} -o {} -c {}".format(
@@ -296,7 +304,10 @@ def process(sample, pipe_manager, args):
                 sample.paths.unmapped,
                 sample.paths.hicpro_output,
                 sample.hicpro_config),
-            lock_name="hicpro.quality_checks", nofail=True)
+            target=os.path.join(
+                sample.paths.hicpro_output,
+                "hic_results", "pic", sample.name,
+                "plotMappingPairing_" + sample.name + ".pdf"), nofail=True)
 
         pipe_manager.run(
             "{} -s merge_persample -i {} -o {} -c {}".format(
@@ -304,7 +315,10 @@ def process(sample, pipe_manager, args):
                 os.path.join(sample.paths.hicpro_output, "hic_results", "data"),
                 sample.paths.hicpro_output,
                 sample.hicpro_config),
-            lock_name="hicpro.merge_persample")
+            target=os.path.join(
+                sample.paths.hicpro_output,
+                "hic_results", "data", sample.name,
+                sample.name + "_allValidPairs.mergestat"))
 
         pipe_manager.run(
             "{} -s build_contact_maps -i {} -o {} -c {}".format(
@@ -312,7 +326,10 @@ def process(sample, pipe_manager, args):
                 os.path.join(sample.paths.hicpro_output, "hic_results", "data"),
                 sample.paths.hicpro_output,
                 sample.hicpro_config),
-            lock_name="hicpro.build_contact_maps")
+            target=os.path.join(
+                sample.paths.hicpro_output,
+                "hic_results", "matrix", sample.name,
+                "raw", "1000", sample.name + "_1000.matrix"))
 
         pipe_manager.run(
             "{} -s ice_norm -i {} -o {} -c {}".format(
@@ -320,14 +337,15 @@ def process(sample, pipe_manager, args):
                 os.path.join(sample.paths.hicpro_output, "hic_results", "matrix", sample.name, "raw"),
                 sample.paths.hicpro_output,
                 sample.hicpro_config),
-            lock_name="hicpro.ice_norm")
-
+            target=os.path.join(
+                sample.paths.hicpro_output,
+                "hic_results", "matrix",
+                "1000", "iced", "1000", "1000_1000_iced.matrix"))
 
     ## Convertions
 
     ### HiC-Pro output to Juicebox ".hic"
     pipe_manager.run(
-
         "{} -i {} -g {} -j {} -r {} -o {}"
             .format(pipe_manager.config.tools.hicpro2juicebox,
                 os.path.join(
@@ -342,22 +360,22 @@ def process(sample, pipe_manager, args):
 
     ### make pairix indexed BEDPE
     pipe_manager.run(
-        "awk -v OFS='\t' '{{print $2,$3,$3+1,$5,$6,$6+1,\'.\',\'.\',$4,$7}}' {} | sort -k1,1V -k4,4V -k2,2n -k5,5n | bgzip -@ {} > {}".format(
+        "awk -v OFS='\\t' '{{print $2,$3,$3+1,$5,$6,$6+1,\".\",\".\",$4,$7}}' {} | sort -k1,1V -k4,4V -k2,2n -k5,5n | bgzip -@ {} > {}".format(
             os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs"),
             args.cores,
-            os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.bed.gz")),
-        target=os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.bed.gz"))
+            os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz")),
+        target=os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz"))
     pipe_manager.run(
         "pairix  -s 1 -d 4 -b 2 -e 3 -u 5 -v 6 {}".format(
-            os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.bed.gz")),
-        target=os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.bed.gz.px2"))
+            os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz")),
+        target=os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz.px2"))
 
     ### make cool
     pipe_manager.run(
         "hic2cool {} {}".format(
-            os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.hic"),
-            os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.cool")),
-        target=os.path.join(sample.paths.hicpro_output, "hic_results", "peaks", sample.name + "_allValidPairs.multi.cool"))
+            os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.hic"),
+            os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.cool")),
+        target=os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.multi.cool"))
 
     # add balanced normalizations to cooler file
     for resolution in [1, 5, 10, 25, 100, 250, 500, 1000]:
@@ -365,9 +383,9 @@ def process(sample, pipe_manager, args):
             "cooler balance -p {} --blacklist {} {}::/resolutions/{}".format(
                 args.cores,
                 pipe_manager.config.resources.blacklisted_regions[sample.genome],
-                os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.multi.cool"),
+                os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.multi.cool"),
                 resolution * 1000),
-            lock_name="cooler.balance.{}kb".format(resolution))
+            lock_name="cooler.balance.{}kb".format(resolution), nofail=True)
 
     # Call peaks with MACS2
     ## TODO: optimize parameters further
@@ -381,7 +399,6 @@ def process(sample, pipe_manager, args):
     # Call loops
     ### with cLoops
     pipe_manager.run(
-
         "cLoops -f {} -o {} ".format(
             os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs.bed.gz"),
             os.path.join(sample.paths.hicpro_output, "hic_results", "loops", sample.name)
@@ -392,7 +409,6 @@ def process(sample, pipe_manager, args):
         "-p {} ".format(args.cores) +
         "-w -j -s -hic",
         target=os.path.join(sample.paths.hicpro_output, "hic_results", "loops", sample.name + ".loop"), nofail=True)
-
 
     ### with hichipper
     #### make hichipper config file
@@ -417,7 +433,7 @@ def process(sample, pipe_manager, args):
         "hichipper --out {} {}".format(
             os.path.join(sample.paths.hicpro_output, "hic_results", "hichipper"),
             hichipper_config),
-        target=os.path.join(sample.paths.hicpro_output, "hic_results", "hichipper", sample.name + ".filt.intra.loop_counts.bedpe"))
+        target=os.path.join(sample.paths.hicpro_output, "hic_results", "hichipper", sample.name + ".filt.intra.loop_counts.bedpe"), nofail=True)
     # or target to os.path.join(sample.paths.hicpro_output, "hic_results", "hichipper", "qcReport_make.html")
 
     # Finish up
