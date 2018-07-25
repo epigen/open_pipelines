@@ -477,6 +477,9 @@ def main():
         sample.ngs_inputs = [sample.data_source]
     if not hasattr(sample, "read_type"):
         sample.set_read_type()
+    else:
+        if sample.read_type not in ['single', 'paired']:
+            sample.set_read_type()
 
     # Shorthand for read_type
     if sample.read_type == "paired":
