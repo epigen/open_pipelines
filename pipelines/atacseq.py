@@ -657,7 +657,7 @@ def process(sample, pipe_manager, args):
     usable = (
         float(pipe_manager.stats_dict["filtered_single_ends"]) +
         (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
-    total = pipe_manager.stats_dict['fastqc_total_pass_filter_reads']
+    total = float(pipe_manager.stats_dict['fastqc_total_pass_filter_reads'])
     report_dict(
         pipe_manager,
         {"total_efficiency": (usable / total) * 100})
