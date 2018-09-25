@@ -1,0 +1,69 @@
+# The following section contains static files required by the pipeline
+resources:
+  chromosome_sizes:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chrom.sizes
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chrom.sizes
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chrom.sizes
+    mm9: /data/prod/ngs_resources/genomes/mm9/mm9_chromlength.txt
+  blacklisted_regions:
+    hg38: /data/groups/lab_bock/shared/resources/regions/blacklists/hg38.blacklist.bed
+    hg19: /data/groups/lab_bock/shared/resources/regions/blacklists/wgEncodeMergedMapabilityRegionsExcludable.no_chr_no_extra.bed
+    mm10: /data/groups/lab_bock/shared/resources/regions/blacklists/mm10.blacklist.bed
+    mm9: /data/groups/lab_bock/shared/resources/regions/blacklists/mm9.blacklist.bed
+  oracle_peak_regions:
+    hg38: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh38.Regulatory_Build.regulatory_features.20161111.bed
+    hg19: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh19.RegulatoryFeatures_MultiCell.bed
+    mm10: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm38.Regulatory_Build.regulatory_features.20161111.bed
+    mm9: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm19.RegulatoryFeatures_MultiCell.bed
+  genomes_fasta:
+    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.fa
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.fa
+    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.fa
+
+
+# The following section contains command-line tools used by the pipeline
+# # Required modules to use in current installation of HiC-Pro (v2.10.0) on CeMM cluster.
+# # Be sure to load them before starting pipeline.
+# module load gcc/7.1.0
+# module load python/2.7.13
+# module load bowtie/2.2.9
+# module load htslib/1.7
+# module load samtools/1.7
+# module load HiC-Pro
+tools:
+  fastqc: fastqc
+  java: java
+  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  hicpro: /cm/shared/apps/HiC-Pro/2.10.0/HiC-Pro_2.10.0/bin/HiC-Pro
+  hicpro2juicebox: /cm/shared/apps/HiC-Pro/2.10.0/HiC-Pro_2.10.0/bin/utils/hicpro2juicebox.sh
+  hicpro2fithic: /cm/shared/apps/HiC-Pro/2.10.0/HiC-Pro_2.10.0/bin/utils/hicpro2fithic.py
+  juicertools: /data/groups/lab_bock/shared/resources/tools/juicertools/juicer_tools.1.8.9_jcuda.0.8.jar
+  juicebox: /data/groups/lab_bock/shared/resources/tools/juicebox/Juicebox_1.8.8.jar
+  mango: /data/groups/lab_bock/shared/resources/tools/mango/mango.R
+  pairix: pairix
+  cLooper: cLooper
+  macs2: macs2
+
+
+# The following section parameters used to control pipeline behaviour
+parameters:
+  # HiC-Pro configs
+  hicpro_template_config: /data/groups/lab_bock/shared/resources/tools/HiC-Pro/config_MboI.txt
+  hicpro_restriction_fragments: /data/groups/lab_bock/shared/resources/tools/HiC-Pro/hg19_MboI.bed
+  # HiCCups "medium" resolution:
+  hiccups_resolutions: 25000,10000,5000  # comma-separated list of DNA resolutions to use
+  hiccups_normalization: KR  # One of NONE/VC/VC_SQRT/KR
+  hiccups_fdr_alpha: .1,.1,.1
+  hiccups_peak_width: 4,2,1
+  hiccups_window_width: 7,5,3
+  hiccups_merging_threshold: 0.02,1.5,1.75,2
+  hiccups_merging_distance: 20000,20000,50000
+  # MANGO
+  mango_config: /data/groups/lab_bock/shared/resources/tools/mango/hg19_config.txt
+  mango_bowtiepath: /cm/shared/apps/bowtie/1.1.2/bin/bowtie
+  mango_fdr: 0.05
+  mango_numofbins: 50
+  mango_maxinteractingdist: 1000000
+  mango_extendreads: 120
+  mango_minPETS: 2
+  mango_reportallpairs: TRUE
