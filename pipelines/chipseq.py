@@ -515,6 +515,11 @@ def main():
         print("Finished processing sample '{}'.".format(sample.name))
         return
 
+    if sample.compare_sample == "":
+        pipe_manager.stop_pipeline()
+        print("Finished processing sample '{}'.".format(sample.name))
+        return
+
     # The pipeline will now wait for the comparison sample file to be completed
     pipe_manager._wait_for_file(sample.filtered.replace(sample.name, sample.compare_sample))
 
