@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
-from looper.models import AttributeDict, Sample
+from peppy import AttributeDict, Sample
 
 import pandas as pd
 
@@ -511,11 +511,6 @@ def main():
 
     # If sample does not have "ctrl" attribute, finish processing it.
     if not hasattr(sample, "compare_sample"):
-        pipe_manager.stop_pipeline()
-        print("Finished processing sample '{}'.".format(sample.name))
-        return
-
-    if sample.compare_sample == "":
         pipe_manager.stop_pipeline()
         print("Finished processing sample '{}'.".format(sample.name))
         return

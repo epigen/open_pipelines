@@ -26,8 +26,6 @@ def get_static(name, condition=None):
 	else:
 		return filter(lambda x: eval(condition), static)
 
-# looper configs from /config
-looper_configs = get_static("config")
 # pipeline configs from /pipelines/.*\.yaml
 pipeline_configs = get_static("pipelines", condition="'yaml' in x")
 
@@ -58,13 +56,14 @@ setup(
 		"console_scripts": [
 			'atacseq_pipeline = pipelines.atacseq:main',
 			'chipseq_pipeline = pipelines.chipseq:main',
-			'quantseq_pipeline = pipelines.quantseq:main',
+			'dropseq_pipeline = pipelines.dropseq:main',
+			'rnaseq_pipeline = pipelines.rnaseq:main',
 			'starrseq_pipeline = pipelines.starrseq:main'
 		],
 	},
 	scripts=scripts,
 	data_files=[
-		("configs", looper_configs + pipeline_configs)
+		("configs", pipeline_configs)
 	],
 	include_package_data=True,
 	**extra

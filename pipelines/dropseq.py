@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 
 import pypiper
 import yaml
-from looper.models import AttributeDict
+from peppy import AttributeDict
 
 
 __author__ = "Andre Rendeiro"

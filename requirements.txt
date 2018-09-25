@@ -1,2 +1,4 @@
 pandas
 pyyaml
+git+git://github.com/pepkit/looper.git@v0.9.1#egg=looper
+git+git://github.com/databio/pypiper.git@v0.6#egg=pypiper

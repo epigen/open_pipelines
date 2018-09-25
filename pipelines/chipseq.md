@@ -9,11 +9,11 @@ For each step statistics are collected and several library quality metrics are c
 
 ### Prequisites
 
-**Python packages**. This pipeline uses [pypiper](https://github.com/epigen/pypiper) and [looper](https://github.com/epigen/looper). You can do a user-specific install of these like this:
+**Python packages**. This pipeline uses [pypiper](https://github.com/databio/pypiper) and [looper](https://github.com/pepkit/looper). You can do a user-specific install of these like this:
 
 ```
-pip install --user https://github.com/epigen/pypiper/zipball/v0.6
-pip install --user https://github.com/epigen/looper/zipball/v0.7.2
+pip install --user https://github.com/databio/pypiper/zipball/v0.6
+pip install --user https://github.com/pepkit/looper/zipball/v0.9.1
 ```
 
 **Required executables**. You will need some common bioinformatics software installed. The list is specified in the pipeline configuration file ([chipseq.yaml](chipseq.yaml)) tools section.

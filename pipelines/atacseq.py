@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
-from looper.models import AttributeDict, Sample
+from peppy import AttributeDict, Sample
 
 import pandas as pd
 
@@ -91,6 +91,8 @@ class ATACseqSample(Sample):
         # Coverage: read coverage in windows genome-wide
         self.paths.coverage = os.path.join(self.paths.sample_root, "coverage")
         self.coverage = os.path.join(self.paths.coverage, self.name + ".cov")
+
+        self.bigwig = os.path.join(self.paths.coverage, self.name + ".bigWig")
 
         self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
         self.insertdata = os.path.join(self.paths.sample_root, self.name + "_insertLengths.csv")
