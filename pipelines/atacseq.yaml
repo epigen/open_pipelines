@@ -7,11 +7,13 @@ resources:
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
     mm9: /data/prod/ngs_resources/genomes/mm9/forBowtie2/mm9
     ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
+    Calbicans_SC5314_A22: /data/groups/lab_bock/shared/resources/genomes/Calbicans_SC5314_A22/indexed_bowtie2/Calbicans_SC5314_A22
   chromosome_sizes:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
     mm9: /data/prod/ngs_resources/genomes/mm9/mm9_chromlength.txt
+    Calbicans_SC5314_A22: /data/groups/lab_bock/shared/resources/genomes/Calbicans_SC5314_A22/Calbicans_SC5314_A22.chromSizes
   genome_windows:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
@@ -40,6 +42,7 @@ resources:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.fa
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.fa
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.fa
+    Calbicans_SC5314_A22: /data/groups/lab_bock/shared/resources/genomes/Calbicans_SC5314_A22/Calbicans_SC5314_A22.fa
 
 
 # The following section contains command-line tools used by the pipeline
