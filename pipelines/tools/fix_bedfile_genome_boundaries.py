@@ -19,7 +19,8 @@ chrSizes = {
     "hg38": "/data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes",
     "hg19": "/data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes",
     "mm10": "/data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes",
-    "dr7": "/data/groups/lab_bock/shared/resources/genomes/dr7/dr7.chromSizes"
+    "dr7": "/data/groups/lab_bock/shared/resources/genomes/dr7/dr7.chromSizes",
+    "Calbicans_SC5314_A22": "/data/groups/lab_bock/shared/resources/genomes/Calbicans_SC5314_A22/Calbicans_SC5314_A22.chromSizes"
 }
 
 genome = sys.argv[1]
