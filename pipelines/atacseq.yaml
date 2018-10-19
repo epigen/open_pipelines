@@ -19,6 +19,7 @@ resources:
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
     mm9: /data/groups/lab_bock/shared/resources/genomes/mm9/mm9_genomeWindows_1kb.bed
+    Calbicans_SC5314_A22: /data/groups/lab_bock/shared/resources/genomes/Calbicans_SC5314_A22/Calbicans_SC5314_A22_genomeWindows_1kb.bed
   tss:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
