@@ -148,7 +148,7 @@ def main():
             "Input options should be either a sample config file or 'input', 'sample_name' and 'output_parent'."])
     )
     parser = arg_parser(parser)
-    parser = pypiper.add_pypiper_args(parser, groups=["all"])
+    parser = pypiper.add_pypiper_args(parser, args=["genome", "sample-name"], groups="pypiper", required=["genome", "sample-name"])
     args = parser.parse_args()
     if (
         (args.sample_config is None) and
