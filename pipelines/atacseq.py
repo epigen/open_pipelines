@@ -369,6 +369,11 @@ def parse_peak_number(peak_file, prefix=""):
         return {prefix + "peaks": pd.np.nan}
 
 
+def calculate_frip(input_bam, input_bed, output, cpus=4):
+    return ("sambamba view -t {0} -c  -L {1}  {2} > {3}"
+            .format(cpus, input_bed, input_bam, output))
+
+
 def parse_FRiP(frip_file, total_reads, prefix=""):
     """
     Calculates the fraction of reads in peaks for a given sample.
@@ -762,9 +767,9 @@ def process(sample, pipe_manager, args):
     # Calculate fraction of reads in peaks (FRiP)
     pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
     # on the sample's peaks
-    cmd = tk.calculate_FRiP(
-        inputBam=sample.filtered,
-        inputBed=sample.peaks,
+    cmd = calculate_frip(
+        input_bam=sample.filtered,
+        input_bed=sample.peaks,
         output=sample.frip,
         cpus=args.cores
     )
@@ -774,9 +779,9 @@ def process(sample, pipe_manager, args):
 
     # on an oracle peak list
     if hasattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome):
-        cmd = tk.calculate_FRiP(
-            inputBam=sample.filtered,
-            inputBed=getattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome),
+        cmd = calculate_frip(
+            input_bam=sample.filtered,
+            input_bed=getattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome),
             output=sample.oracle_frip,
             cpus=args.cores
         )

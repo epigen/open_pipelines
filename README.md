@@ -9,6 +9,9 @@ Pipelines here are configured to work with [`looper`](http://looper.readthedocs.
 1. Install [`looper`](http://looper.readthedocs.io) and [`pypiper`](http://pypiper.readthedocs.io): 
   - `pip install https://github.com/pepkit/looper/zipball/v0.9.1`
   - `pip install https://github.com/databio/pypiper/zipball/v0.6`
+
+  (another simple way is to clone the repository first and then do `pip install -r requirements.txt`)
+
 2. Clone this repository:
   - `git clone git@github.com:epigen/open_pipelines.git`
 3. Produce a configuration file for your project ([see here how to do it](http://looper.readthedocs.io/en/latest/define-your-project.html)).
