@@ -1,7 +1,7 @@
 # The following section contains static files required by the pipeline
 resources:
   adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
-  genomes:
+  genome_index:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
@@ -32,8 +32,7 @@ tools:
   trimmomatic: trimmomatic
   skewer: skewer
   bedtools: /cm/shared/apps/bedtools/2.20.1/bedtools
-  bedgraphtobigwig: bedgraphtobigwig  # You can find this here http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/
-  fix_bedfile_genome_boundaries.py: fix_bedfile_genome_boundaries.py   # You can find this here https://raw.githubusercontent.com/epigen/open_pipelines/master/pipelines/tools/fix_bedfile_genome_boundaries.py
+  bamCoverage: bamCoverage  # from deeptools
   macs2: macs2
   # optional:
   Rscript: Rscript

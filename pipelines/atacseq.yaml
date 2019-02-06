@@ -1,7 +1,7 @@
 # The following section contains static files required by the pipeline
 resources:
   adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
-  genomes:
+  genome_index:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
@@ -12,20 +12,6 @@ resources:
     hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
     mm9: /data/prod/ngs_resources/genomes/mm9/mm9_chromlength.txt
-  genome_windows:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
-    mm9: /data/groups/lab_bock/shared/resources/genomes/mm9/mm9_genomeWindows_1kb.bed
-  tss:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
-  alignability:
-    hg19:
-      24: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign24mer.bed
-      36: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign36mer.bed
-      50: /data/groups/lab_bock/shared/resources/genomes/hg19/mappability/wgEncodeCrgMapabilityAlign50mer.bed
   blacklisted_regions:
     hg38: /data/groups/lab_bock/shared/resources/regions/blacklists/hg38.blacklist.bed
     hg19: /data/groups/lab_bock/shared/resources/regions/blacklists/wgEncodeMergedMapabilityRegionsExcludable.bed
@@ -36,10 +22,6 @@ resources:
     hg19: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh37.RegulatoryFeatures_MultiCell.bed
     mm10: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm38.Regulatory_Build.regulatory_features.20161111.bed
     mm9: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/mus_musculus.GRCm37.RegulatoryFeatures_MultiCell.bed
-  genomes_fasta:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.fa
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.fa
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.fa
 
 
 # The following section contains command-line tools used by the pipeline
@@ -52,8 +34,7 @@ tools:
   trimmomatic: trimmomatic
   skewer: skewer
   bedtools: /cm/shared/apps/bedtools/2.20.1/bedtools
-  bedgraphtobigwig: bedgraphtobigwig  # You can find this here http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/
-  fix_bedfile_genome_boundaries.py: fix_bedfile_genome_boundaries.py   # You can find this here https://raw.githubusercontent.com/epigen/open_pipelines/master/pipelines/tools/fix_bedfile_genome_boundaries.py
+  bamCoverage: bamCoverage  # from deeptools
   macs2: macs2
   # optional:
   Rscript: Rscript

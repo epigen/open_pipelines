@@ -132,319 +132,6 @@ class ChIPmentation(ChIPseqSample):
         super(ChIPmentation, self).set_file_paths()
 
 
-def bamToBigWig(inputBam, outputBigWig, genomeSizes, genome, tagmented=False, normalize=False, norm_factor=1000000):
-    import os
-    import re
-    # TODO:
-    # addjust fragment length dependent on read size and real fragment size
-    # (right now it asssumes 50bp reads with 180bp fragments)
-    cmds = list()
-    transientFile = os.path.abspath(re.sub("\.bigWig", "", outputBigWig))
-    cmd1 = "bedtools bamtobed -i {0} |".format(inputBam)
-    if not tagmented:
-        cmd1 += " " + "bedtools slop -i stdin -g {0} -s -l 0 -r 130 |".format(genomeSizes)
-        cmd1 += " fix_bedfile_genome_boundaries.py {0} |".format(genome)
-    cmd1 += " " + "genomeCoverageBed {0}-bg -g {1} -i stdin > {2}.cov".format(
-        "-5 " if tagmented else "",
-        genomeSizes,
-        transientFile
-    )
-    cmds.append(cmd1)
-    if normalize:
-        cmds.append("""awk 'NR==FNR{{sum+= $4; next}}{{ $4 = ($4 / sum) * {1}; print}}' {0}.cov {0}.cov | sort -k1,1 -k2,2n > {0}.normalized.cov""".format(transientFile, norm_factor))
-    cmds.append("bedGraphToBigWig {0}{1}.cov {2} {3}".format(transientFile, ".normalized" if normalize else "", genomeSizes, outputBigWig))
-    # remove tmp files
-    cmds.append("if [[ -s {0}.cov ]]; then rm {0}.cov; fi".format(transientFile))
-    if normalize:
-        cmds.append("if [[ -s {0}.normalized.cov ]]; then rm {0}.normalized.cov; fi".format(transientFile))
-    cmds.append("chmod 755 {0}".format(outputBigWig))
-    return cmds
-
-
-def report_dict(pipe, stats_dict):
-    for key, value in stats_dict.items():
-        pipe.report_result(key, value)
-
-
-def parse_fastqc(fastqc_zip, prefix=""):
-    """
-    """
-    import StringIO
-    import zipfile
-    import re
-
-    error_dict = {
-        prefix + "total_pass_filter_reads": pd.np.nan,
-        prefix + "poor_quality": pd.np.nan,
-        prefix + "read_length": pd.np.nan,
-        prefix + "GC_perc": pd.np.nan}
-
-    try:
-        zfile = zipfile.ZipFile(fastqc_zip)
-        content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
-    except:
-        return error_dict
-    try:
-        line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
-        total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-        line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
-        poor_quality = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-        line = [i for i in range(len(content)) if "Sequence length	" in content[i]][0]
-        seq_len = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
-        line = [i for i in range(len(content)) if "%GC" in content[i]][0]
-        gc_perc = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
-        return {
-            prefix + "total_pass_filter_reads": total,
-            prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
-            prefix + "read_length": seq_len,
-            prefix + "GC_perc": gc_perc}
-    except IndexError:
-        return error_dict
-
-
-def parse_trim_stats(stats_file, prefix="", paired_end=True):
-    """
-    :param stats_file: sambamba output file with duplicate statistics.
-    :type stats_file: str
-    :param prefix: A string to be used as prefix to the output dictionary keys.
-    :type stats_file: str
-    """
-    import re
-
-    stats_dict = {
-        prefix + "surviving_perc": pd.np.nan,
-        prefix + "short_perc": pd.np.nan,
-        prefix + "empty_perc": pd.np.nan,
-        prefix + "trimmed_perc": pd.np.nan,
-        prefix + "untrimmed_perc": pd.np.nan,
-        prefix + "trim_loss_perc": pd.np.nan}
-    try:
-        with open(stats_file) as handle:
-            content = handle.readlines()  # list of strings per line
-    except:
-        return stats_dict
-
-    suf = "s" if not paired_end else " pairs"
-
-    try:
-        line = [i for i in range(len(content)) if "read{} processed; of these:".format(suf) in content[i]][0]
-        total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-    except IndexError:
-        return stats_dict
-    try:
-        line = [i for i in range(len(content)) if "read{} available; of these:".format(suf) in content[i]][0]
-        surviving = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-        stats_dict[prefix + "surviving_perc"] = (float(surviving) / total) * 100
-        stats_dict[prefix + "trim_loss_perc"] = ((total - float(surviving)) / total) * 100
-    except IndexError:
-        pass
-    try:
-        line = [i for i in range(len(content)) if "short read{} filtered out after trimming by size control".format(suf) in content[i]][0]
-        short = int(re.sub(" \(.*", "", content[line]).strip())
-        stats_dict[prefix + "short_perc"] = (float(short) / total) * 100
-    except IndexError:
-        pass
-    try:
-        line = [i for i in range(len(content)) if "empty read{} filtered out after trimming by size control".format(suf) in content[i]][0]
-        empty = int(re.sub(" \(.*", "", content[line]).strip())
-        stats_dict[prefix + "empty_perc"] = (float(empty) / total) * 100
-    except IndexError:
-        pass
-    try:
-        line = [i for i in range(len(content)) if "trimmed read{} available after processing".format(suf) in content[i]][0]
-        trimmed = int(re.sub(" \(.*", "", content[line]).strip())
-        stats_dict[prefix + "trimmed_perc"] = (float(trimmed) / total) * 100
-    except IndexError:
-        pass
-    try:
-        line = [i for i in range(len(content)) if "untrimmed read{} available after processing".format(suf) in content[i]][0]
-        untrimmed = int(re.sub(" \(.*", "", content[line]).strip())
-        stats_dict[prefix + "untrimmed_perc"] = (float(untrimmed) / total) * 100
-    except IndexError:
-        pass
-    return stats_dict
-
-
-def parse_mapping_stats(stats_file, prefix="", paired_end=True):
-    """
-    :param stats_file: sambamba output file with duplicate statistics.
-    :type stats_file: str
-    :param prefix: A string to be used as prefix to the output dictionary keys.
-    :type stats_file: str
-    """
-    import re
-
-    if not paired_end:
-        error_dict = {
-            prefix + "not_aligned_perc": pd.np.nan,
-            prefix + "unique_aligned_perc": pd.np.nan,
-            prefix + "multiple_aligned_perc": pd.np.nan,
-            prefix + "perc_aligned": pd.np.nan}
-    else:
-        error_dict = {
-            prefix + "paired_perc": pd.np.nan,
-            prefix + "concordant_perc": pd.np.nan,
-            prefix + "concordant_unique_perc": pd.np.nan,
-            prefix + "concordant_multiple_perc": pd.np.nan,
-            prefix + "not_aligned_or_discordant_perc": pd.np.nan,
-            prefix + "not_aligned_perc": pd.np.nan,
-            prefix + "unique_aligned_perc": pd.np.nan,
-            prefix + "multiple_aligned_perc": pd.np.nan,
-            prefix + "perc_aligned": pd.np.nan}
-
-    try:
-        with open(stats_file) as handle:
-            content = handle.readlines()  # list of strings per line
-    except:
-        return error_dict
-
-    if not paired_end:
-        try:
-            line = [i for i in range(len(content)) if "reads; of these:" in content[i]][0]
-            total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-            line = [i for i in range(len(content)) if "aligned 0 times" in content[i]][0]
-            not_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
-            line = [i for i in range(len(content)) if " aligned exactly 1 time" in content[i]][0]
-            unique_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
-            line = [i for i in range(len(content)) if " aligned >1 times" in content[i]][0]
-            multiple_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
-            line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
-            perc_aligned = float(re.sub("%.*", "", content[line]).strip())
-            return {
-                prefix + "not_aligned_perc": not_aligned_perc,
-                prefix + "unique_aligned_perc": unique_aligned_perc,
-                prefix + "multiple_aligned_perc": multiple_aligned_perc,
-                prefix + "perc_aligned": perc_aligned}
-        except IndexError:
-            return error_dict
-
-    if paired_end:
-        try:
-            line = [i for i in range(len(content)) if "reads; of these:" in content[i]][0]
-            total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-            line = [i for i in range(len(content)) if " were paired; of these:" in content[i]][0]
-            paired_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
-            line = [i for i in range(len(content)) if "aligned concordantly 0 times" in content[i]][0]
-            concordant_unaligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
-            line = [i for i in range(len(content)) if "aligned concordantly exactly 1 time" in content[i]][0]
-            concordant_unique_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
-            line = [i for i in range(len(content)) if "aligned concordantly >1 times" in content[i]][0]
-            concordant_multiple_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2])
-            line = [i for i in range(len(content)) if "mates make up the pairs; of these:" in content[i]][0]
-            not_aligned_or_discordant = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-            d_fraction = (not_aligned_or_discordant / float(total))
-            not_aligned_or_discordant_perc = d_fraction * 100
-            line = [i for i in range(len(content)) if "aligned 0 times\n" in content[i]][0]
-            not_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2]) * d_fraction
-            line = [i for i in range(len(content)) if " aligned exactly 1 time" in content[i]][0]
-            unique_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2]) * d_fraction
-            line = [i for i in range(len(content)) if " aligned >1 times" in content[i]][0]
-            multiple_aligned_perc = float(re.search("\(.*%\)", content[line]).group()[1:-2]) * d_fraction
-            line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
-            perc_aligned = float(re.sub("%.*", "", content[line]).strip())
-            return {
-                prefix + "paired_perc": paired_perc,
-                prefix + "concordant_unaligned_perc": concordant_unaligned_perc,
-                prefix + "concordant_unique_perc": concordant_unique_perc,
-                prefix + "concordant_multiple_perc": concordant_multiple_perc,
-                prefix + "not_aligned_or_discordant_perc": not_aligned_or_discordant_perc,
-                prefix + "not_aligned_perc": not_aligned_perc,
-                prefix + "unique_aligned_perc": unique_aligned_perc,
-                prefix + "multiple_aligned_perc": multiple_aligned_perc,
-                prefix + "perc_aligned": perc_aligned}
-        except IndexError:
-            return error_dict
-
-
-def parse_duplicate_stats(stats_file, prefix=""):
-    """
-    Parses sambamba markdup output, returns series with values.
-
-    :param stats_file: sambamba output file with duplicate statistics.
-    :type stats_file: str
-    :param prefix: A string to be used as prefix to the output dictionary keys.
-    :type stats_file: str
-    """
-    import re
-
-    error_dict = {
-        prefix + "filtered_single_ends": pd.np.nan,
-        prefix + "filtered_paired_ends": pd.np.nan,
-        prefix + "duplicate_percentage": pd.np.nan}
-    try:
-        with open(stats_file) as handle:
-            content = handle.readlines()  # list of strings per line
-    except:
-        return error_dict
-
-    try:
-        line = [i for i in range(len(content)) if "single ends" in content[i]][0]
-        single_ends = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
-        line = [i for i in range(len(content)) if " end pairs" in content[i]][0]
-        paired_ends = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
-        line = [i for i in range(len(content)) if " duplicates" in content[i]][0]
-        duplicates = int(re.sub("\D", "", re.sub("\.\.\..*", "", content[line])))
-        return {
-            prefix + "filtered_single_ends": single_ends,
-            prefix + "filtered_paired_ends": paired_ends,
-            prefix + "duplicate_percentage": (float(duplicates) / (single_ends + paired_ends * 2)) * 100}
-    except IndexError:
-        return error_dict
-
-
-def parse_peak_number(peak_file):
-    from subprocess import check_output
-    try:
-        return {"peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
-    except:
-        return {"peaks": pd.np.nan}
-
-
-def calculate_frip(input_bam, input_bed, output, cpus=4):
-    return ("sambamba view -t {0} -c  -L {1}  {2} > {3}"
-            .format(cpus, input_bed, input_bam, output))
-
-
-def parse_FRiP(frip_file, total_reads):
-    """
-    Calculates the fraction of reads in peaks for a given sample.
-
-    :param frip_file: A sting path to a file with the FRiP output.
-    :type frip_file: str
-    :param total_reads: A Sample object with the "peaks" attribute.
-    :type total_reads: int
-    """
-    import re
-
-    error_dict = {"frip": pd.np.nan}
-    try:
-        with open(frip_file, "r") as handle:
-            content = handle.readlines()
-    except:
-        return error_dict
-
-    if content[0].strip() == "":
-        return error_dict
-
-    reads_in_peaks = int(re.sub("\D", "", content[0]))
-
-    return {"frip": reads_in_peaks / float(total_reads)}
-
-
-def parse_nsc_rsc(nsc_rsc_file):
-    """
-    Parses the values of NSC and RSC from a stats file.
-
-    :param nsc_rsc_file: A sting path to a file with the NSC and RSC output (generally a tsv file).
-    :type nsc_rsc_file: str
-    """
-    try:
-        nsc_rsc = pd.read_csv(nsc_rsc_file, header=None, sep="\t")
-        return {"NSC": nsc_rsc[8].squeeze(), "RSC": nsc_rsc[9].squeeze()}
-    except:
-        return {"NSC": pd.np.nan, "RSC": pd.np.nan}
-
-
 def main():
     # Parse command-line arguments
     parser = ArgumentParser(
@@ -659,7 +346,7 @@ def process(sample, pipe_manager, args):
         outputBam=sample.mapped,
         log=sample.aln_rates,
         metrics=sample.aln_metrics,
-        genomeIndex=getattr(pipe_manager.config.resources.genomes, sample.genome),
+        genomeIndex=getattr(pipe_manager.config.resources.genome_index, sample.genome),
         maxInsert=pipe_manager.config.parameters.max_insert,
         cpus=args.cores
     )
@@ -700,17 +387,16 @@ def process(sample, pipe_manager, args):
         {"total_efficiency": (usable / total) * 100})
 
     # Make tracks
+    track_dir = os.path.dirname(sample.bigwig)
+    if not os.path.exists(track_dir):
+        os.makedirs(track_dir)
     # right now tracks are only made for bams without duplicates
-    pipe_manager.timestamp("Making bigWig tracks from bam file")
-    cmd = bamToBigWig(
-        inputBam=sample.filtered,
-        outputBigWig=sample.bigwig,
-        genomeSizes=getattr(pipe_manager.config.resources.chromosome_sizes, sample.genome),
+    pipe_manager.timestamp("Making bigWig tracks from BAM file")
+    cmd = bam_to_bigwig(
+        input_bam=sample.filtered,
+        output_bigwig=sample.bigwig,
         genome=sample.genome,
-        tagmented=pipe_manager.config.parameters.tagmented,  # by default make extended tracks
-        normalize=pipe_manager.config.parameters.normalize_tracks,
-        norm_factor=pipe_manager.config.parameters.norm_factor
-    )
+        normalization_method="RPGC")
     pipe_manager.run(cmd, sample.bigwig, shell=True)
 
     # Plot fragment distribution
@@ -828,6 +514,308 @@ def call_peaks(sample, pipe_manager, args):
 
     print("Finished calling peaks for sample '{}'.".format(sample.name))
     pipe_manager.stop_pipeline()
+
+
+def report_dict(pipe, stats_dict):
+    for key, value in stats_dict.items():
+        pipe.report_result(key, value)
+
+
+def parse_fastqc(fastqc_zip, prefix=""):
+    """
+    """
+    import StringIO
+    import zipfile
+    import re
+
+    error_dict = {
+        prefix + "total_pass_filter_reads": pd.np.nan,
+        prefix + "poor_quality": pd.np.nan,
+        prefix + "read_length": pd.np.nan,
+        prefix + "GC_perc": pd.np.nan}
+
+    try:
+        zfile = zipfile.ZipFile(fastqc_zip)
+        content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
+    except:
+        return error_dict
+    try:
+        line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
+        total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+        line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
+        poor_quality = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+        line = [i for i in range(len(content)) if "Sequence length  " in content[i]][0]
+        seq_len = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
+        line = [i for i in range(len(content)) if "%GC" in content[i]][0]
+        gc_perc = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
+        return {
+            prefix + "total_pass_filter_reads": total,
+            prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
+            prefix + "read_length": seq_len,
+            prefix + "GC_perc": gc_perc}
+    except IndexError:
+        return error_dict
+
+
+def parse_trim_stats(stats_file, prefix="", paired_end=True):
+    """
+    :param stats_file: sambamba output file with duplicate statistics.
+    :type stats_file: str
+    :param prefix: A string to be used as prefix to the output dictionary keys.
+    :type stats_file: str
+    """
+    import re
+
+    stats_dict = {
+        prefix + "surviving_perc": pd.np.nan,
+        prefix + "short_perc": pd.np.nan,
+        prefix + "empty_perc": pd.np.nan,
+        prefix + "trimmed_perc": pd.np.nan,
+        prefix + "untrimmed_perc": pd.np.nan,
+        prefix + "trim_loss_perc": pd.np.nan}
+    try:
+        with open(stats_file) as handle:
+            content = handle.readlines()  # list of strings per line
+    except:
+        return stats_dict
+
+    suf = "s" if not paired_end else " pairs"
+
+    try:
+        line = [i for i in range(len(content)) if "read{} processed; of these:".format(suf) in content[i]][0]
+        total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+    except IndexError:
+        return stats_dict
+    try:
+        line = [i for i in range(len(content)) if "read{} available; of these:".format(suf) in content[i]][0]
+        surviving = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+        stats_dict[prefix + "surviving_perc"] = (float(surviving) / total) * 100
+        stats_dict[prefix + "trim_loss_perc"] = ((total - float(surviving)) / total) * 100
+    except IndexError:
+        pass
+    try:
+        line = [i for i in range(len(content)) if "short read{} filtered out after trimming by size control".format(suf) in content[i]][0]
+        short = int(re.sub(r" \(.*", "", content[line]).strip())
+        stats_dict[prefix + "short_perc"] = (float(short) / total) * 100
+    except IndexError:
+        pass
+    try:
+        line = [i for i in range(len(content)) if "empty read{} filtered out after trimming by size control".format(suf) in content[i]][0]
+        empty = int(re.sub(r" \(.*", "", content[line]).strip())
+        stats_dict[prefix + "empty_perc"] = (float(empty) / total) * 100
+    except IndexError:
+        pass
+    try:
+        line = [i for i in range(len(content)) if "trimmed read{} available after processing".format(suf) in content[i]][0]
+        trimmed = int(re.sub(r" \(.*", "", content[line]).strip())
+        stats_dict[prefix + "trimmed_perc"] = (float(trimmed) / total) * 100
+    except IndexError:
+        pass
+    try:
+        line = [i for i in range(len(content)) if "untrimmed read{} available after processing".format(suf) in content[i]][0]
+        untrimmed = int(re.sub(r" \(.*", "", content[line]).strip())
+        stats_dict[prefix + "untrimmed_perc"] = (float(untrimmed) / total) * 100
+    except IndexError:
+        pass
+    return stats_dict
+
+
+def parse_mapping_stats(stats_file, prefix="", paired_end=True):
+    """
+    :param stats_file: sambamba output file with duplicate statistics.
+    :type stats_file: str
+    :param prefix: A string to be used as prefix to the output dictionary keys.
+    :type stats_file: str
+    """
+    import re
+
+    if not paired_end:
+        error_dict = {
+            prefix + "not_aligned_perc": pd.np.nan,
+            prefix + "unique_aligned_perc": pd.np.nan,
+            prefix + "multiple_aligned_perc": pd.np.nan,
+            prefix + "perc_aligned": pd.np.nan}
+    else:
+        error_dict = {
+            prefix + "paired_perc": pd.np.nan,
+            prefix + "concordant_perc": pd.np.nan,
+            prefix + "concordant_unique_perc": pd.np.nan,
+            prefix + "concordant_multiple_perc": pd.np.nan,
+            prefix + "not_aligned_or_discordant_perc": pd.np.nan,
+            prefix + "not_aligned_perc": pd.np.nan,
+            prefix + "unique_aligned_perc": pd.np.nan,
+            prefix + "multiple_aligned_perc": pd.np.nan,
+            prefix + "perc_aligned": pd.np.nan}
+
+    try:
+        with open(stats_file) as handle:
+            content = handle.readlines()  # list of strings per line
+    except:
+        return error_dict
+
+    if not paired_end:
+        try:
+            line = [i for i in range(len(content)) if "reads; of these:" in content[i]][0]
+            total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+            line = [i for i in range(len(content)) if "aligned 0 times" in content[i]][0]
+            not_aligned_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2])
+            line = [i for i in range(len(content)) if " aligned exactly 1 time" in content[i]][0]
+            unique_aligned_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2])
+            line = [i for i in range(len(content)) if " aligned >1 times" in content[i]][0]
+            multiple_aligned_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2])
+            line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
+            perc_aligned = float(re.sub(r"%.*", "", content[line]).strip())
+            return {
+                prefix + "not_aligned_perc": not_aligned_perc,
+                prefix + "unique_aligned_perc": unique_aligned_perc,
+                prefix + "multiple_aligned_perc": multiple_aligned_perc,
+                prefix + "perc_aligned": perc_aligned}
+        except IndexError:
+            return error_dict
+
+    if paired_end:
+        try:
+            line = [i for i in range(len(content)) if "reads; of these:" in content[i]][0]
+            total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+            line = [i for i in range(len(content)) if " were paired; of these:" in content[i]][0]
+            paired_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2])
+            line = [i for i in range(len(content)) if "aligned concordantly 0 times" in content[i]][0]
+            concordant_unaligned_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2])
+            line = [i for i in range(len(content)) if "aligned concordantly exactly 1 time" in content[i]][0]
+            concordant_unique_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2])
+            line = [i for i in range(len(content)) if "aligned concordantly >1 times" in content[i]][0]
+            concordant_multiple_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2])
+            line = [i for i in range(len(content)) if "mates make up the pairs; of these:" in content[i]][0]
+            not_aligned_or_discordant = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+            d_fraction = (not_aligned_or_discordant / float(total))
+            not_aligned_or_discordant_perc = d_fraction * 100
+            line = [i for i in range(len(content)) if "aligned 0 times\n" in content[i]][0]
+            not_aligned_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2]) * d_fraction
+            line = [i for i in range(len(content)) if " aligned exactly 1 time" in content[i]][0]
+            unique_aligned_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2]) * d_fraction
+            line = [i for i in range(len(content)) if " aligned >1 times" in content[i]][0]
+            multiple_aligned_perc = float(re.search(r"\(.*%\)", content[line]).group()[1:-2]) * d_fraction
+            line = [i for i in range(len(content)) if "overall alignment rate" in content[i]][0]
+            perc_aligned = float(re.sub(r"%.*", "", content[line]).strip())
+            return {
+                prefix + "paired_perc": paired_perc,
+                prefix + "concordant_unaligned_perc": concordant_unaligned_perc,
+                prefix + "concordant_unique_perc": concordant_unique_perc,
+                prefix + "concordant_multiple_perc": concordant_multiple_perc,
+                prefix + "not_aligned_or_discordant_perc": not_aligned_or_discordant_perc,
+                prefix + "not_aligned_perc": not_aligned_perc,
+                prefix + "unique_aligned_perc": unique_aligned_perc,
+                prefix + "multiple_aligned_perc": multiple_aligned_perc,
+                prefix + "perc_aligned": perc_aligned}
+        except IndexError:
+            return error_dict
+
+
+def parse_duplicate_stats(stats_file, prefix=""):
+    """
+    Parses sambamba markdup output, returns series with values.
+
+    :param stats_file: sambamba output file with duplicate statistics.
+    :type stats_file: str
+    :param prefix: A string to be used as prefix to the output dictionary keys.
+    :type stats_file: str
+    """
+    import re
+
+    error_dict = {
+        prefix + "filtered_single_ends": pd.np.nan,
+        prefix + "filtered_paired_ends": pd.np.nan,
+        prefix + "duplicate_percentage": pd.np.nan}
+    try:
+        with open(stats_file) as handle:
+            content = handle.readlines()  # list of strings per line
+    except:
+        return error_dict
+
+    try:
+        line = [i for i in range(len(content)) if "single ends" in content[i]][0]
+        single_ends = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
+        line = [i for i in range(len(content)) if " end pairs" in content[i]][0]
+        paired_ends = int(re.sub(r"\D", "", re.sub(r"\.\.\..*", "", content[line])))
+        line = [i for i in range(len(content)) if " duplicates" in content[i]][0]
+        duplicates = int(re.sub(r"\D", "", re.sub(r"\.\.\..*", "", content[line])))
+        return {
+            prefix + "filtered_single_ends": single_ends,
+            prefix + "filtered_paired_ends": paired_ends,
+            prefix + "duplicate_percentage": (float(duplicates) / (single_ends + paired_ends * 2)) * 100}
+    except IndexError:
+        return error_dict
+
+
+def parse_peak_number(peak_file):
+    from subprocess import check_output
+    try:
+        return {"peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
+    except:
+        return {"peaks": pd.np.nan}
+
+
+def calculate_frip(input_bam, input_bed, output, cpus=4):
+    return ("sambamba view -t {0} -c  -L {1}  {2} > {3}"
+            .format(cpus, input_bed, input_bam, output))
+
+
+def parse_FRiP(frip_file, total_reads):
+    """
+    Calculates the fraction of reads in peaks for a given sample.
+
+    :param frip_file: A sting path to a file with the FRiP output.
+    :type frip_file: str
+    :param total_reads: A Sample object with the "peaks" attribute.
+    :type total_reads: int
+    """
+    import re
+
+    error_dict = {"frip": pd.np.nan}
+    try:
+        with open(frip_file, "r") as handle:
+            content = handle.readlines()
+    except:
+        return error_dict
+
+    if content[0].strip() == "":
+        return error_dict
+
+    reads_in_peaks = int(re.sub(r"\D", "", content[0]))
+
+    return {"frip": reads_in_peaks / float(total_reads)}
+
+
+def parse_nsc_rsc(nsc_rsc_file):
+    """
+    Parses the values of NSC and RSC from a stats file.
+
+    :param nsc_rsc_file: A sting path to a file with the NSC and RSC output (generally a tsv file).
+    :type nsc_rsc_file: str
+    """
+    try:
+        nsc_rsc = pd.read_csv(nsc_rsc_file, header=None, sep="\t")
+        return {"NSC": nsc_rsc[8].squeeze(), "RSC": nsc_rsc[9].squeeze()}
+    except:
+        return {"NSC": pd.np.nan, "RSC": pd.np.nan}
+
+
+def bam_to_bigwig(
+        input_bam, output_bigwig, genome,
+        normalization_method="RPGC"):
+    from collections import defaultdict
+
+    if genome not in ['hg19', 'hg38', 'mm10', 'mm9']:
+        print("Genome assembly is not known. Using size of human genome. Beware.")
+
+    genome_size = defaultdict(lambda: 3300000000)
+    for g in ['mm9', 'mm10']:
+        genome_size[g] = 2800000000
+
+    cmd = "bamCoverage --bam {bam_file} -o {bigwig}"
+    cmd += " -p max --binSize 10  --normalizeUsing {norm} --effectiveGenomeSize {genome_size} --extendReads 175"""
+    cmd = cmd.format(bam_file=input_bam, bigwig=output_bigwig, norm=normalization_method, genome_size=genome_size[genome])
+    return cmd
 
 
 if __name__ == '__main__':
