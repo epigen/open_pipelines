@@ -10,11 +10,13 @@ input_name = args[4]
 outputDir = args[5]
 broad_peaks = args[6]
 nCPUs = args[7]
+# Parse FDR or set to 1% by default.
+fdr <- if (length(args) > 7) as.numeric(args[8]) else 1e-2
 
 # The following section shows how to initialize a cluster of 8 nodes for parallel processing
 # see "snow" package manual for details.
 library(snow)
-cluster <- makeCluster(nCPUs);
+cluster <- makeCluster(rep("localhost", as.numeric(nCPUs)), type = "SOCK");
 
 chip.data <- read.bam.tags(sample)
 input.data <- read.bam.tags(input)
@@ -72,8 +74,7 @@ if (broad_peaks){
 
 
 # binding detection parameters
-# desired FDR (1%). Alternatively, an E-value can be supplied to the method calls below instead of the fdr parameter
-fdr <- 1e-2; 
+# As an alternative to FDR, an E-value can be supplied to the method calls below.
 # the binding.characteristics contains the optimized half-size for binding detection window
 detection.window.halfsize <- binding.characteristics$whs;
   
