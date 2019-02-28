@@ -109,7 +109,7 @@ def main():
         description="STARR-seq pipeline."
     )
     parser = arg_parser(parser)
-    parser = pypiper.add_pypiper_args(parser, groups=["all"])
+    parser = pypiper.add_pypiper_args(parser, groups=["ngs", "looper", "resource", "pypiper"])
     args = parser.parse_args()
 
     # Read in yaml configs

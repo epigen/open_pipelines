@@ -29,26 +29,22 @@ def arg_parser(parser):
         "-i",
         dest="input",
         help="Input Fastq file.",
-        type=str
-    )
+        type=str)
     parser.add_argument(
         "-n",
         dest="sample_name",
         help="Sample name.",
-        type=str
-    )
+        type=str)
     parser.add_argument(
         "-a", "--amplicon",
         dest="amplicon",
         help="Full amplicon sequence.",
-        type=str
-    )
+        type=str)
     parser.add_argument(
         "-g", "--guide-rna",
         dest="guide_rna",
         help="Guide RNA sequence used to target the genome.",
-        type=str
-    )
+        type=str)
     return parser
 
 
@@ -101,10 +97,9 @@ def main():
     # Parse command-line arguments
     parser = ArgumentParser(
         prog="amplicon-pipeline",
-        description="Amplicon pipeline."
-    )
+        description="Amplicon pipeline.")
     parser = arg_parser(parser)
-    parser = pypiper.add_pypiper_args(parser, groups=["all"])
+    parser = pypiper.add_pypiper_args(parser, groups=["ngs", "looper", "pypiper"])
     args = parser.parse_args()
 
     print("Processing sample {}.".format(args.sample_name))
