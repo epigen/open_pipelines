@@ -212,7 +212,7 @@ def process(sample, pipeline_config, args):
     """
     print("Start processing Drop-seq sample %s." % sample.sample_name)
 
-    for path in ["sample_root"] + sample.paths.__dict__.keys():
+    for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
         try:
             exists = os.path.exists(sample.paths[path])
         except TypeError:
