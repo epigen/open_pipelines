@@ -98,7 +98,7 @@ class ATACseqSample(Sample):
 
         # Peaks: peaks called and derivate files
         self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
-        peaks = s.path.join(self.paths.peaks, self.sample_name)
+        peaks = os.path.join(self.paths.peaks, self.sample_name)
         self.peaks = peaks + "_peaks.narrowPeak"
         self.summits = peaks + "_summits.bed"
         self.filteredPeaks = peaks + "_peaks.filtered.bed"
@@ -311,6 +311,13 @@ def process(sample, pipe_manager, args):
     pipe_manager.run(cmd, sample.filtered, shell=True)
     report_dict(pipe_manager, parse_duplicate_stats(sample.dups_metrics))
 
+    # Index bams
+    pipe_manager.timestamp("Indexing bamfiles with samtools")
+    cmd = tk.index_bam(input_bam=sample.mapped)
+    pipe_manager.run(cmd, sample.mapped + ".bai", shell=True)
+    cmd = tk.index_bam(input_bam=sample.filtered)
+    pipe_manager.run(cmd, sample.filtered + ".bai", shell=True)
+
     # Shift reads
     if args.shift_reads:
         pipe_manager.timestamp("Shifting reads of tagmented sample")
@@ -320,45 +327,8 @@ def process(sample, pipe_manager, args):
             output_bam=sample.filteredshifted)
         pipe_manager.run(cmd, sample.filteredshifted, shell=True)
 
-    # Index bams
-    pipe_manager.timestamp("Indexing bamfiles with samtools")
-    cmd = tk.index_bam(input_bam=sample.mapped)
-    pipe_manager.run(cmd, sample.mapped + ".bai", shell=True)
-    cmd = tk.index_bam(input_bam=sample.filtered)
-    pipe_manager.run(cmd, sample.filtered + ".bai", shell=True)
-    if sample.tagmented:
         cmd = tk.index_bam(input_bam=sample.filteredshifted)
         pipe_manager.run(cmd, sample.filteredshifted + ".bai", shell=True)
-
-    track_dir = os.path.dirname(sample.bigwig)
-    if not os.path.exists(track_dir):
-        os.makedirs(track_dir)
-
-    # Plot fragment distribution
-    if sample.paired and not os.path.exists(sample.insertplot):
-        pipe_manager.timestamp("Plotting insert size distribution")
-        tk.plot_atacseq_insert_sizes(
-            bam=sample.filtered,
-            plot=sample.insertplot,
-            output_csv=sample.insertdata)
-
-    # Count coverage genome-wide
-    pipe_manager.timestamp("Calculating genome-wide coverage")
-    cmd = tk.genome_wide_coverage(
-        input_bam=sample.filtered,
-        genome_windows=getattr(pipe_manager.config.resources.genome_windows, sample.genome),
-        output=sample.coverage)
-    pipe_manager.run(cmd, sample.coverage, shell=True)
-
-    # Calculate NSC, RSC
-    pipe_manager.timestamp("Assessing signal/noise in sample")
-    cmd = tk.run_spp(
-        input_bam=sample.filtered,
-        output=sample.qc,
-        plot=sample.qc_plot,
-        cpus=args.cores)
-    pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
-    report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
 
     # Call peaks
     pipe_manager.timestamp("Calling peaks with MACS2")
@@ -386,6 +356,42 @@ def process(sample, pipe_manager, args):
         float(pipe_manager.stats_dict["filtered_single_ends"]) +
         (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
     pipe_manager.report_result("frip", parse_frip(sample.frip, total))
+
+    # on an oracle peak list
+    if hasattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome):
+        cmd = calculate_frip(
+            input_bam=sample.filtered,
+            input_bed=getattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome),
+            output=sample.oracle_frip,
+            cpus=args.cores)
+        pipe_manager.run(cmd, sample.oracle_frip, shell=True)
+        report_dict(pipe_manager, parse_frip(sample.oracle_frip, total, prefix="oracle_"))
+
+    # Plot fragment distribution
+    if sample.paired and not os.path.exists(sample.insertplot):
+        pipe_manager.timestamp("Plotting insert size distribution")
+        tk.plot_atacseq_insert_sizes(
+            bam=sample.filtered,
+            plot=sample.insertplot,
+            output_csv=sample.insertdata)
+
+    # # Count coverage genome-wide
+    # pipe_manager.timestamp("Calculating genome-wide coverage")
+    # cmd = tk.genome_wide_coverage(
+    #     input_bam=sample.filtered,
+    #     genome_windows=getattr(pipe_manager.config.resources.genome_windows, sample.genome),
+    #     output=sample.coverage)
+    # pipe_manager.run(cmd, sample.coverage, shell=True)
+
+    # Calculate NSC, RSC
+    pipe_manager.timestamp("Assessing signal/noise in sample")
+    cmd = tk.run_spp(
+        input_bam=sample.filtered,
+        output=sample.qc,
+        plot=sample.qc_plot,
+        cpus=args.cores)
+    pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
+    report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
 
     # Make tracks
     track_dir = os.path.dirname(sample.bigwig)

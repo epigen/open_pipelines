@@ -475,6 +475,16 @@ def process(sample, pipe_manager, args):
         (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
     pipe_manager.report_result("frip", parse_frip(sample.frip, total))
 
+    # on an oracle peak list
+    if hasattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome):
+        cmd = calculate_frip(
+            input_bam=sample.filtered,
+            input_bed=getattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome),
+            output=sample.oracle_frip,
+            cpus=args.cores)
+        pipe_manager.run(cmd, sample.oracle_frip, shell=True)
+        report_dict(pipe_manager, parse_frip(sample.oracle_frip, total, prefix="oracle_"))
+
     # Make tracks
     track_dir = os.path.dirname(sample.bigwig)
     if not os.path.exists(track_dir):

@@ -51,11 +51,6 @@ parameters:
   peak_caller: "macs2"
   # peak window width
   peak_window_width: 1000
-  # BigWig file:
-  # should tracks be normalized to total of reads sequenced
-  normalize_tracks: True
-  # normalization factor (this number will be multiplied at each window/bp)
-  norm_factor: 1000000
   # Should the tracks be based on whole-read densities or 5' read positions (DNAse cuts or Tn5 tagmentation)?
   tagmented: False
 

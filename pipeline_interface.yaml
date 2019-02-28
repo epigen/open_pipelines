@@ -7,7 +7,7 @@ protocol_mapping:
   STARR: starrseq.py
   STARR-SEQ: starrseq.py
   ChIA-PET: chiapet.py
-  QUANT-SEQ: quantseq.py
+  RNA-SEQ: rnaseq.py
   Amplicon: amplicon_simple.py
   Drop-seq: dropseq.py
 
@@ -87,9 +87,9 @@ pipelines:
         cores: "12"
         mem: "64000"
         time: "4-00:00:00"
-  quantseq.py:
-    path: pipelines/quantseq.py
-    name: QUANT-SEQ
+  rnaseq.py:
+    path: pipelines/rnaseq.py
+    name: RNA-SEQ
     looper_args: True
     arguments:
       "--sample-name": sample_name
