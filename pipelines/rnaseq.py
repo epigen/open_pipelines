@@ -19,7 +19,7 @@ __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2018, Andre Rendeiro"
 __credits__ = []
 __license__ = "GPL2"
-__version__ = "0.1"
+__version__ = "0.4"
 __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
@@ -137,17 +137,17 @@ def parse_fastqc(fastqc_zip, prefix=""):
     try:
         line = [i for i in range(len(content))
                 if "Total Sequences" in content[i]][0]
-        total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+        total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
         line = [i for i in range(
             len(content)) if "Sequences flagged as poor quality" in content[i]][0]
-        poor_quality = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+        poor_quality = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
         line = [i for i in range(len(content))
                 if "Sequence length	" in content[i]][0]
-        seq_len = int(re.sub("\D", "", re.sub(
-            " \(.*", "", content[line]).strip()))
+        seq_len = int(re.sub(r"\D", "", re.sub(
+            r" \(.*", "", content[line]).strip()))
         line = [i for i in range(len(content)) if "%GC" in content[i]][0]
-        gc_perc = int(re.sub("\D", "", re.sub(
-            " \(.*", "", content[line]).strip()))
+        gc_perc = int(re.sub(r"\D", "", re.sub(
+            r" \(.*", "", content[line]).strip()))
         return {
             prefix + "total_pass_filter_reads": total,
             prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
@@ -184,22 +184,22 @@ def parse_trim_stats(stats_file, prefix="", paired_end=True):
     try:
         line = [i for i in range(len(content)) if "read{} processed; of these:".format(
             suf) in content[i]][0]
-        total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+        total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
         line = [i for i in range(len(content)) if "read{} available; of these:".format(
             suf) in content[i]][0]
-        surviving = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+        surviving = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
         line = [i for i in range(len(
             content)) if "short read{} filtered out after trimming by size control".format(suf) in content[i]][0]
-        short = int(re.sub(" \(.*", "", content[line]).strip())
+        short = int(re.sub(r" \(.*", "", content[line]).strip())
         line = [i for i in range(len(
             content)) if "empty read{} filtered out after trimming by size control".format(suf) in content[i]][0]
-        empty = int(re.sub(" \(.*", "", content[line]).strip())
+        empty = int(re.sub(r" \(.*", "", content[line]).strip())
         line = [i for i in range(len(
             content)) if "trimmed read{} available after processing".format(suf) in content[i]][0]
-        trimmed = int(re.sub(" \(.*", "", content[line]).strip())
+        trimmed = int(re.sub(r" \(.*", "", content[line]).strip())
         line = [i for i in range(len(
             content)) if "untrimmed read{} available after processing".format(suf) in content[i]][0]
-        untrimmed = int(re.sub(" \(.*", "", content[line]).strip())
+        untrimmed = int(re.sub(r" \(.*", "", content[line]).strip())
         return {
             prefix + "surviving_perc": (float(surviving) / total) * 100,
             prefix + "short_perc": (float(short) / total) * 100,

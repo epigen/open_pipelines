@@ -19,7 +19,7 @@ __author__ = "Andre Rendeiro"
 __copyright__ = "Copyright 2018, Andre Rendeiro"
 __credits__ = []
 __license__ = "GPL2"
-__version__ = "0.2"
+__version__ = "0.4"
 __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
@@ -54,19 +54,21 @@ class HiCSample(Sample):
         super(HiCSample, self).set_file_paths()
 
         # Files in the root of the sample dir
-        self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
-        self.trimlog = os.path.join(self.paths.sample_root, self.sample_name + ".trimlog.txt")
-        self.aln_rates = os.path.join(self.paths.sample_root, self.sample_name + ".aln_rates.txt")
-        self.aln_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".aln_metrics.txt")
-        self.dups_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".dups_metrics.txt")
+        prefix = os.path.join(self.paths.sample_root, self.sample_name)
+        self.fastqc = prefix + ".fastqc.zip"
+        self.trimlog = prefix + ".trimlog.txt"
+        self.aln_rates = prefix + ".aln_rates.txt"
+        self.aln_metrics = prefix + ".aln_metrics.txt"
+        self.dups_metrics = prefix + ".dups_metrics.txt"
 
         # Unmapped: merged bam, fastq, trimmed fastq
         self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
-        self.unmapped = os.path.join(self.paths.unmapped, self.sample_name + ".bam")
-        self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
-        self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
-        self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
-        self.fastq_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
+        unmapped = os.path.join(self.paths.unmapped, self.sample_name)
+        self.unmapped = unmapped + ".bam"
+        self.fastq = unmapped + ".fastq"
+        self.fastq1 = unmapped + ".1.fastq"
+        self.fastq2 = unmapped + ".2.fastq"
+        self.fastq_unpaired = unmapped + ".unpaired.fastq"
 
         # HiC-Pro
         self.paths.hicpro = os.path.join(self.paths.sample_root, "hic-pro")
@@ -267,8 +269,8 @@ def process(sample, pipe_manager, args):
         # run the whole HiC-Pro pipeline as once
         pipe_manager.run(
             """{} -i {} -o {} -c {}""".format(
-            pipe_manager.config.tools.hicpro, sample.paths.hicpro_input,
-            sample.paths.hicpro_output, sample.hicpro_config),
+                pipe_manager.config.tools.hicpro, sample.paths.hicpro_input,
+                sample.paths.hicpro_output, sample.hicpro_config),
             target=os.path.join(
                     sample.paths.hicpro_output,
                     "hic_results", "data", sample.name,
@@ -345,12 +347,12 @@ def process(sample, pipe_manager, args):
     stats = get_hicpro_stats(sample)
     report_dict(pipe_manager, stats.to_dict())
 
-    ## Convertions
+    # # Convertions
 
-    ### HiC-Pro output to Juicebox ".hic"
+    # # # HiC-Pro output to Juicebox ".hic"
     pipe_manager.run(
         "{} -i {} -g {} -j {} -r {} -o {}"
-            .format(pipe_manager.config.tools.hicpro2juicebox,
+        .format(pipe_manager.config.tools.hicpro2juicebox,
                 os.path.join(
                     sample.paths.hicpro_output,
                     "hic_results", "data", sample.name,
@@ -361,7 +363,7 @@ def process(sample, pipe_manager, args):
                 sample.paths.hicpro_output),
         target=os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.hic"))
 
-    ### make pairix indexed BEDPE
+    # # # make pairix indexed BEDPE
     pipe_manager.run(
         "awk -v OFS='\\t' '{{print $2,$3,$3+75,$5,$6,$6+75,\".\",\".\",$4,$7}}' {} | sort -k1,1V -k4,4V -k2,2n -k5,5n | bgzip -@ {} > {}".format(
             os.path.join(sample.paths.hicpro_output, "hic_results", "data", sample.name, sample.name + "_allValidPairs"),
@@ -373,7 +375,7 @@ def process(sample, pipe_manager, args):
             os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz")),
         target=os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz.px2"))
 
-    ### make cool
+    # # # make cool
     pipe_manager.run(
         "hic2cool {} {}".format(
             os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.hic"),
@@ -391,7 +393,7 @@ def process(sample, pipe_manager, args):
             lock_name="cooler.balance.{}kb".format(resolution), nofail=True)
 
     # Call peaks with MACS2
-    ## TODO: optimize parameters further
+    # # TODO: optimize parameters further
     pipe_manager.run(
         "macs2 callpeak -t {} -f BEDPE --keep-dup auto --nomodel --extsize 147 -g hs -n {} --outdir {}".format(
             os.path.join(sample.paths.hicpro_output, sample.name + "_allValidPairs.bed.gz"),
@@ -400,7 +402,7 @@ def process(sample, pipe_manager, args):
         target=os.path.join(sample.paths.hicpro_output, "hic_results", "peaks", sample.name + "_peaks.narrowPeak"), nofail=True)
 
     # Call loops
-    ### with cLoops
+    # # # with cLoops
     if not os.path.exists(os.path.join(sample.paths.hicpro_output, "hic_results", "cLoops")):
         os.makedirs(os.path.join(sample.paths.hicpro_output, "hic_results", "cLoops"))
     pipe_manager.run(
@@ -415,8 +417,8 @@ def process(sample, pipe_manager, args):
         "-w -j -s -hic",
         target=os.path.join(sample.paths.hicpro_output, "hic_results", "cLoops", sample.name + ".loop"), nofail=True)
 
-    ### with hichipper
-    #### make hichipper config file
+    # # # with hichipper
+    # # # # make hichipper config file
     yaml = textwrap.dedent("""
     peaks:
      - {}
@@ -435,7 +437,7 @@ def process(sample, pipe_manager, args):
     hichipper_config = os.path.join(sample.paths.sample_root, "hichipper_config.yaml")
     with open(hichipper_config, 'w') as handle:
         handle.write(yaml)
-    #### run
+    # # # # run
     pipe_manager.run(  # TODO: I think this command has to be run from sample.paths.sample_root, needs testing
         "hichipper --out {} {}".format(
             os.path.join(sample.paths.sample_root, "hichipper"),
@@ -448,7 +450,6 @@ def process(sample, pipe_manager, args):
 
     pipe_manager.stop_pipeline()
     print("Finished processing sample %s." % sample.sample_name)
-
 
 
 def report_dict(pipe, stats_dict):
@@ -476,13 +477,13 @@ def parse_fastqc(fastqc_zip, prefix=""):
         return error_dict
     try:
         line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
-        total = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+        total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
         line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
-        poor_quality = int(re.sub("\D", "", re.sub("\(.*", "", content[line])))
+        poor_quality = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
         line = [i for i in range(len(content)) if "Sequence length  " in content[i]][0]
-        seq_len = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
+        seq_len = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
         line = [i for i in range(len(content)) if "%GC" in content[i]][0]
-        gc_perc = int(re.sub("\D", "", re.sub(" \(.*", "", content[line]).strip()))
+        gc_perc = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
         return {
             prefix + "total_pass_filter_reads": total,
             prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
