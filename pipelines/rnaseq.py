@@ -10,7 +10,8 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
-from peppy import AttributeDict, Sample
+from attmap import AttributeDict
+from peppy import Sample
 
 import pandas as pd
 
@@ -29,7 +30,8 @@ class RNASeqSample(Sample):
     """
     Class to model RNA-seq samples based on the ChIPseqSample class.
 
-    :param pandas.Series series: Pandas `Series` object.
+    :param series: Pandas `Series` object.
+    :type series: pandas.Series
     """
     __library__ = "RNA-seq"
 
@@ -40,6 +42,12 @@ class RNASeqSample(Sample):
             raise TypeError("Provided object is not a pandas Series.")
         super(RNASeqSample, self).__init__(series)
 
+        # Set the sample's paths.sample_root attribute.
+        # This is a workaround to calling the parent's class set_file_paths
+        # which is impossible if the sample's YAML file does not contain
+        # pointers to its project (as is the case after looper submission)
+        self.paths.sample_root = series['paths']['sample_root']
+
     def __repr__(self):
         return "RNA-seq sample '%s'" % self.sample_name
 
@@ -48,38 +56,31 @@ class RNASeqSample(Sample):
         Sets the paths of all files for this sample.
         """
         # Inherit paths from Sample by running Sample's set_file_paths()
-        super(RNASeqSample, self).set_file_paths()
+        super(RNASeqSample, self)
 
         # Files in the root of the sample dir
-        self.fastqc = os.path.join(
-            self.paths.sample_root, self.sample_name + ".fastqc.zip")
-        self.trimlog = os.path.join(
-            self.paths.sample_root, self.sample_name + ".trimlog.txt")
-        self.dups_metrics = os.path.join(
-            self.paths.sample_root, self.sample_name + ".dups_metrics.txt")
+        prefix = os.path.join(self.paths.sample_root, self.sample_name)
+        self.fastqc_initial_output = (
+            os.path.join(
+                self.paths.sample_root,
+                os.path.splitext(os.path.basename(self.data_source))[0])
+            + "_fastqc.zip")
+        self.trimlog = prefix + ".trimlog.txt"
+        self.dups_metrics = prefix + ".dups_metrics.txt"
 
         # Unmapped: merged bam, fastq, trimmed fastq
         self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
-        self.unmapped = os.path.join(
-            self.paths.unmapped, self.sample_name + ".bam")
-        self.fastq = os.path.join(
-            self.paths.unmapped, self.sample_name + ".fastq")
-        self.fastq1 = os.path.join(
-            self.paths.unmapped, self.sample_name + ".1.fastq")
-        self.fastq2 = os.path.join(
-            self.paths.unmapped, self.sample_name + ".2.fastq")
-        self.fastq_unpaired = os.path.join(
-            self.paths.unmapped, self.sample_name + ".unpaired.fastq")
-        self.trimmed = os.path.join(
-            self.paths.unmapped, self.sample_name + ".trimmed.fastq")
-        self.trimmed1 = os.path.join(
-            self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
-        self.trimmed2 = os.path.join(
-            self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
-        self.trimmed1_unpaired = os.path.join(
-            self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
-        self.trimmed2_unpaired = os.path.join(
-            self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+        prefix = os.path.join(self.paths.unmapped, self.sample_name)
+        self.unmapped = prefix + ".bam"
+        self.fastq = prefix + ".fastq"
+        self.fastq1 = prefix + ".1.fastq"
+        self.fastq2 = prefix + ".2.fastq"
+        self.fastq_unpaired = prefix + ".unpaired.fastq"
+        self.trimmed = prefix + ".trimmed.fastq"
+        self.trimmed1 = prefix + ".1.trimmed.fastq"
+        self.trimmed2 = prefix + ".2.trimmed.fastq"
+        self.trimmed1_unpaired = prefix + ".1_unpaired.trimmed.fastq"
+        self.trimmed2_unpaired = prefix + ".2_unpaired.trimmed.fastq"
 
         # Expression quantification
         self.paths.kallisto = os.path.join(self.paths.sample_root, "kallisto")
@@ -118,7 +119,6 @@ def report_dict(pipe, stats_dict):
 def parse_fastqc(fastqc_zip, prefix=""):
     """
     """
-    import StringIO
     import zipfile
     import re
 
@@ -130,24 +130,18 @@ def parse_fastqc(fastqc_zip, prefix=""):
 
     try:
         zfile = zipfile.ZipFile(fastqc_zip)
-        content = StringIO.StringIO(zfile.read(os.path.join(
-            zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
+        content = zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt")).decode().split("\n")
     except:
         return error_dict
     try:
-        line = [i for i in range(len(content))
-                if "Total Sequences" in content[i]][0]
+        line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
         total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
-        line = [i for i in range(
-            len(content)) if "Sequences flagged as poor quality" in content[i]][0]
+        line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
         poor_quality = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
-        line = [i for i in range(len(content))
-                if "Sequence length	" in content[i]][0]
-        seq_len = int(re.sub(r"\D", "", re.sub(
-            r" \(.*", "", content[line]).strip()))
+        line = [i for i in range(len(content)) if "Sequence length" in content[i]][0]
+        seq_len = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
         line = [i for i in range(len(content)) if "%GC" in content[i]][0]
-        gc_perc = int(re.sub(r"\D", "", re.sub(
-            r" \(.*", "", content[line]).strip()))
+        gc_perc = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
         return {
             prefix + "total_pass_filter_reads": total,
             prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
@@ -246,7 +240,7 @@ def main():
     args = parser.parse_args()
 
     # Read in yaml configs
-    sample = RNASeqSample(pd.Series(yaml.load(open(args.sample_config, "r"))))
+    sample = RNASeqSample(pd.Series(yaml.safe_load(open(args.sample_config, "r"))))
 
     # Check if merged
     if len(sample.data_path.split(" ")) > 1:
@@ -311,9 +305,10 @@ def process(sample, pipe_manager, args):
         except TypeError:
             continue
         if not exists:
+            msg = "Cannot create '{}' path: {}".format(path, sample.paths[path])
             try:
                 os.mkdir(sample.paths[path])
-            except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
+            except OSError(msg):
                 raise
 
     # Create NGSTk instance
@@ -332,23 +327,22 @@ def process(sample, pipe_manager, args):
 
     # Fastqc
     pipe_manager.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastqc_rename(
-        input_bam=sample.data_path,
-        output_dir=sample.paths.sample_root,
-        sample_name=sample.sample_name
-    )
-    pipe_manager.run(cmd, os.path.join(sample.paths.sample_root,
-                                       sample.sample_name + "_fastqc.zip"), shell=True)
-    report_dict(pipe_manager, parse_fastqc(os.path.join(
-        sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), prefix="fastqc_"))
+    cmd = tk.fastqc(
+        file=sample.data_source,
+        output_dir=sample.paths.sample_root)
+    pipe_manager.run(cmd, sample.fastqc_initial_output, shell=False)
+    # # rename output
+    if os.path.exists(sample.fastqc_initial_output):
+        os.rename(sample.fastqc_initial_output, sample.fastqc)
+    report_dict(pipe_manager, parse_fastqc(sample.fastqc, prefix="fastqc_"))
 
     # Convert bam to fastq
     pipe_manager.timestamp("Converting to Fastq format")
     cmd = tk.bam2fastq(
-        inputBam=sample.data_path,
-        outputFastq=sample.fastq1 if sample.paired else sample.fastq,
-        outputFastq2=sample.fastq2 if sample.paired else None,
-        unpairedFastq=sample.fastq_unpaired if sample.paired else None
+        input_bam=sample.data_path,
+        output_fastq=sample.fastq1 if sample.paired else sample.fastq,
+        output_fastq2=sample.fastq2 if sample.paired else None,
+        unpaired_fastq=sample.fastq_unpaired if sample.paired else None
     )
     pipe_manager.run(
         cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
@@ -363,12 +357,12 @@ def process(sample, pipe_manager, args):
     pipe_manager.timestamp("Trimming adapters from sample")
     if pipe_manager.config.parameters.trimmer == "trimmomatic":
         cmd = tk.trimmomatic(
-            inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-            inputFastq2=sample.fastq2 if sample.paired else None,
-            outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-            outputFastq1unpaired=sample.trimmed1_unpaired if sample.paired else None,
-            outputFastq2=sample.trimmed2 if sample.paired else None,
-            outputFastq2unpaired=sample.trimmed2_unpaired if sample.paired else None,
+            input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+            input_fastq2=sample.fastq2 if sample.paired else None,
+            output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+            output_fastq1_unpaired=sample.trimmed1_unpaired if sample.paired else None,
+            output_fastq2=sample.trimmed2 if sample.paired else None,
+            output_fastq2_unpaired=sample.trimmed2_unpaired if sample.paired else None,
             cpus=args.cores,
             adapters=pipe_manager.config.resources.adapters,
             log=sample.trimlog
@@ -385,13 +379,13 @@ def process(sample, pipe_manager, args):
 
     elif pipe_manager.config.parameters.trimmer == "skewer":
         cmd = tk.skewer(
-            inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-            inputFastq2=sample.fastq2 if sample.paired else None,
-            outputPrefix=os.path.join(
+            input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+            input_fastq2=sample.fastq2 if sample.paired else None,
+            output_prefix=os.path.join(
                 sample.paths.unmapped, sample.sample_name),
-            outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-            outputFastq2=sample.trimmed2 if sample.paired else None,
-            trimLog=sample.trimlog,
+            output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+            output_fastq2=sample.trimmed2 if sample.paired else None,
+            log=sample.trimlog,
             cpus=args.cores,
             adapters=pipe_manager.config.resources.adapters
         )

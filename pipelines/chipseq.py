@@ -14,7 +14,8 @@ import yaml
 
 import pypiper
 from pypiper.ngstk import NGSTk
-from looper.models import AttributeDict, Sample
+from attmap import AttributeDict
+from peppy import Sample
 from const import CHIP_COMPARE_COLUMN, CHIP_MARK_COLUMN
 
 
@@ -42,25 +43,18 @@ class ChIPseqSample(Sample):
 
     :param series: Pandas `Series` object.
     :type series: pandas.Series
-
-    :Example:
-
-    # create Samples through a project object
-    from looper.models import Project
-    prj = Project("project_config.yaml")
-    prj.add_sample_sheet()
-    s0 = prj.samples[0]  # here's a Sample
-
-    # create Samples through a SampleSheet object
-    from looper.models import SampleSheet, Sample
-    sheet = SampleSheet("project_sheet.csv")
-    s1 = Sample(sheet.ix[0])  # here's a Sample too
     """
     __library__ = "ChIP-seq"
 
     def __init__(self, series):
         super(ChIPseqSample, self).__init__(series)
         self.tagmented = False
+
+        # Set the sample's paths.sample_root attribute.
+        # This is a workaround to calling the parent's class set_file_paths
+        # which is impossible if the sample's YAML file does not contain
+        # pointers to its project (as is the case after looper submission)
+        self.paths.sample_root = series['paths']['sample_root']
 
         # Set broad/histone status that may later be modified given
         # context of a pipeline configuration file, handling null/missing mark.
@@ -83,10 +77,15 @@ class ChIPseqSample(Sample):
         """
 
         # Get paths container structure and any contents used by any Sample.
-        super(ChIPseqSample, self).set_file_paths(project)
+        super(ChIPseqSample, self)
 
         # Files in the root of the sample dir
         prefix = os.path.join(self.paths.sample_root, self.sample_name)
+        self.fastqc_initial_output = (
+            os.path.join(
+                self.paths.sample_root,
+                os.path.splitext(os.path.basename(self.data_source))[0])
+            + "_fastqc.zip")
         self.fastqc = prefix + ".fastqc.zip"
         self.trimlog = prefix + ".trimlog.txt"
         self.aln_rates = prefix + ".aln_rates.txt"
@@ -172,34 +171,35 @@ def main():
         return 1
 
     # Read in yaml configs
-    series = pd.Series(yaml.load(open(args.sample_config, "r")))
-    sample = Sample(series)
+    series = pd.Series(yaml.safe_load(open(args.sample_config, "r")))
     # Create Sample object
-    if sample.protocol == "ChIPmentation":
-        sample = ChIPmentation(sample)
+    if series["protocol"] == "ChIPmentation":
+        sample = ChIPmentation(series)
     else:
-        sample = ChIPseqSample(sample)
+        sample = ChIPseqSample(series)
 
     # Check if merged
-    if len(sample.input_file_paths) > 1:
+    if len(sample.data_source.split(" ")) > 1:
         sample.merged = True
     else:
         sample.merged = False
     sample.prj = AttributeDict(sample.prj)
     sample.paths = AttributeDict(sample.paths.__dict__)
 
-    # Flag version of read type since it's a binary; handle case vagaries.
-    read_type = sample.read_type
-    try:
-        sample.paired = (read_type.lower() == "paired")
-    except AttributeError:
-        print("WARNING: non-string read_type: {} ({})".format(
-            read_type, type(read_type)))
+    # Check read type if not provided
+    if not hasattr(sample, "ngs_inputs"):
+        sample.ngs_inputs = [sample.data_source]
+    if not hasattr(sample, "read_type"):
+        sample.set_read_type()
+
+    # Shorthand for read_type
+    if sample.read_type == "paired":
+        sample.paired = True
+    else:
         sample.paired = False
 
     # Set file paths
     sample.set_file_paths(sample.prj)
-    # sample.make_sample_dirs()  # should be fixed to check if values of paths are strings and paths indeed
 
     # Start Pypiper object
     # Best practice is to name the pipeline with the name of the script;
@@ -249,7 +249,7 @@ def process(sample, pipe_manager, args):
     """
     print("Start processing ChIP-seq sample %s." % sample.name)
 
-    for path in ["sample_root"] + sample.paths.__dict__.keys():
+    for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
         try:
             exists = os.path.exists(sample.paths[path])
         except TypeError:
@@ -273,13 +273,14 @@ def process(sample, pipe_manager, args):
 
     # Fastqc
     pipe_manager.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastqc_rename(
-        input_bam=sample.data_source,
-        output_dir=sample.paths.sample_root,
-        sample_name=sample.sample_name)
-    fastqc_target = os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip")
-    pipe_manager.run(cmd, fastqc_target, shell=True)
-    report_dict(pipe_manager, parse_fastqc(fastqc_target, prefix="fastqc_"))
+    cmd = tk.fastqc(
+        file=sample.data_source,
+        output_dir=sample.paths.sample_root)
+    pipe_manager.run(cmd, sample.fastqc_initial_output, shell=False)
+    # # rename output
+    if os.path.exists(sample.fastqc_initial_output):
+        os.rename(sample.fastqc_initial_output, sample.fastqc)
+    report_dict(pipe_manager, parse_fastqc(sample.fastqc, prefix="fastqc_"))
 
     # Convert bam to fastq
     pipe_manager.timestamp("Converting to Fastq format")
@@ -326,7 +327,7 @@ def process(sample, pipe_manager, args):
             output_prefix=os.path.join(sample.paths.unmapped, sample.sample_name),
             output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
             output_fastq2=sample.trimmed2 if sample.paired else None,
-            trim_log=sample.trimlog,
+            log=sample.trimlog,
             cpus=args.cores,
             adapters=pipe_manager.config.resources.adapters
         )
@@ -346,7 +347,7 @@ def process(sample, pipe_manager, args):
         output_bam=sample.mapped,
         log=sample.aln_rates,
         metrics=sample.aln_metrics,
-        genome_index=getattr(pipe_manager.config.resources.genomes, sample.genome),
+        genome_index=getattr(pipe_manager.config.resources.genome_index, sample.genome),
         max_insert=pipe_manager.config.parameters.max_insert,
         cpus=args.cores)
     pipe_manager.run(cmd, sample.mapped, shell=True)
@@ -473,7 +474,7 @@ def process(sample, pipe_manager, args):
     total = (
         float(pipe_manager.stats_dict["filtered_single_ends"]) +
         (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
-    pipe_manager.report_result("frip", parse_frip(sample.frip, total))
+    report_dict(pipe_manager, parse_frip(sample.frip, total))
 
     # on an oracle peak list
     if hasattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome):
@@ -520,49 +521,37 @@ def report_dict(pipe, stats_dict):
 
 def parse_fastqc(fastqc_zip, prefix=""):
     """
-    Fetch a handful of fastqc metrics from its output file.
-
-    Count of total reads passing filtration, poor quality reads, read length,
-    and GC content are the metrics parsed and returned.
-
-    :param fastqc_zip: Path to the zipfile created by fastqc
-    :type fastqc_zip: str
-    :param prefix: Prefix for name of each metric
-    :type prefix: str
-    :rtype: Mapping[str, object]
     """
-    import StringIO
     import zipfile
+    import re
 
-    stat_names = [prefix + stat for stat in
-                  ["total_pass_filter_reads", "poor_quality",
-                   "read_length", "GC_perc"]]
+    error_dict = {
+        prefix + "total_pass_filter_reads": pd.np.nan,
+        prefix + "poor_quality": pd.np.nan,
+        prefix + "read_length": pd.np.nan,
+        prefix + "GC_perc": pd.np.nan}
 
-    def error_dict():
-        return dict((sn, pd.np.nan) for sn in stat_names)
-
-    # Read the zipfile from fastqc.
     try:
         zfile = zipfile.ZipFile(fastqc_zip)
-        content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
+        content = zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt")).decode().split("\n")
     except:
-        return error_dict()
-
-    # Parse the unzipped fastqc data, fetching the desired metrics.
+        return error_dict
     try:
         line = [i for i in range(len(content)) if "Total Sequences" in content[i]][0]
         total = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
         line = [i for i in range(len(content)) if "Sequences flagged as poor quality" in content[i]][0]
         poor_quality = int(re.sub(r"\D", "", re.sub(r"\(.*", "", content[line])))
-        line = [i for i in range(len(content)) if "Sequence length  " in content[i]][0]
+        line = [i for i in range(len(content)) if "Sequence length" in content[i]][0]
         seq_len = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
         line = [i for i in range(len(content)) if "%GC" in content[i]][0]
         gc_perc = int(re.sub(r"\D", "", re.sub(r" \(.*", "", content[line]).strip()))
-        values = [total, 100 * float(poor_quality) / total, seq_len, gc_perc]
-        return dict(zip(stat_names, values))
-
+        return {
+            prefix + "total_pass_filter_reads": total,
+            prefix + "poor_quality_perc": (float(poor_quality) / total) * 100,
+            prefix + "read_length": seq_len,
+            prefix + "GC_perc": gc_perc}
     except IndexError:
-        return error_dict()
+        return error_dict
 
 
 def parse_trim_stats(stats_file, prefix="", paired_end=True):

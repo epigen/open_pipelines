@@ -1,15 +1,22 @@
 protocol_mapping:
+  AMPLICON: amplicon_simple.py
+  Amplicon: amplicon_simple.py
   ATAC: atacseq.py
+  ATAC-seq: atacseq.py
   ATAC-SEQ: atacseq.py
+  ChIA-PET: chiapet.py
   CHIP: chipseq.py
   CHIP-SEQ: chipseq.py
+  CHIP-seq: chipseq.py
   CHIPMENTATION: chipseq.py
+  ChIPmentation: chipseq.py
+  DROP-SEQ: dropseq.py
+  Drop-seq: dropseq.py
   STARR: starrseq.py
   STARR-SEQ: starrseq.py
-  ChIA-PET: chiapet.py
+  STARR-seq: starrseq.py
   RNA-SEQ: rnaseq.py
-  Amplicon: amplicon_simple.py
-  Drop-seq: dropseq.py
+  RNA-seq: rnaseq.py
 
 # The pipelines section describes how looper, which submits jobs, knows
 # what resources to request for a pipeline, and what arguments to pass to the
