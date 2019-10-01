@@ -17,7 +17,7 @@ import pandas as pd
 
 
 __author__ = "Andre Rendeiro"
-__copyright__ = "Copyright 2015, Andre Rendeiro"
+__copyright__ = "Copyright 2019, Andre Rendeiro"
 __credits__ = []
 __license__ = "GPL2"
 __version__ = "0.4"

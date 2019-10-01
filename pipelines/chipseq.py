@@ -54,7 +54,10 @@ class ChIPseqSample(Sample):
         # This is a workaround to calling the parent's class set_file_paths
         # which is impossible if the sample's YAML file does not contain
         # pointers to its project (as is the case after looper submission)
-        self.paths.sample_root = series['paths']['sample_root']
+        self.paths.sample_root = os.path.join(
+            self.prj['metadata']['output_dir'],
+            self.prj['metadata']['results_subdir'],
+            self.name)
 
         # Set broad/histone status that may later be modified given
         # context of a pipeline configuration file, handling null/missing mark.
@@ -124,12 +127,6 @@ class ChIPseqSample(Sample):
 
         self.qc = prefix + "_qc.tsv"
         self.qc_plot = prefix + "_qc.pdf"
-
-        bigwig_subfolder = "bigwig_{}".format(self.genome)
-        bigwig_folder = os.path.join(
-                self.prj.metadata.results_subdir, self.name, bigwig_subfolder)
-        bigwig_file = "CHIP_{}.bw".format(self.sample_name)
-        self.bigwig = os.path.join(bigwig_folder, bigwig_file)
 
         # Peaks: peaks called and derivate files
         self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
@@ -372,10 +369,6 @@ def process(sample, pipe_manager, args):
     cmd = tk.index_bam(input_bam=sample.filtered)
     pipe_manager.run(cmd, sample.filtered + ".bai", shell=True)
 
-    track_dir = os.path.dirname(sample.bigwig)
-    if not os.path.exists(track_dir):
-        os.makedirs(track_dir)
-
     # Plot fragment distribution
     if sample.paired and not os.path.exists(sample.insertplot):
         pipe_manager.timestamp("Plotting insert size distribution")
@@ -431,14 +424,14 @@ def process(sample, pipe_manager, args):
     }
     if args.peak_caller == "macs2":
         cmd = tk.macs2_call_peaks(
-                treatment_bams=treatment_file, control_bams=control_file,
-                sample_name=sample.name, pvalue=args.pvalue,
-                genome=sample.genome, paired=sample.paired, **peak_call_kwargs)
+            treatment_bams=treatment_file, control_bams=control_file,
+            sample_name=sample.name, pvalue=args.pvalue,
+            genome=sample.genome, paired=sample.paired, **peak_call_kwargs)
     else:
         cmd = tk.spp_call_peaks(
-                treatment_bam=treatment_file, control_bam=control_file,
-                treatment_name=sample.name, control_name=comparison,
-                cpus=args.cpus, **peak_call_kwargs)
+            treatment_bam=treatment_file, control_bam=control_file,
+            treatment_name=sample.name, control_name=comparison,
+            cpus=args.cpus, **peak_call_kwargs)
     pipe_manager.run(cmd, target=sample.peaks, shell=True)
     report_dict(pipe_manager, parse_peak_number(sample.peaks))
 
