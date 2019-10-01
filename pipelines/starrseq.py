@@ -10,7 +10,8 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
-from peppy import AttributeDict, Sample
+from attmap import AttributeDict
+from peppy import Sample
 
 import pandas as pd
 

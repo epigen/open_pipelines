@@ -46,7 +46,10 @@ class ATACseqSample(Sample):
         # This is a workaround to calling the parent's class set_file_paths
         # which is impossible if the sample's YAML file does not contain
         # pointers to its project (as is the case after looper submission)
-        self.paths.sample_root = series['paths']['sample_root']
+        self.paths.sample_root = os.path.join(
+            self.prj['metadata']['output_dir'],
+            self.prj['metadata']['results_subdir'],
+            self.name)
 
         self.tagmented = True
 
@@ -206,7 +209,8 @@ def process(sample, pipe_manager, args):
     """
     print("Start processing ATAC-seq sample %s." % sample.sample_name)
 
-    for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
+    # for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
+    for path in ["sample_root", "unmapped", "mapped", "peaks", "coverage"]:
         try:
             exists = os.path.exists(sample.paths[path])
         except TypeError:
@@ -232,10 +236,11 @@ def process(sample, pipe_manager, args):
 
     # Fastqc
     pipe_manager.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastqc(
-        file=sample.data_source,
-        output_dir=sample.paths.sample_root)
-    pipe_manager.run(cmd, sample.fastqc_initial_output, shell=False)
+    if not os.path.exists(sample.fastqc):
+        cmd = tk.fastqc(
+            file=sample.data_source,
+            output_dir=sample.paths.sample_root)
+        pipe_manager.run(cmd, sample.fastqc_initial_output, shell=False)
     # # rename output
     if os.path.exists(sample.fastqc_initial_output):
         os.rename(sample.fastqc_initial_output, sample.fastqc)
@@ -463,6 +468,7 @@ def arg_parser(parser):
 def parse_fastqc(fastqc_zip, prefix=""):
     """
     """
+    # TODO: review the parsing of paired-end files
     import zipfile
     import re
 
@@ -686,10 +692,14 @@ def parse_duplicate_stats(stats_file, prefix=""):
 
 
 def parse_peak_number(peak_file, prefix=""):
-    from subprocess import check_output
+    import subprocess
     try:
-        return {prefix + "peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
-    except:
+        return {
+            prefix + "peaks":
+            int(
+                subprocess.check_output(["wc", "-l", peak_file])
+                .decode().strip().split(" ")[0])}
+    except (TypeError, IndexError, subprocess.CalledProcessError):
         return {prefix + "peaks": pd.np.nan}
 
 

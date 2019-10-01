@@ -23,121 +23,198 @@ protocol_mapping:
 # pipeline. For each pipeline, you specify two components: an arguments list,
 # and a resources list, like so:
 
+
 pipelines:
-  atacseq.py:
-    name: ATAC-SEQ
-    path: pipelines/atacseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "16000"
-        time: "08:00:00"
-      medium:
-        file_size: "1"
-        cores: "8"
-        mem: "32000"
-        time: "1-12:00:00"
-      high:
-        file_size: "2"
-        cores: "12"
-        mem: "64000"
-        time: "4-00:00:00"
-  chipseq.py:
-    path: pipelines/chipseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "16000"
-        time: "08:00:00"
-      medium:
-        file_size: "1"
-        cores: "8"
-        mem: "32000"
-        time: "1-12:00:00"
-      high:
-        file_size: "2"
-        cores: "12"
-        mem: "64000"
-        time: "4-00:00:00"
-  starrseq.py:
-    path: pipelines/starrseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "16000"
-        time: "08:00:00"
-      medium:
-        file_size: "1"
-        cores: "8"
-        mem: "32000"
-        time: "1-12:00:00"
-      high:
-        file_size: "2"
-        cores: "12"
-        mem: "64000"
-        time: "4-00:00:00"
-  rnaseq.py:
-    path: pipelines/rnaseq.py
-    name: RNA-SEQ
-    looper_args: True
-    arguments:
-      "--sample-name": sample_name
-      "--genome": genome
-      "--input": data_source
-      "--single-or-paired": read_type
-    resources:
-      default:
-        file_size: "0"
-        cores: "4"
-        mem: "12000"
-        time: "12-00:00:00"
-  amplicon_simple.py:
-    path: pipelines/amplicon_simple.py
-    arguments:
-      "-n": sample_name
-      "-i": data_source
-      "-a": amplicon
-      "-g": guide_rna
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "1"
-        mem: "8000"
-        time: "0:30:00"
-  dropseq.py:
-    path: pipelines/dropseq.py
-    arguments:
-      "--sample-yaml": yaml_file
-      "-I": sample_name
-      "-G": genome
-    looper_args: True
-    resources:
-      default:
-        file_size: "0"
-        cores: "8"
-        mem: "60000"
-        time: "1-12:00:00"
-      high:
-        file_size: "4"
-        cores: "8"
-        mem: "80000"
-        time: "3-12:00:00"
+    amplicon_simple:
+        name: amplicon_simple
+        path: pipelines/amplicon_simple.py
+        arguments:
+            "-n": sample_name
+            "-i": data_path
+            "-a": amplicon
+            "-g": guide_rna
+        looper_args: True
+        resources:
+            default:
+                file_size: "0"
+                cores: 1
+                mem: 8000
+                time: "0:30:00"
+
+    atacseq:
+        name: ATAC-seq
+        # sample_subtypes:
+        #     ATAC-seq: ATACseqSample
+        path: pipelines/atacseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-G": genome
+            "--protocol": protocol
+            "--single-or-paired": read_type
+        looper_args: True
+        required_input_files: [read1]
+        ngs_input_files: [read1, read2]
+        resources:
+            default:
+                file_size: "0"
+                cores: 4
+                mem: 16000
+                time: "08:00:00"
+                partition: "shortq"
+            medium:
+                file_size: "1"
+                cores: 8
+                mem: 32000
+                time: "1-12:00:00"
+                partition: "mediumq"
+            high:
+                file_size: "2"
+                cores: 12
+                mem: 64000
+                time: "4-00:00:00"
+                partition: "longq"
+
+    chipseq:
+        name: ChIP-seq
+        # sample_subtypes:
+        #     ChIP-seq: ChIPseqSample
+        path: pipelines/chipseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-S": sample_name
+            "-G": genome
+        looper_args: True
+        required_input_files: [data_path]
+        ngs_input_files: [data_path]
+        resources:
+            default:
+                file_size: "0"
+                cores: 4
+                mem: 16000
+                time: "08:00:00"
+                partition: "shortq"
+            medium:
+                file_size: "1"
+                cores: 8
+                mem: 32000
+                time: "1-12:00:00"
+                partition: "mediumq"
+            high:
+                file_size: "2"
+                cores: 12
+                mem: 64000
+                time: "4-00:00:00"
+                partition: "longq"
+
+    dropseq:
+        name: Drop-seq
+        path: pipelines/dropseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-S": sample_name
+            "-G": genome
+        looper_args: True
+        resources:
+            default:
+                file_size: "0"
+                cores: 8
+                mem: 60000
+                time: "1-12:00:00"
+                partition: "mediumq"
+            high:
+                file_size: "4"
+                cores: 8
+                mem: 80000
+                time: "3-12:00:00"
+                partition: "longq"
+
+    hic:
+        name: Hi-C
+        sample_subtypes:
+            HiC: HiCSample
+            Hi-C: HiCSample
+            HiChIP: HiChIPSample
+            Hi-ChIP: HiChIPSample
+        path: pipelines/hic.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-S": sample_name
+            "-G": genome
+        looper_args: True
+        required_input_files: [data_path]
+        ngs_input_files: [data_path]
+        resources:
+            default:
+                file_size: "0"
+                cores: 4
+                mem: 16000
+                time: "08:00:00"
+                partition: "shortq"
+            medium:
+                file_size: "1"
+                cores: 8
+                mem: 32000
+                time: "1-12:00:00"
+                partition: "mediumq"
+            high:
+                file_size: "2"
+                cores: 12
+                mem: 64000
+                time: "8-00:00:00"
+                partition: "longq"
+
+    rnaseq:
+        name: RNA-seq
+        sample_subtypes: 
+            RNA-seq: RNASeqSample
+            RNA: RNASeqSample
+        path: pipelines/rnaseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-S": sample_name
+            "-G": genome
+        looper_args: True
+        required_input_files: [data_path]
+        ngs_input_files: [data_path]
+        resources:
+            default:
+                file_size: "0"
+                cores: 1
+                mem: 8000
+                time: "01:00:00"
+                partition: "shortq"
+            medium:
+                file_size: "1"
+                cores: 2
+                mem: 16000
+                time: "08:00:00"
+                partition: "longq"
+
+    starrseq:
+        name: STARR-seq
+        # sample_subtypes: STARRseqSample
+        path: pipelines/starrseq.py
+        arguments:
+            "--sample-yaml": yaml_file
+            "-S": sample_name
+            "-G": genome
+        looper_args: True
+        resources:
+            default:
+                file_size: "0"
+                cores: 4
+                mem: 16000
+                time: "08:00:00"
+                partition: "shortq"
+            medium:
+                file_size: "1"
+                cores: 8
+                mem: 32000
+                time: "1-12:00:00"
+                partition: "mediumq"
+            high:
+                file_size: "2"
+                cores: 12
+                mem: 64000
+                time: "4-00:00:00"
+                partition: "longq"
