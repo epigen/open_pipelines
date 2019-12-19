@@ -1,27 +1,28 @@
 protocol_mapping:
-    AMPLICON: amplicon_simple
-    ATAC-SEQ: atacseq
-    ATACSEQ: atacseq
-    ATAC: atacseq
-    CHIP-SEQ: chipseq
-    CHIPSEQ: chipseq
-    CHIP: chipseq
-    CHIPMENTATION: chipseq
-    DNASE-SEQ: atacseq
-    DNASESEQ: atacseq
-    DNASE: atacseq
-    DROP-SEQ: dropseq
-    DROPSEQ: dropseq
-    HI-C: hic
-    HIC: hic
-    HI-CHIP: hic
-    HICHIP: hic
-    RNA-SEQ: rnaseq
-    RNASEQ: rnaseq
-    RNA: rnaseq
-    STARR-SEQ: starrseq
-    STARRSEQ: starrseq
-    STARR: starrseq
+  AMPLICON: amplicon_simple
+  Amplicon: amplicon_simple
+  ATAC: atacseq
+  ATAC-seq: atacseq
+  ATAC-SEQ: atacseq
+  ChIA-PET: chiapet
+  CHIP: chipseq
+  CHIP-SEQ: chipseq
+  CHIP-seq: chipseq
+  CHIPMENTATION: chipseq
+  ChIPmentation: chipseq
+  DROP-SEQ: dropseq
+  Drop-seq: dropseq
+  STARR: starrseq
+  STARR-SEQ: starrseq
+  STARR-seq: starrseq
+  RNA-SEQ: rnaseq
+  RNA-seq: rnaseq
+
+# The pipelines section describes how looper, which submits jobs, knows
+# what resources to request for a pipeline, and what arguments to pass to the
+# pipeline. For each pipeline, you specify two components: an arguments list,
+# and a resources list, like so:
+
 
 pipelines:
     amplicon_simple:
@@ -42,16 +43,11 @@ pipelines:
 
     atacseq:
         name: ATAC-seq
-        sample_subtypes: 
-            ATAC-seq: ATACseqSample
-            ATAC: ATACseqSample
-            DNASE-SEQ: DNaseSample
-            DNASE: DNaseSample
+        # sample_subtypes:
+        #     ATAC-seq: ATACseqSample
         path: pipelines/atacseq.py
         arguments:
             "--sample-yaml": yaml_file
-            "-S": sample_name
-            "-G": genome
         looper_args: True
         required_input_files: [data_path]
         ngs_input_files: [data_path]
@@ -61,28 +57,27 @@ pipelines:
                 cores: 4
                 mem: 16000
                 time: "08:00:00"
+                partition: "shortq"
             medium:
                 file_size: "1"
                 cores: 8
                 mem: 32000
                 time: "1-12:00:00"
+                partition: "mediumq"
             high:
                 file_size: "2"
                 cores: 12
                 mem: 64000
                 time: "4-00:00:00"
+                partition: "longq"
 
     chipseq:
         name: ChIP-seq
-        sample_subtypes:
-            ChIP-seq: ChIPseqSample
-            ChIP: ChIPseqSample
-            ChIPmentation: ChIPmentation
+        # sample_subtypes:
+        #     ChIP-seq: ChIPseqSample
         path: pipelines/chipseq.py
         arguments:
             "--sample-yaml": yaml_file
-            "-S": sample_name
-            "-G": genome
         looper_args: True
         required_input_files: [data_path]
         ngs_input_files: [data_path]
@@ -92,16 +87,19 @@ pipelines:
                 cores: 4
                 mem: 16000
                 time: "08:00:00"
+                partition: "shortq"
             medium:
                 file_size: "1"
                 cores: 8
                 mem: 32000
                 time: "1-12:00:00"
+                partition: "mediumq"
             high:
                 file_size: "2"
                 cores: 12
                 mem: 64000
                 time: "4-00:00:00"
+                partition: "longq"
 
     dropseq:
         name: Drop-seq
@@ -117,11 +115,13 @@ pipelines:
                 cores: 8
                 mem: 60000
                 time: "1-12:00:00"
+                partition: "mediumq"
             high:
                 file_size: "4"
                 cores: 8
                 mem: 80000
                 time: "3-12:00:00"
+                partition: "longq"
 
     hic:
         name: Hi-C
@@ -144,16 +144,19 @@ pipelines:
                 cores: 4
                 mem: 16000
                 time: "08:00:00"
+                partition: "shortq"
             medium:
                 file_size: "1"
                 cores: 8
                 mem: 32000
                 time: "1-12:00:00"
+                partition: "mediumq"
             high:
                 file_size: "2"
                 cores: 12
                 mem: 64000
                 time: "8-00:00:00"
+                partition: "longq"
 
     rnaseq:
         name: RNA-seq
@@ -174,15 +177,17 @@ pipelines:
                 cores: 1
                 mem: 8000
                 time: "01:00:00"
+                partition: "shortq"
             medium:
                 file_size: "1"
                 cores: 2
                 mem: 16000
                 time: "08:00:00"
+                partition: "longq"
 
     starrseq:
         name: STARR-seq
-        sample_subtypes: STARRseqSample
+        # sample_subtypes: STARRseqSample
         path: pipelines/starrseq.py
         arguments:
             "--sample-yaml": yaml_file
@@ -195,13 +200,16 @@ pipelines:
                 cores: 4
                 mem: 16000
                 time: "08:00:00"
+                partition: "shortq"
             medium:
                 file_size: "1"
                 cores: 8
                 mem: 32000
                 time: "1-12:00:00"
+                partition: "mediumq"
             high:
                 file_size: "2"
                 cores: 12
                 mem: 64000
                 time: "4-00:00:00"
+                partition: "longq"

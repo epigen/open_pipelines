@@ -9,7 +9,8 @@ For each step statistics are collected and several library quality metrics are c
 
 ### Prequisites
 
-**Python packages**. This pipeline uses [pypiper](https://github.com/databio/pypiper) and [looper](https://github.com/pepkit/looper). You can do a user-specific install of these like this:
+**Python packages**. This pipeline uses [pypiper](https://github.com/databio/pypiper) and [looper](https://github.com/pepkit/looper).
+You can do a user-specific install of tested versions like this:
 
 ```
 pip install --user https://github.com/databio/pypiper/zipball/v0.6
@@ -81,8 +82,8 @@ For genomes with annotation available, I strongly recommend filtering the peak c
 
 #### bigWig file
 
-A bigWig file with signal along the genome will be produced which can be used for visualizations in genome browsers. This requires some [UCSC tools](http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/) to be available, particularly `bedGraphToBigWig`.
-This file can be normalized to the total library size if specified in the [pipeline configuration file](atacseq.yaml) under `parameters: normalize_tracks`. The normalization can take a normalization factor `parameters: norm_factor` under consideration which will make the scalling of the bigWig file comparable between samples. This can however create files with numerical scales which are impractical and therefore producing unnormalized bigWig files or making a posterior normalization with all samples jointly can sometimes be preferable.
+A bigWig file with signal along the genome will be produced which can be used for visualizations in genome browsers.
+This file is normalized to 1X genome coverage using [deepTools' bamCoverage command](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html).
 
 #### Fragment distributions
 

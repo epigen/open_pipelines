@@ -3,5 +3,5 @@ pyyaml
 peppy>=0.18.2
 pybedtools>=0.7.10
 matplotlib>=2.2.3
--e git://github.com/pepkit/looper.git@v0.9.1#egg=looper
--e git://github.com/databio/pypiper.git@v0.6#egg=pypiper
+loopercli>=0.12.4
+piper>=0.12.1

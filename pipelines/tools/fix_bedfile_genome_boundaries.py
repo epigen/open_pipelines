@@ -1,11 +1,18 @@
 #!/usr/bin/env python
+
 import csv
+import os
 import sys
+
+EXTENSION = "chromSizes"
+DEFAULT_CHROMSIZES_LOCATION = "/data/groups/lab_bock/shared/resources/genomes"
+
+
 
 
 def getChrSizes(chrmFile):
     """
-    Reads tab-delimiter file with two rows describing the chromossomes and its lengths.
+    Reads tab-delimiter file with two rows describing the chromosomes and its lengths.
     Returns dictionary of chr:sizes.
     """
     with open(chrmFile, 'r') as f:
@@ -15,15 +22,26 @@ def getChrSizes(chrmFile):
             chrmSizes[str(row[0])] = int(row[1])
     return chrmSizes
 
-chrSizes = {
-    "hg38": "/data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes",
-    "hg19": "/data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes",
-    "mm10": "/data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes",
-    "dr7": "/data/groups/lab_bock/shared/resources/genomes/dr7/dr7.chromSizes"
-}
+
+
+def getChrFile(assembly):
+    filename = "{}.{}".format(assembly, EXTENSION)
+    default_filepath = os.path.join(
+            DEFAULT_CHROMSIZES_LOCATION, assembly, filename)
+    genomes_folder_path = os.getenv("GENOMES")
+    try:
+        env_based_filepath = os.path.join(
+                genomes_folder_path, assembly, filename)
+    except TypeError:
+        return default_filepath
+    return env_based_filepath if os.path.exists(env_based_filepath) \
+            else default_filepath
+
+
 
 genome = sys.argv[1]
-chrms = getChrSizes(chrSizes[genome])  # get size of chromosomes
+chrSizesFilepath = getChrFile(genome)
+chrms = getChrSizes(chrSizesFilepath)  # get size of chromosomes
 
 wr = csv.writer(sys.stdout, delimiter='\t', lineterminator='\n')
 

@@ -1,43 +1,41 @@
 # The following section contains static files required by the pipeline
 resources:
-  adapters: /data/groups/lab_bock/shared/resources/adapters/nextera_adapters.fa
-  genome_index:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/indexed_bowtie2/hg38
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/indexed_bowtie2/hg19
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/indexed_bowtie2/mm10
-    sacCer3: /data/groups/lab_bock/shared/resources/genomes/sacCer3/indexed_bowtie2/sacCer3
-    ercc: /data/groups/lab_bock/shared/resources/genomes/ERCC92/indexed_bowtie2/ERCC92
+  adapters: ${RESOURCES}/adapters/nextera_adapters.fa
+  genomes:
+    hg38: ${GENOMES}/hg38/indexed_bowtie2/hg38
+    hg19: ${GENOMES}/hg19/indexed_bowtie2/hg19
+    mm10: ${GENOMES}/mm10/indexed_bowtie2/mm10
+    sacCer3: ${GENOMES}/sacCer3/indexed_bowtie2/sacCer3
+    ercc: ${GENOMES}/ERCC92/indexed_bowtie2/ERCC92
   chromosome_sizes:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.chromSizes
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.chromSizes
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.chromSizes
-    sacCer3: /data/groups/lab_bock/shared/resources/genomes/sacCer3/sacCer3.chrom.sizes
+    hg38: ${GENOMES}/hg38/hg38.chromSizes
+    hg19: ${GENOMES}/hg19/hg19.chromSizes
+    mm10: ${GENOMES}/mm10/mm10.chromSizes
+    sacCer3: ${GENOMES}/sacCer3/sacCer3.chrom.sizes
   genome_windows:
-    hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
-    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
-    mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
-  # tss:
-  #   hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38.genomeWindows_1kb.bed
-  #   hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19.genomeWindows_1kb.bed
-  #   mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10.genomeWindows_1kb.bed
+    hg38: ${GENOMES}/hg38/hg38.genomeWindows_1kb.bed
+    hg19: ${GENOMES}/hg19/hg19.genomeWindows_1kb.bed
+    mm10: ${GENOMES}/mm10/mm10.genomeWindows_1kb.bed
+  tss:
+    hg38: ${GENOMES}/hg38/hg38.genomeWindows_1kb.bed
+    hg19: ${GENOMES}/hg19/hg19.genomeWindows_1kb.bed
+    mm10: ${GENOMES}/mm10/mm10.genomeWindows_1kb.bed
 
 
 # The following section contains command-line tools used by the pipeline
 tools:
   fastqc: fastqc
   java: java
-  picard: /cm/shared/apps/picard-tools/1.140/picard.jar
+  picard: ${PICARD}
   samtools: samtools
   sambamba: sambamba
-  trimmomatic: trimmomatic
+  trimmomatic: ${TRIMMOMATIC}
   skewer: skewer
-  bedtools: /cm/shared/apps/bedtools/2.20.1/bedtools
-  bamCoverage: bamCoverage  # from deeptools
+  bedtools: bedtools
   macs2: macs2
   # optional:
   Rscript: Rscript
-  spp: /home/arendeiro/.local/bin/run_spp.R  # You can find this here: https://raw.githubusercontent.com/crazyhottommy/phantompeakqualtools/master/run_spp.R
-
+  spp: ${PEAK_QUAL_TK}/run_spp.R
 
 # The following section parameters used to control pipeline behaviour
 parameters:
@@ -53,24 +51,18 @@ parameters:
   peak_caller: "macs2"
   # peak window width
   peak_window_width: 1000
-  # BigWig file:
-  # should tracks be normalized to total of reads sequenced
-  normalize_tracks: True
-  # normalization factor (this number will be multiplied at each window/bp)
-  norm_factor: 1000000
   # Should the tracks be based on whole-read densities or 5' read positions (DNAse cuts or Tn5 tagmentation)?
   tagmented: False
 
-# Factors considered as histones
-# Factors matching this as substring
-# will be considered as well (e.g. H3K4ME3)
+# Histone names, which if matched to a substring of a target name will cause
+# the target to be considered a histone.
 histones:
   - "H2A"
   - "H2B"
   - "H3"
   - "H4"
 
-# Factors considered as broad
+# Histone modifications associated with broad peaks
 broadfactors:
   - "H3K27ME1"
   - "H3K27ME2"

@@ -10,14 +10,14 @@ from argparse import ArgumentParser
 
 import pypiper
 import yaml
-from peppy import AttributeDict
+from attmap import AttributeDict
 
 
 __author__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __credits__ = []
 __license__ = "GPL2"
-__version__ = "0.2"
+__version__ = "0.4"
 __status__ = "Development"
 
 
@@ -62,14 +62,14 @@ def arg_parser(parser):
     return parser
 
 
-def merge_bam_files(inputBams, outputBam, args, pipe, tmpdir):
+def merge_bam_files(input_bams, output_bam, args, pipe, tmpdir):
     cmd = 'java -Djava.io.tmpdir={}'.format(tmpdir)
     cmd += " -Xmx{}g".format(int(args.mem) / 1000)
     cmd += " -jar " + pipe.config.tools.piccard_jar + " MergeSamFiles"
     cmd += " USE_THREADING=TRUE"
     cmd += " SORT_ORDER=queryname"
-    cmd += " " + (" ".join(["INPUT=%s"] * len(inputBams))) % tuple(inputBams)
-    cmd += " OUTPUT={0}".format(outputBam)
+    cmd += " " + (" ".join(["INPUT=%s"] * len(input_bams))) % tuple(input_bams)
+    cmd += " OUTPUT={0}".format(output_bam)
     return cmd
 
 
@@ -231,11 +231,11 @@ def process(sample, pipeline_config, args):
     output_dir = sample.paths.sample_root
 
     # Merge Bam files if more than one technical replicate
-    if len(sample.data_path.split(" ")) > 1:
+    if len(sample.data_source.split(" ")) > 1:
         pipe.timestamp("## Merging bam files from replicates")
         cmd = merge_bam_files(
-            inputBams=sample.data_path.split(" "),  # this is a list of sample paths
-            outputBam=os.path.join(output_dir, "unaligned_merged.bam"),
+            input_bams=sample.data_source.split(" "),  # this is a list of sample paths
+            output_bam=os.path.join(output_dir, "unaligned_merged.bam"),
             args=args, pipe=pipe,
             tmpdir=output_dir
         )
@@ -244,7 +244,7 @@ def process(sample, pipeline_config, args):
 
         input_file = os.path.join(output_dir, "unaligned_merged.bam")
     else:
-        input_file = sample.data_path
+        input_file = sample.data_source
 
     # Copy the input file if it is not writable
     # (the first step requires the file to be writable which is silly)

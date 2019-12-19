@@ -10,22 +10,23 @@ from argparse import ArgumentParser
 import yaml
 import pypiper
 from pypiper.ngstk import NGSTk
-from peppy import AttributeDict, Sample
+from attmap import AttributeDict
+from peppy import Sample
 
 import pandas as pd
 
-##### for TSS analysis
+# for TSS analysis
 import pybedtools as bedtools
-import matplotlib as mpl
-mpl.use('Agg')
+import matplotlib
 import matplotlib.pyplot as plt
-#####
+matplotlib.use('Agg')
+
 
 __author__ = "Andre Rendeiro"
-__copyright__ = "Copyright 2015, Andre Rendeiro"
+__copyright__ = "Copyright 2019, Andre Rendeiro"
 __credits__ = []
 __license__ = "GPL2"
-__version__ = "0.2"
+__version__ = "0.4"
 __maintainer__ = "Andre Rendeiro"
 __email__ = "arendeiro@cemm.oeaw.ac.at"
 __status__ = "Development"
@@ -47,70 +48,88 @@ class ATACseqSample(Sample):
             raise TypeError("Provided object is not a pandas Series.")
         super(ATACseqSample, self).__init__(series)
 
+        # Set the sample's paths.sample_root attribute.
+        # This is a workaround to calling the parent's class set_file_paths
+        # which is impossible if the sample's YAML file does not contain
+        # pointers to its project (as is the case after looper submission)
+        self.paths.sample_root = os.path.join(
+            self.prj['metadata']['output_dir'],
+            self.prj['metadata']['results_subdir'],
+            self.name)
+
         self.tagmented = True
 
     def __repr__(self):
         return "ATAC-seq sample '%s'" % self.sample_name
 
-    def set_file_paths(self):
+    def set_file_paths(self, project):
         """
         Sets the paths of all files for this sample.
         """
         # Inherit paths from Sample by running Sample's set_file_paths()
-        super(ATACseqSample, self).set_file_paths()
+        super(ATACseqSample, self)  # .set_file_paths(project)
 
         # Files in the root of the sample dir
-        self.fastqc = os.path.join(self.paths.sample_root, self.sample_name + ".fastqc.zip")
-        self.trimlog = os.path.join(self.paths.sample_root, self.sample_name + ".trimlog.txt")
-        self.aln_rates = os.path.join(self.paths.sample_root, self.sample_name + ".aln_rates.txt")
-        self.aln_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".aln_metrics.txt")
-        self.dups_metrics = os.path.join(self.paths.sample_root, self.sample_name + ".dups_metrics.txt")
+        prefix = os.path.join(self.paths.sample_root, self.sample_name)
+        self.fastqc_initial_output = (
+            os.path.join(
+                self.paths.sample_root,
+                os.path.splitext(os.path.basename(self.data_source))[0])
+            + "_fastqc.zip")
+        self.fastqc = prefix + ".fastqc.zip"
+        self.trimlog = prefix + ".trimlog.txt"
+        self.aln_rates = prefix + ".aln_rates.txt"
+        self.aln_metrics = prefix + ".aln_metrics.txt"
+        self.dups_metrics = prefix + ".dups_metrics.txt"
 
         # Unmapped: merged bam, fastq, trimmed fastq
         self.paths.unmapped = os.path.join(self.paths.sample_root, "unmapped")
-        self.unmapped = os.path.join(self.paths.unmapped, self.sample_name + ".bam")
-        self.fastq = os.path.join(self.paths.unmapped, self.sample_name + ".fastq")
-        self.fastq1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.fastq")
-        self.fastq2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.fastq")
-        self.fastq_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".unpaired.fastq")
-        self.trimmed = os.path.join(self.paths.unmapped, self.sample_name + ".trimmed.fastq")
-        self.trimmed1 = os.path.join(self.paths.unmapped, self.sample_name + ".1.trimmed.fastq")
-        self.trimmed2 = os.path.join(self.paths.unmapped, self.sample_name + ".2.trimmed.fastq")
-        self.trimmed1_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".1_unpaired.trimmed.fastq")
-        self.trimmed2_unpaired = os.path.join(self.paths.unmapped, self.sample_name + ".2_unpaired.trimmed.fastq")
+        unmapped = os.path.join(self.paths.unmapped, self.sample_name)
+        self.unmapped = unmapped + ".bam"
+        self.fastq = unmapped + ".fastq"
+        self.fastq1 = unmapped + ".1.fastq"
+        self.fastq2 = unmapped + ".2.fastq"
+        self.fastq_unpaired = unmapped + ".unpaired.fastq"
+        self.trimmed = unmapped + ".trimmed.fastq"
+        self.trimmed1 = unmapped + ".1.trimmed.fastq"
+        self.trimmed2 = unmapped + ".2.trimmed.fastq"
+        self.trimmed1_unpaired = unmapped + ".1_unpaired.trimmed.fastq"
+        self.trimmed2_unpaired = unmapped + ".2_unpaired.trimmed.fastq"
 
         # Mapped: mapped, duplicates marked, removed, reads shifted
         self.paths.mapped = os.path.join(self.paths.sample_root, "mapped")
-        self.mapped = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.bam")
-        self.filtered = os.path.join(self.paths.mapped, self.sample_name + ".trimmed.bowtie2.filtered.bam")
+        mapped = os.path.join(self.paths.mapped, self.sample_name)
+        self.mapped = mapped + ".trimmed.bowtie2.bam"
+        self.filtered = mapped + ".trimmed.bowtie2.filtered.bam"
         # this will create additional bam files with reads shifted
-        self.filteredshifted = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.filtered.shifted.bam")
+        self.filteredshifted = mapped + ".trimmed.bowtie2.filtered.shifted.bam"
 
         # Files in the root of the sample dir
-        self.frip = os.path.join(self.paths.sample_root, self.name + "_FRiP.txt")
-        self.oracle_frip = os.path.join(self.paths.sample_root, self.name + "_oracle_FRiP.txt")
-
-        # Mapped: mapped, duplicates marked, removed, reads shifted
-        # this will create additional bam files with reads shifted
-        self.filteredshifted = os.path.join(self.paths.mapped, self.name + ".trimmed.bowtie2.filtered.shifted.bam")
+        self.frip = prefix + "_FRiP.txt"
+        self.oracle_frip = prefix + "_oracle_FRiP.txt"
 
         # Coverage: read coverage in windows genome-wide
         self.paths.coverage = os.path.join(self.paths.sample_root, "coverage")
-        self.coverage = os.path.join(self.paths.coverage, self.name + ".cov")
+        self.coverage = os.path.join(self.paths.coverage, self.sample_name + ".cov")
 
-        self.bigwig = os.path.join(self.paths.coverage, self.name + ".bigWig")
+        # self.bigwig = os.path.join(self.paths.coverage, self.name + ".bigWig")
+        self.insertplot = prefix + "_insertLengths.pdf"
+        self.insertdata = prefix + "_insertLengths.csv"
+        self.mitochondrial_stats = prefix + "_mitochondrial_stats.tsv"
+        self.qc = prefix + "_qc.tsv"
+        self.qc_plot = prefix + "_qc.pdf"
         self.paths.tss = os.path.join(self.paths.sample_root, "tss")
-        self.insertplot = os.path.join(self.paths.sample_root, self.name + "_insertLengths.pdf")
-        self.insertdata = os.path.join(self.paths.sample_root, self.name + "_insertLengths.csv")
-        self.mitochondrial_stats = os.path.join(self.paths.sample_root, self.name + "_mitochondrial_stats.tsv")
-        self.qc = os.path.join(self.paths.sample_root, self.name + "_qc.tsv")
-        self.qc_plot = os.path.join(self.paths.sample_root, self.name + "_qc.pdf")
+        tss_prefix = os.path.join(self.paths.tss, self.sample_name)
+        self.tss_plot = tss_prefix + "_TSS.svg"
+        self.tss_hist = tss_prefix + "_TSS_histogram.csv"
+        self.tss_lock = tss_prefix + "_TSS.complete"
 
         # Peaks: peaks called and derivate files
         self.paths.peaks = os.path.join(self.paths.sample_root, "peaks")
-        self.peaks = os.path.join(self.paths.peaks, self.name + "_peaks.narrowPeak")
-        self.summits = os.path.join(self.paths.peaks, self.name + "_summits.bed")
-        self.filtered_peaks = os.path.join(self.paths.peaks, self.name + "_peaks.filtered.bed")
+        peaks = os.path.join(self.paths.peaks, self.sample_name)
+        self.peaks = peaks + "_peaks.narrowPeak"
+        self.summits = peaks + "_summits.bed"
+        self.filteredPeaks = peaks + "_peaks.filtered.bed"
 
 
 class DNaseSample(ATACseqSample):
@@ -132,8 +151,13 @@ class DNaseSample(ATACseqSample):
     def __repr__(self):
         return "DNase-seq sample '%s'" % self.sample_name
 
-    def set_file_paths(self):
-        super(DNaseSample, self).set_file_paths()
+    def set_file_paths(self, project):
+        super(DNaseSample, self).set_file_paths(project)
+
+
+def report_dict(pipe, stats_dict):
+    for key, value in stats_dict.items():
+        pipe.report_result(key, value)
 
 
 def run_TSS_analysis(sample,
@@ -191,32 +215,24 @@ def main():
     # Parse command-line arguments
     parser = ArgumentParser(
         prog="atacseq-pipeline",
-        description="ATAC-seq pipeline."
-    )
+        description="ATAC-seq pipeline.")
     parser = arg_parser(parser)
     parser = pypiper.add_pypiper_args(parser, groups=["ngs", "looper", "resource", "pypiper"])
     args = parser.parse_args()
+    if args.sample_config is None:
+        parser.print_help()
+        return 1
 
     # Read in yaml configs
-    series = pd.Series(yaml.load(open(args.sample_config, "r")))
-
-    # looper 0.6/0.7 compatibility:
-    if "protocol" in series.index:
-        key = "protocol"
-    elif "library" in series.index:
-        key = "library"
-    else:
-        raise KeyError(
-            "Sample does not contain either a 'protocol' or 'library' attribute!")
-
+    series = pd.Series(yaml.safe_load(open(args.sample_config, "r")))
     # Create Sample object
-    if series[key] != "DNase-seq":
+    if series["protocol"] != "DNase-seq":
         sample = ATACseqSample(series)
     else:
         sample = DNaseSample(series)
 
     # Check if merged
-    if len(sample.data_path.split(" ")) > 1:
+    if len(sample.data_source.split(" ")) > 1:
         sample.merged = True
     else:
         sample.merged = False
@@ -228,9 +244,6 @@ def main():
         sample.ngs_inputs = [sample.data_source]
     if not hasattr(sample, "read_type"):
         sample.set_read_type()
-    else:
-        if sample.read_type not in ['single', 'paired']:
-            sample.set_read_type()
 
     # Shorthand for read_type
     if sample.read_type == "paired":
@@ -239,8 +252,7 @@ def main():
         sample.paired = False
 
     # Set file paths
-    sample.set_file_paths()
-    # sample.make_sample_dirs()  # should be fixed to check if values of paths are strings and paths indeed
+    sample.set_file_paths(sample.prj)
 
     # Start Pypiper object
     # Best practice is to name the pipeline with the name of the script;
@@ -252,24 +264,6 @@ def main():
     process(sample, pipe_manager, args)
 
 
-def arg_parser(parser):
-    """
-    Global options for pipeline.
-    """
-    parser.add_argument(
-        "-y", "--sample-yaml",
-        dest="sample_config",
-        help="Yaml config file with sample attributes.",
-        type=str)
-    parser.add_argument(
-        "--shift-reads",
-        dest="shift_reads",
-        help="Whether to produce a BAM file with reads shifted"
-             " to the original transposition location in addition.",
-        action="store_true")
-    return parser
-
-
 def process(sample, pipe_manager, args):
     """
     This takes unmapped Bam files and makes trimmed, aligned, duplicate marked
@@ -278,48 +272,50 @@ def process(sample, pipe_manager, args):
     """
     print("Start processing ATAC-seq sample %s." % sample.sample_name)
 
-    for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
+    # for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
+    for path in ["sample_root", "unmapped", "mapped", "peaks", "coverage"]:
         try:
             exists = os.path.exists(sample.paths[path])
         except TypeError:
             continue
         if not exists:
+            msg = "Cannot create '{}' path: {}".format(path, sample.paths[path])
             try:
                 os.mkdir(sample.paths[path])
-            except OSError("Cannot create '%s' path: %s" % (path, sample.paths[path])):
+            except OSError(msg):
                 raise
 
     # Create NGSTk instance
     tk = NGSTk(pm=pipe_manager)
 
     # Merge Bam files if more than one technical replicate
-    if len(sample.data_path.split(" ")) > 1:
+    if len(sample.data_source.split(" ")) > 1:
         pipe_manager.timestamp("Merging bam files from replicates")
         cmd = tk.merge_bams(
-            input_bams=sample.data_path.split(" "),  # this is a list of sample paths
-            merged_bam=sample.unmapped
-        )
+            input_bams=sample.data_source.split(" "),  # this is a list of sample paths
+            merged_bam=sample.unmapped)
         pipe_manager.run(cmd, sample.unmapped, shell=True)
-        sample.data_path = sample.unmapped
+        sample.data_source = sample.unmapped
 
     # Fastqc
     pipe_manager.timestamp("Measuring sample quality with Fastqc")
-    cmd = tk.fastqc_rename(
-        input_bam=sample.data_path,
-        output_dir=sample.paths.sample_root,
-        sample_name=sample.sample_name
-    )
-    pipe_manager.run(cmd, os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), shell=True)
-    report_dict(pipe_manager, parse_fastqc(os.path.join(sample.paths.sample_root, sample.sample_name + "_fastqc.zip"), prefix="fastqc_"))
+    if not os.path.exists(sample.fastqc):
+        cmd = tk.fastqc(
+            file=sample.data_source,
+            output_dir=sample.paths.sample_root)
+        pipe_manager.run(cmd, sample.fastqc_initial_output, shell=False)
+    # # rename output
+    if os.path.exists(sample.fastqc_initial_output):
+        os.rename(sample.fastqc_initial_output, sample.fastqc)
+    report_dict(pipe_manager, parse_fastqc(sample.fastqc, prefix="fastqc_"))
 
     # Convert bam to fastq
     pipe_manager.timestamp("Converting to Fastq format")
     cmd = tk.bam2fastq(
-        inputBam=sample.data_path,
-        outputFastq=sample.fastq1 if sample.paired else sample.fastq,
-        outputFastq2=sample.fastq2 if sample.paired else None,
-        unpairedFastq=sample.fastq_unpaired if sample.paired else None
-    )
+        input_bam=sample.data_source,
+        output_fastq=sample.fastq1 if sample.paired else sample.fastq,
+        output_fastq2=sample.fastq2 if sample.paired else None,
+        unpaired_fastq=sample.fastq_unpaired if sample.paired else None)
     pipe_manager.run(cmd, sample.fastq1 if sample.paired else sample.fastq, shell=True)
     if not sample.paired:
         pipe_manager.clean_add(sample.fastq, conditional=True)
@@ -332,16 +328,15 @@ def process(sample, pipe_manager, args):
     pipe_manager.timestamp("Trimming adapters from sample")
     if pipe_manager.config.parameters.trimmer == "trimmomatic":
         cmd = tk.trimmomatic(
-            inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-            inputFastq2=sample.fastq2 if sample.paired else None,
-            outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-            outputFastq1unpaired=sample.trimmed1_unpaired if sample.paired else None,
-            outputFastq2=sample.trimmed2 if sample.paired else None,
-            outputFastq2unpaired=sample.trimmed2_unpaired if sample.paired else None,
+            input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+            input_fastq2=sample.fastq2 if sample.paired else None,
+            output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+            output_fastq1_unpaired=sample.trimmed1_unpaired if sample.paired else None,
+            output_fastq2=sample.trimmed2 if sample.paired else None,
+            output_fastq2_unpaired=sample.trimmed2_unpaired if sample.paired else None,
             cpus=args.cores,
             adapters=pipe_manager.config.resources.adapters,
-            log=sample.trimlog
-        )
+            log=sample.trimlog)
         pipe_manager.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
         if not sample.paired:
             pipe_manager.clean_add(sample.trimmed, conditional=True)
@@ -353,15 +348,14 @@ def process(sample, pipe_manager, args):
 
     elif pipe_manager.config.parameters.trimmer == "skewer":
         cmd = tk.skewer(
-            inputFastq1=sample.fastq1 if sample.paired else sample.fastq,
-            inputFastq2=sample.fastq2 if sample.paired else None,
-            outputPrefix=os.path.join(sample.paths.unmapped, sample.sample_name),
-            outputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-            outputFastq2=sample.trimmed2 if sample.paired else None,
-            trimLog=sample.trimlog,
+            input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
+            input_fastq2=sample.fastq2 if sample.paired else None,
+            output_prefix=os.path.join(sample.paths.unmapped, sample.sample_name),
+            output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+            output_fastq2=sample.trimmed2 if sample.paired else None,
+            log=sample.trimlog,
             cpus=args.cores,
-            adapters=pipe_manager.config.resources.adapters
-        )
+            adapters=pipe_manager.config.resources.adapters)
         pipe_manager.run(cmd, sample.trimmed1 if sample.paired else sample.trimmed, shell=True)
         if not sample.paired:
             pipe_manager.clean_add(sample.trimmed, conditional=True)
@@ -373,16 +367,15 @@ def process(sample, pipe_manager, args):
 
     # Map
     pipe_manager.timestamp("Mapping reads with Bowtie2")
-    cmd = tk.bowtie2Map(
-        inputFastq1=sample.trimmed1 if sample.paired else sample.trimmed,
-        inputFastq2=sample.trimmed2 if sample.paired else None,
-        outputBam=sample.mapped,
+    cmd = tk.bowtie2_map(
+        input_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
+        input_fastq2=sample.trimmed2 if sample.paired else None,
+        output_bam=sample.mapped,
         log=sample.aln_rates,
         metrics=sample.aln_metrics,
-        genomeIndex=getattr(pipe_manager.config.resources.genome_index, sample.genome),
-        maxInsert=pipe_manager.config.parameters.max_insert,
-        cpus=args.cores
-    )
+        genome_index=getattr(pipe_manager.config.resources.genome_index, sample.genome),
+        max_insert=pipe_manager.config.parameters.max_insert,
+        cpus=args.cores)
     pipe_manager.run(cmd, sample.mapped, shell=True)
     report_dict(pipe_manager, parse_mapping_stats(sample.aln_rates, paired_end=sample.paired))
 
@@ -391,50 +384,39 @@ def process(sample, pipe_manager, args):
     cmd = tk.get_mitochondrial_reads(
         bam_file=sample.mapped,
         output=sample.mitochondrial_stats,
-        cpus=args.cores
-    )
+        cpus=args.cores)
     pipe_manager.run(cmd, sample.mitochondrial_stats, shell=True, nofail=True)
     report_dict(pipe_manager, parse_duplicate_stats(sample.mitochondrial_stats, prefix="MT_"))
 
     # Filter reads
     pipe_manager.timestamp("Filtering reads for quality")
-    cmd = tk.filterReads(
-        inputBam=sample.mapped,
-        outputBam=sample.filtered,
-        metricsFile=sample.dups_metrics,
+    cmd = tk.filter_reads(
+        input_bam=sample.mapped,
+        output_bam=sample.filtered,
+        metrics_file=sample.dups_metrics,
         paired=sample.paired,
         cpus=args.cores,
-        Q=pipe_manager.config.parameters.read_quality
-    )
+        Q=pipe_manager.config.parameters.read_quality)
     pipe_manager.run(cmd, sample.filtered, shell=True)
     report_dict(pipe_manager, parse_duplicate_stats(sample.dups_metrics))
 
-    # Report total efficiency
-    usable = (
-        float(pipe_manager.stats_dict["filtered_single_ends"]) +
-        (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
-    total = float(pipe_manager.stats_dict['fastqc_total_pass_filter_reads'])
-    report_dict(
-        pipe_manager,
-        {"total_efficiency": (usable / total) * 100})
+    # Index bams
+    pipe_manager.timestamp("Indexing bamfiles with samtools")
+    cmd = tk.index_bam(input_bam=sample.mapped)
+    pipe_manager.run(cmd, sample.mapped + ".bai", shell=True)
+    cmd = tk.index_bam(input_bam=sample.filtered)
+    pipe_manager.run(cmd, sample.filtered + ".bai", shell=True)
 
     # Shift reads
     if args.shift_reads:
         pipe_manager.timestamp("Shifting reads of tagmented sample")
-        cmd = tk.shiftReads(
-            inputBam=sample.filtered,
+        cmd = tk.shift_reads(
+            input_bam=sample.filtered,
             genome=sample.genome,
-            outputBam=sample.filteredshifted)
+            output_bam=sample.filteredshifted)
         pipe_manager.run(cmd, sample.filteredshifted, shell=True)
 
-    # Index bams
-    pipe_manager.timestamp("Indexing bamfiles with samtools")
-    cmd = tk.indexBam(inputBam=sample.mapped)
-    pipe_manager.run(cmd, sample.mapped + ".bai", shell=True)
-    cmd = tk.indexBam(inputBam=sample.filtered)
-    pipe_manager.run(cmd, sample.filtered + ".bai", shell=True)
-    if args.shift_reads:
-        cmd = tk.indexBam(inputBam=sample.filteredshifted)
+        cmd = tk.index_bam(input_bam=sample.filteredshifted)
         pipe_manager.run(cmd, sample.filteredshifted + ".bai", shell=True)
 
     ###########
@@ -451,37 +433,26 @@ def process(sample, pipe_manager, args):
     if not os.path.exists(sample.paths.peaks):
         os.makedirs(sample.paths.peaks)
 
-    cmd = tk.macs2CallPeaksATACSeq(
-        treatmentBam=sample.filtered,
-        outputDir=sample.paths.peaks,
-        sampleName=sample.sample_name,
-        genome=sample.genome
-    )
+    cmd = tk.macs2_call_peaks_atacseq(
+        treatment_bam=sample.filtered,
+        output_dir=sample.paths.peaks,
+        sample_name=sample.sample_name,
+        genome=sample.genome)
     pipe_manager.run(cmd, sample.peaks, shell=True)
     report_dict(pipe_manager, parse_peak_number(sample.peaks))
 
-    # Filter peaks
-    if hasattr(pipe_manager.config.resources.blacklisted_regions, sample.genome):
-        pipe_manager.timestamp("Filtering peaks from blacklisted regions")
-        cmd = filter_peaks(
-            peaks=sample.peaks,
-            exclude=getattr(pipe_manager.config.resources.blacklisted_regions, sample.genome),
-            filtered_peaks=sample.filtered_peaks
-        )
-        pipe_manager.run(cmd, sample.filtered_peaks, shell=True)
-        report_dict(pipe_manager, parse_peak_number(sample.filtered_peaks, prefix="filtered_"))
-
     # Calculate fraction of reads in peaks (FRiP)
     pipe_manager.timestamp("Calculating fraction of reads in peaks (FRiP)")
-    # on the sample's peaks
-    cmd = calculate_frip(
+    cmd = tk.calculate_frip(
         input_bam=sample.filtered,
         input_bed=sample.peaks,
         output=sample.frip,
         cpus=args.cores)
     pipe_manager.run(cmd, sample.frip, shell=True)
-    total = (float(pipe_manager.stats_dict["filtered_single_ends"]) + (float(pipe_manager.stats_dict["filtered_paired_ends"]) * 2.))
-    report_dict(pipe_manager, parse_FRiP(sample.frip, total))
+    total = (
+        float(pipe_manager.stats_dict["filtered_single_ends"]) +
+        (float(pipe_manager.stats_dict["filtered_paired_ends"]) / 2.))
+    report_dict(pipe_manager, parse_frip(sample.frip, total))
 
     # on an oracle peak list
     if hasattr(pipe_manager.config.resources.oracle_peak_regions, sample.genome):
@@ -491,7 +462,7 @@ def process(sample, pipe_manager, args):
             output=sample.oracle_frip,
             cpus=args.cores)
         pipe_manager.run(cmd, sample.oracle_frip, shell=True)
-        report_dict(pipe_manager, parse_FRiP(sample.oracle_frip, total, prefix="oracle_"))
+        report_dict(pipe_manager, parse_frip(sample.oracle_frip, total, prefix="oracle_"))
 
     # Plot fragment distribution
     if sample.paired and not os.path.exists(sample.insertplot):
@@ -499,30 +470,25 @@ def process(sample, pipe_manager, args):
         tk.plot_atacseq_insert_sizes(
             bam=sample.filtered,
             plot=sample.insertplot,
-            output_csv=sample.insertdata
-        )
-        pipe_manager.report_figure("insert_sizes", sample.insertplot)
+            output_csv=sample.insertdata)
 
-    # Count coverage genome-wide
+    # # Count coverage genome-wide
     # pipe_manager.timestamp("Calculating genome-wide coverage")
-    # cmd = tk.genomeWideCoverage(
-    #     inputBam=sample.filtered,
-    #     genomeWindows=getattr(pipe_manager.config.resources.genome_windows, sample.genome),
-    #     output=sample.coverage
-    # )
+    # cmd = tk.genome_wide_coverage(
+    #     input_bam=sample.filtered,
+    #     genome_windows=getattr(pipe_manager.config.resources.genome_windows, sample.genome),
+    #     output=sample.coverage)
     # pipe_manager.run(cmd, sample.coverage, shell=True)
 
     # Calculate NSC, RSC
     pipe_manager.timestamp("Assessing signal/noise in sample")
-    cmd = tk.peakTools(
-        inputBam=sample.filtered,
+    cmd = tk.run_spp(
+        input_bam=sample.filtered,
         output=sample.qc,
         plot=sample.qc_plot,
-        cpus=args.cores
-    )
+        cpus=args.cores)
     pipe_manager.run(cmd, sample.qc_plot, shell=True, nofail=True)
     report_dict(pipe_manager, parse_nsc_rsc(sample.qc))
-    pipe_manager.report_figure("cross_correlation", sample.qc_plot)
 
     # Make tracks
     track_dir = os.path.dirname(sample.bigwig)
@@ -537,22 +503,43 @@ def process(sample, pipe_manager, args):
         normalization_method="RPGC")
     pipe_manager.run(cmd, sample.bigwig, shell=True)
 
-    # Finish up
     print(pipe_manager.stats_dict)
 
     pipe_manager.stop_pipeline()
     print("Finished processing sample %s." % sample.sample_name)
 
 
-def report_dict(pipe, stats_dict):
-    for key, value in stats_dict.items():
-        pipe.report_result(key, value)
+def arg_parser(parser):
+    """
+    Global options for pipeline.
+    """
+    parser.add_argument(
+        "-y", "--sample-yaml",
+        dest="sample_config",
+        help="Yaml config file with sample attributes; in addition to "
+             "sample_name, this should define '{rt}', as 'single' or "
+             "'paired'"
+             .format(rt="read_type"))
+    parser.add_argument(
+        "-p", "--peak-caller",
+        dest="peak_caller",
+        choices=["macs2", "spp"],
+        help="Peak caller algorithm.",
+        default="macs2")
+    parser.add_argument(
+        "--shift-reads",
+        dest="shift_reads",
+        action="store_true",
+        help="Whether to produce a file with 5' read positions shifted to their original position.")
+    parser.add_argument("--pvalue", type=float, default=0.001, help="MACS2 p-value")
+    parser.add_argument("--qvalue", type=float, help="Q-value for peak calling")
+    return parser
 
 
 def parse_fastqc(fastqc_zip, prefix=""):
     """
     """
-    import StringIO
+    # TODO: review the parsing of paired-end files
     import zipfile
     import re
 
@@ -564,7 +551,7 @@ def parse_fastqc(fastqc_zip, prefix=""):
 
     try:
         zfile = zipfile.ZipFile(fastqc_zip)
-        content = StringIO.StringIO(zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt"))).readlines()
+        content = zfile.read(os.path.join(zfile.filelist[0].filename, "fastqc_data.txt")).decode().split("\n")
     except:
         return error_dict
     try:
@@ -776,10 +763,14 @@ def parse_duplicate_stats(stats_file, prefix=""):
 
 
 def parse_peak_number(peak_file, prefix=""):
-    from subprocess import check_output
+    import subprocess
     try:
-        return {prefix + "peaks": int(check_output(["wc", "-l", peak_file]).split(" ")[0])}
-    except:
+        return {
+            prefix + "peaks":
+            int(
+                subprocess.check_output(["wc", "-l", peak_file])
+                .decode().strip().split(" ")[0])}
+    except (TypeError, IndexError, subprocess.CalledProcessError):
         return {prefix + "peaks": pd.np.nan}
 
 
@@ -788,7 +779,7 @@ def calculate_frip(input_bam, input_bed, output, cpus=4):
             .format(cpus, input_bed, input_bam, output))
 
 
-def parse_FRiP(frip_file, total_reads, prefix=""):
+def parse_frip(frip_file, total_reads, prefix=""):
     """
     Calculates the fraction of reads in peaks for a given sample.
 
