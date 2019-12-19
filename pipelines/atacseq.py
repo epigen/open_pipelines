@@ -155,62 +155,6 @@ class DNaseSample(ATACseqSample):
         super(DNaseSample, self).set_file_paths(project)
 
 
-def report_dict(pipe, stats_dict):
-    for key, value in stats_dict.items():
-        pipe.report_result(key, value)
-
-
-def run_TSS_analysis(sample,
-                     bam_file,
-                     output_folder,
-                     chrom_file,
-                     tss_file,
-                     read_length=50,
-                     slop_size=1000):
-
-    if not os.path.exists(bam_file):
-        print ("Bam File {} not found!".format(bam_file))
-        return 1
-
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
-
-    tss_bed = bedtools.BedTool(tss_file)
-    tss_bed = tss_bed.slop(b=slop_size, g=chrom_file).sort(faidx=chrom_file)
-    # sample = os.path.splitext(os.path.split(bam_file)[1])[0]
-
-    output_base = "{}_TSS".format(sample)
-    alignments = bedtools.BedTool(bam_file).bam_to_bed().shift(g=chrom_file, p=-read_length / 2,
-                                                               m=read_length / 2).sort(faidx=chrom_file)
-
-    coverage = tss_bed.coverage(alignments, g=chrom_file, sorted=True, d=True, F=0.5)
-
-    histogram = coverage.to_dataframe(names=['chrom', 'start', 'end', 'gene', 'X', 'strand', 'base', 'count'],
-                                  usecols=['base', 'count', 'strand'])
-    histogram.loc[histogram['strand'] == '+', 'base'] = histogram[histogram['strand'] == '+']['base'] - slop_size - 1
-    histogram.loc[histogram['strand'] == '-', 'base'] = -(histogram[histogram['strand'] == '-']['base'] - slop_size - 1)
-    histogram = histogram[['base', 'count']].sort_values(by=['base']).groupby('base').sum()
-
-    noise = (histogram[:100].sum() + histogram[-100:].sum()) / 200
-    normalized_histogram = histogram / noise
-    normalized_histogram.to_csv(os.path.join(output_folder, "{}.csv".format(output_base)))
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    ax.plot(normalized_histogram.index, normalized_histogram, color='k')
-    ax.axvline(0, linestyle=':', color='k')
-
-    ax.set_xlabel('Distance from TSS (bp)')
-    ax.set_ylabel('Normalized coverage')
-    fig.savefig(os.path.join(output_folder, "{}.svg".format(output_base)))
-    plt.close(fig)
-
-    open(os.path.join(output_folder, "{}.complete".format(output_base)), 'w')
-
-    print "TSS enrichment: {}".format(normalized_histogram.max())
-
-
 def main():
     # Parse command-line arguments
     parser = ArgumentParser(
@@ -419,13 +363,15 @@ def process(sample, pipe_manager, args):
         cmd = tk.index_bam(input_bam=sample.filteredshifted)
         pipe_manager.run(cmd, sample.filteredshifted + ".bai", shell=True)
 
-    ###########
-    run_TSS_analysis(sample=sample.sample_name,
-                     bam_file=sample.filtered,
-                     output_folder=sample.paths.tss,
-                     chrom_file=getattr(pipe_manager.config.resources.chromosome_sizes, sample.genome),
-                     tss_file=getattr(pipe_manager.config.resources.unique_tss, sample.genome))
-    ############
+    # Run TSS enrichment
+    tss_enrichment = run_tss_analysis(
+        sample=sample.sample_name,
+        bam_file=sample.filtered,
+        chrom_file=getattr(
+            pipe_manager.config.resources.chromosome_sizes, sample.genome),
+        tss_file=getattr(
+            pipe_manager.config.resources.unique_tss, sample.genome))
+    report_dict(pipe_manager, {"tss_enrichment": tss_enrichment})
 
     # Call peaks
     pipe_manager.timestamp("Calling peaks with MACS2")
@@ -534,6 +480,11 @@ def arg_parser(parser):
     parser.add_argument("--pvalue", type=float, default=0.001, help="MACS2 p-value")
     parser.add_argument("--qvalue", type=float, help="Q-value for peak calling")
     return parser
+
+
+def report_dict(pipe, stats_dict):
+    for key, value in stats_dict.items():
+        pipe.report_result(key, value)
 
 
 def parse_fastqc(fastqc_zip, prefix=""):
@@ -817,6 +768,66 @@ def parse_nsc_rsc(nsc_rsc_file):
         return {"NSC": nsc_rsc[8].squeeze(), "RSC": nsc_rsc[9].squeeze()}
     except:
         return {"NSC": pd.np.nan, "RSC": pd.np.nan}
+
+
+def run_tss_analysis(sample,
+                     bam_file,
+                     output_folder,
+                     chrom_file,
+                     tss_file,
+                     read_length=50,
+                     slop_size=1000):
+
+    if not os.path.exists(bam_file):
+        print("Bam File {} not found!".format(bam_file))
+        return 1
+
+    tss_bed = bedtools.BedTool(tss_file)
+    tss_bed = tss_bed.slop(b=slop_size, g=chrom_file).sort(faidx=chrom_file)
+    # sample = os.path.splitext(os.path.split(bam_file)[1])[0]
+
+    alignments = (
+        bedtools.BedTool(bam_file)
+        .bam_to_bed()
+        .shift(
+            g=chrom_file, p=-read_length / 2,
+            m=read_length / 2)
+        .sort(faidx=chrom_file))
+
+    coverage = tss_bed.coverage(
+        alignments, g=chrom_file, sorted=True, d=True, F=0.5)
+
+    histogram = coverage.to_dataframe(
+        names=['chrom', 'start', 'end', 'gene', 'X', 'strand', 'base', 'count'],
+        usecols=['base', 'count', 'strand'])
+    histogram.loc[histogram['strand'] == '+', 'base'] = \
+        histogram.loc[histogram['strand'] == '+', 'base'] - slop_size - 1
+    histogram.loc[histogram['strand'] == '-', 'base'] = \
+        -(histogram.loc[histogram['strand'] == '-', 'base'] - slop_size - 1)
+    histogram = (
+        histogram[['base', 'count']]
+        .sort_values(by=['base'])
+        .groupby('base')
+        .sum())
+
+    noise = (histogram[:100].sum() + histogram[-100:].sum()) / 200
+    normalized_histogram = histogram / noise
+    normalized_histogram.to_csv(sample.tss_hist)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(normalized_histogram.index, normalized_histogram, color='k')
+    ax.axvline(0, linestyle=':', color='k')
+
+    ax.set_xlabel('Distance from TSS (bp)')
+    ax.set_ylabel('Normalized coverage')
+    fig.savefig(sample.tss_plot)
+    plt.close(fig)
+
+    open(sample.tss_lock, 'w')
+
+    enr = normalized_histogram.max()
+    print("TSS enrichment: {}".format(enr))
+    return enr
 
 
 def filter_peaks(peaks, exclude, filtered_peaks):
