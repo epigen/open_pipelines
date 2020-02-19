@@ -217,7 +217,7 @@ def process(sample, pipe_manager, args):
     print("Start processing ATAC-seq sample %s." % sample.sample_name)
 
     # for path in ["sample_root"] + list(sample.paths.__dict__.keys()):
-    for path in ["sample_root", "unmapped", "mapped", "peaks", "coverage"]:
+    for path in ["sample_root", "unmapped", "mapped", "peaks", "coverage", "tss"]:
         try:
             exists = os.path.exists(sample.paths[path])
         except TypeError:
@@ -365,7 +365,7 @@ def process(sample, pipe_manager, args):
 
     # Run TSS enrichment
     tss_enrichment = run_tss_analysis(
-        sample=sample.sample_name,
+        sample=sample,
         bam_file=sample.filtered,
         chrom_file=getattr(
             pipe_manager.config.resources.chromosome_sizes, sample.genome),
@@ -772,7 +772,6 @@ def parse_nsc_rsc(nsc_rsc_file):
 
 def run_tss_analysis(sample,
                      bam_file,
-                     output_folder,
                      chrom_file,
                      tss_file,
                      read_length=50,
@@ -825,7 +824,7 @@ def run_tss_analysis(sample,
 
     open(sample.tss_lock, 'w')
 
-    enr = normalized_histogram.max()
+    enr = normalized_histogram.max()['count']
     print("TSS enrichment: {}".format(enr))
     return enr
 
