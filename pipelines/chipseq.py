@@ -54,10 +54,7 @@ class ChIPseqSample(Sample):
         # This is a workaround to calling the parent's class set_file_paths
         # which is impossible if the sample's YAML file does not contain
         # pointers to its project (as is the case after looper submission)
-        self.paths.sample_root = os.path.join(
-            self.prj['metadata']['output_dir'],
-            self.prj['metadata']['results_subdir'],
-            self.name)
+        self.paths.sample_root = series['paths']['sample_root']
 
         # Set broad/histone status that may later be modified given
         # context of a pipeline configuration file, handling null/missing mark.
