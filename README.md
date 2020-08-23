@@ -9,7 +9,7 @@ This repository contains pipelines for processing NGS data and associated script
 Pipelines here are configured to work with [`looper`](http://looper.readthedocs.io) and use [`pypiper`](http://pypiper.readthedocs.io) (see the corresponding repositories). These pipelines work with metadata formatted as a [portable encapsulated project](http://pepkit.github.io).
 
 # Installation and usage
-Before installing, make sure your pip installation is up to date!
+:warning: Before installing, make sure your pip installation is up to date!
 
 1. Install [`looper`](http://looper.readthedocs.io) and [`pypiper`](http://pypiper.readthedocs.io): 
   - `pip install "peppy>=0.30.2,<1.0.0" "looper>=1.2.0,<2.0.0" "piper>=0.12.1,<1.0.0"`
@@ -19,16 +19,16 @@ Before installing, make sure your pip installation is up to date!
 4. If your project has more than one protocol (data type), link each protocol to the respective pipeine in the following manner:
 
       ```yaml
-sample_modifiers:
-  imply:
-    - if:
-        protocol: "Amplicon"
-      then:
-        pipeline_interfaces: "${CODE}/open_pipelines/amplicon_simple.interface.yaml"
-    - if:
-        protocol: "ATAC-seq"
-      then:
-        pipeline_interfaces: "${CODE}/open_pipelines/atacseq.interface.yaml"
+        sample_modifiers:
+          imply:
+            - if:
+                protocol: "Amplicon"
+              then:
+                pipeline_interfaces: "${CODE}/open_pipelines/amplicon_simple.interface.yaml"
+            - if:
+                protocol: "ATAC-seq"
+              then:
+                pipeline_interfaces: "${CODE}/open_pipelines/atacseq.interface.yaml"
       ```
 5. Run all jobs using looper:
   - `looper run project/metadata/project_config.yaml`
