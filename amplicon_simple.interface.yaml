@@ -1,0 +1,10 @@
+pep_version: 2.0.0
+pipeline_name: "amplicon_simple"
+pipeline_type: "sample"
+path: "pipelines/amplicon_simple.py"
+# input_schema: "pipelines/amplicon_simple.input_schema.yaml"
+# output_schema: pipelines/amplicon_simple.output_schema.yaml
+command_template: "{pipeline.path} -i {sample.data_source} -n {sample.sample_name} -a {sample.amplicon} -g {sample.guide_rna} --output-parent {looper.sample_output_folder}"
+compute:
+    size_dependent_variables: "pipelines/amplicon_simple.resources-sample.tsv"
+# description: "The interface for the amplicon_simple pipeline"

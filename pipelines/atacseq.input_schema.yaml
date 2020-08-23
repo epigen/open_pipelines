@@ -1,0 +1,24 @@
+description: The input schema for the ATAC-seq pipeline.
+imports:
+  - http://schema.databio.org/pep/2.0.0.yaml
+properties:
+  samples:
+    type: array
+    items:
+      type: object
+      properties:
+        sample_name:
+          type: string
+          description: "Sample name."
+        read_type:
+          type: string
+          description: "Read type."
+        sample_yaml_path:
+          type: string
+          description: "Path to sample YAML file."
+      required:
+        - sample_name
+        - read_type
+        # - sample_yaml_path
+required:
+  - samples

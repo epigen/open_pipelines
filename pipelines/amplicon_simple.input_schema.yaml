@@ -1,0 +1,28 @@
+description: A example schema for a pipeline.
+imports: 
+  - http://schema.databio.org/pep/2.0.0.yaml
+properties:
+  samples:
+    type: array
+    items:
+      type: object
+      properties:
+        sample_name:
+          type: string
+          description: "Fastq file for read 1"
+        amplicon:
+          type: string
+          description: "Fastq file for read 2"
+        guide_rna:
+          type: string
+          description: "Refgenie genome registry identifier"          
+        data_source:
+          type: string
+          description: "Length of the Unique Molecular Identifier, if any"
+      required:
+        - sample_name
+        - amplicon
+        - guide_rna
+        - data_source
+required:
+  - samples
