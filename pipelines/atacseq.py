@@ -111,7 +111,7 @@ class ATACseqSample:
         self.coverage_dir = pjoin(self.sample_root, "coverage")
         self.coverage = pjoin(self.coverage_dir, self.sample_name + ".cov")
 
-        # self.bigwig = pjoin(self.coverage, self.name + ".bigWig")
+        self.bigwig = pjoin(self.coverage, self.sample_name + ".bigWig")
         self.insertplot = prefix + "_insertLengths.pdf"
         self.insertdata = prefix + "_insertLengths.csv"
         self.mitochondrial_stats = prefix + "_mitochondrial_stats.tsv"
@@ -324,7 +324,7 @@ def process(sample, pipe_manager, args):
         cmd = tk.skewer(
             input_fastq1=sample.fastq1 if sample.paired else sample.fastq,
             input_fastq2=sample.fastq2 if sample.paired else None,
-            output_prefix=pjoin(sample.unmapped, sample.sample_name),
+            output_prefix=pjoin(sample.unmapped_dir, sample.sample_name),
             output_fastq1=sample.trimmed1 if sample.paired else sample.trimmed,
             output_fastq2=sample.trimmed2 if sample.paired else None,
             log=sample.trimlog,
