@@ -19,6 +19,7 @@ resources:
     mm9: /data/groups/lab_bock/shared/resources/regions/blacklists/mm9.blacklist.bed
   unique_tss:
     hg38: /data/groups/lab_bock/shared/resources/genomes/hg38/hg38_gencode_tss_unique.bed
+    hg19: /data/groups/lab_bock/shared/resources/genomes/hg19/hg19_CCDS_tss_unique.bed
     mm10: /data/groups/lab_bock/shared/resources/genomes/mm10/mm10_CCDS_tss_unique.bed
   oracle_peak_regions:
     hg38: /data/groups/lab_bock/shared/resources/regions/ensembl_regulatory_build/homo_sapiens.GRCh38.Regulatory_Build.regulatory_features.chromosomes_only.20161111.bed
