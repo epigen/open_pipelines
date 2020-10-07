@@ -1,0 +1,13 @@
+pep_version: 2.0.0
+pipeline_name: "ATAC-seq"
+pipeline_type: "sample"
+description: "The interface for the ATAC-seq pipeline"
+path: "pipelines/atacseq.py"
+input_schema: "pipelines/atacseq.input_schema.yaml"
+# output_schema: pipelines/atacseq.output_schema.yaml
+command_template: "{pipeline.path} --sample-yaml {looper.output_dir}/submission/{sample.sample_name}_sample.yaml --output-parent {looper.sample_output_folder}"
+compute:
+    size_dependent_variables: "pipelines/atacseq.resources-sample.tsv"
+pre_submit:
+  python_functions:
+    - looper.write_sample_yaml
