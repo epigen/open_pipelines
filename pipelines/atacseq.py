@@ -110,7 +110,7 @@ class ATACseqSample:
         self.coverage_dir = pjoin(self.sample_root, "coverage")
         self.coverage = pjoin(self.coverage_dir, self.sample_name + ".cov")
 
-        self.bigwig = pjoin(self.coverage, self.sample_name + ".bigWig")
+        self.bigwig = pjoin(self.coverage_dir, self.sample_name + ".bigWig")
         self.insertplot = prefix + "_insertLengths.pdf"
         self.insertdata = prefix + "_insertLengths.csv"
         self.mitochondrial_stats = prefix + "_mitochondrial_stats.tsv"
