@@ -48,6 +48,7 @@ class ATACseqSample:
         # Use pd.Series object to have all sample attributes
         if not isinstance(series, pd.Series):
             raise TypeError("Provided object is not a pandas Series.")
+        # super(ATACseqSample, self).__init__(series)
 
         self.tagmented = True
         for k, v in series.items():
@@ -56,12 +57,12 @@ class ATACseqSample:
     def __repr__(self):
         return "ATAC-seq sample '%s'" % self.sample_name
 
-    def set_file_paths(self):
+    def set_file_paths(self, project):
         """
         Sets the paths of all files for this sample.
         """
         # Inherit paths from Sample by running Sample's set_file_paths()
-        super(ATACseqSample, self)
+        super(ATACseqSample, self)  # .set_file_paths(project)
 
         # Files in the root of the sample dir
         prefix = pjoin(self.sample_root, self.sample_name)
@@ -150,8 +151,8 @@ class DNaseSample(ATACseqSample):
     def __repr__(self):
         return "DNase-seq sample '%s'" % self.sample_name
 
-    def set_file_paths(self):
-        super(DNaseSample, self).set_file_paths()
+    def set_file_paths(self, project):
+        super(DNaseSample, self).set_file_paths(project)
 
 
 def main():
@@ -184,6 +185,7 @@ def main():
         sample.merged = True
     else:
         sample.merged = False
+    sample.prj = AttributeDict(sample.prj)
     sample.paths = AttributeDict(sample.__dict__)
 
     # Check read type if not provided
@@ -199,7 +201,7 @@ def main():
         sample.paired = False
 
     # Set file paths
-    sample.set_file_paths()
+    sample.set_file_paths(sample.prj)
 
     # Start Pypiper object
     # Best practice is to name the pipeline with the name of the script;
@@ -429,8 +431,8 @@ def process(sample, pipe_manager, args):
     # Call peaks
     pipe_manager.timestamp("Calling peaks with MACS2")
     # make dir for output (macs fails if it does not exist)
-    if not os.path.exists(sample.peaks):
-        os.makedirs(sample.peaks)
+    if not os.path.exists(os.dirname(sample.peaks)):
+        os.makedirs(os.dirname(sample.peaks))
 
     cmd = tk.macs2_call_peaks_atacseq(
         treatment_bam=sample.filtered,
