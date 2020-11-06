@@ -436,7 +436,7 @@ def process(sample, pipe_manager, args):
 
     cmd = tk.macs2_call_peaks_atacseq(
         treatment_bam=sample.filtered,
-        output_dir=sample.peaks,
+        output_dir=sample.peaks_dir,
         sample_name=sample.sample_name,
         genome=sample.genome,
     )
