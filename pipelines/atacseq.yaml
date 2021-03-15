@@ -42,7 +42,7 @@ tools:
   macs2: macs2
   # optional:
   Rscript: Rscript
-  spp:  # You can find this here: https://raw.githubusercontent.com/crazyhottommy/phantompeakqualtools/master/run_spp.R
+  spp:  /home/fzhao/.local/bin/run_spp.R
 
 # The following section parameters used to control pipeline behaviour
 parameters:
