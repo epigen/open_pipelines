@@ -5,7 +5,7 @@ description: "The interface for the ATAC-seq pipeline"
 path: "pipelines/atacseq.py"
 input_schema: "pipelines/atacseq.input_schema.yaml"
 # output_schema: pipelines/atacseq.output_schema.yaml
-command_template: "{pipeline.path} --sample-yaml {looper.output_dir}/submission/{sample.sample_name}.yaml --output-parent {looper.sample_output_folder}"
+command_template: "{pipeline.path} --sample-yaml {looper.output_dir}/submission/{sample.sample_name}_sample.yaml --output-parent {looper.sample_output_folder}"
 compute:
     size_dependent_variables: "pipelines/atacseq.resources-sample.tsv"
 pre_submit:
