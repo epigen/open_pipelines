@@ -36,7 +36,6 @@ __status__ = "Development"
 class ATACseqSample:
     """
     Class to model ATAC-seq samples based on the ChIPseqSample class.
-
     :param series: Pandas `Series` object.
     :type series: pandas.Series
     """
@@ -48,7 +47,6 @@ class ATACseqSample:
         # Use pd.Series object to have all sample attributes
         if not isinstance(series, pd.Series):
             raise TypeError("Provided object is not a pandas Series.")
-        # super(ATACseqSample, self).__init__(series)
 
         self.tagmented = True
         for k, v in series.items():
@@ -57,12 +55,12 @@ class ATACseqSample:
     def __repr__(self):
         return "ATAC-seq sample '%s'" % self.sample_name
 
-    def set_file_paths(self, project):
+    def set_file_paths(self):
         """
         Sets the paths of all files for this sample.
         """
         # Inherit paths from Sample by running Sample's set_file_paths()
-        super(ATACseqSample, self)  # .set_file_paths(project)
+        super(ATACseqSample, self)
 
         # Files in the root of the sample dir
         prefix = pjoin(self.sample_root, self.sample_name)
@@ -134,7 +132,6 @@ class ATACseqSample:
 class DNaseSample(ATACseqSample):
     """
     Class to model DNase-seq samples based on the ChIPseqSample class.
-
     :param series: Pandas `Series` object.
     :type series: pandas.Series
     """
@@ -151,8 +148,8 @@ class DNaseSample(ATACseqSample):
     def __repr__(self):
         return "DNase-seq sample '%s'" % self.sample_name
 
-    def set_file_paths(self, project):
-        super(DNaseSample, self).set_file_paths(project)
+    def set_file_paths(self):
+        super(DNaseSample, self).set_file_paths()
 
 
 def main():
@@ -185,7 +182,6 @@ def main():
         sample.merged = True
     else:
         sample.merged = False
-    sample.prj = AttributeDict(sample.prj)
     sample.paths = AttributeDict(sample.__dict__)
 
     # Check read type if not provided
@@ -201,7 +197,7 @@ def main():
         sample.paired = False
 
     # Set file paths
-    sample.set_file_paths(sample.prj)
+    sample.set_file_paths()
 
     # Start Pypiper object
     # Best practice is to name the pipeline with the name of the script;
@@ -431,12 +427,12 @@ def process(sample, pipe_manager, args):
     # Call peaks
     pipe_manager.timestamp("Calling peaks with MACS2")
     # make dir for output (macs fails if it does not exist)
-    if not os.path.exists(os.path.dirname(sample.peaks)):
-        os.makedirs(os.path.dirname(sample.peaks))
+    if not os.path.exists(sample.peaks):
+        os.makedirs(sample.peaks)
 
     cmd = tk.macs2_call_peaks_atacseq(
         treatment_bam=sample.filtered,
-        output_dir=sample.peaks_dir,
+        output_dir=sample.peaks,
         sample_name=sample.sample_name,
         genome=sample.genome,
     )
@@ -899,7 +895,6 @@ def parse_mapping_stats(stats_file, prefix="", paired_end=True):
 def parse_duplicate_stats(stats_file, prefix=""):
     """
     Parses sambamba markdup output, returns series with values.
-
     :param stats_file: sambamba output file with duplicate statistics.
     :type stats_file: str
     :param prefix: A string to be used as prefix to the output dictionary keys.
@@ -972,7 +967,6 @@ def calculate_frip(input_bam, input_bed, output, cpus=4):
 def parse_frip(frip_file, total_reads, prefix=""):
     """
     Calculates the fraction of reads in peaks for a given sample.
-
     :param frip_file: A sting path to a file with the FRiP output.
     :type frip_file: str
     :param total_reads: A Sample object with the "peaks" attribute.
@@ -998,7 +992,6 @@ def parse_frip(frip_file, total_reads, prefix=""):
 def parse_nsc_rsc(nsc_rsc_file):
     """
     Parses the values of NSC and RSC from a stats file.
-
     :param nsc_rsc_file: A sting path to a file with the NSC and RSC output (generally a tsv file).
     :type nsc_rsc_file: str
     """
