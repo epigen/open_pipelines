@@ -427,8 +427,8 @@ def process(sample, pipe_manager, args):
     # Call peaks
     pipe_manager.timestamp("Calling peaks with MACS2")
     # make dir for output (macs fails if it does not exist)
-    if not os.path.exists(sample.peaks):
-        os.makedirs(sample.peaks)
+    if not os.path.exists(os.dirname(sample.peaks)):
+        os.makedirs(os.dirname(sample.peaks))
 
     cmd = tk.macs2_call_peaks_atacseq(
         treatment_bam=sample.filtered,
