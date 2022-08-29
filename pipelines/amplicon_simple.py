@@ -26,28 +26,26 @@ def arg_parser(parser):
     Global options for pipeline.
     """
     parser.add_argument(
-        "-i",
-        dest="input",
-        help="Input Fastq file.",
-        type=str
+        "-i", dest="input", help="Input Fastq file.", type=str, required=True
     )
     parser.add_argument(
-        "-n",
-        dest="sample_name",
-        help="Sample name.",
-        type=str
+        "-n", dest="sample_name", help="Sample name.", type=str, required=True
     )
     parser.add_argument(
-        "-a", "--amplicon",
+        "-a",
+        "--amplicon",
         dest="amplicon",
         help="Full amplicon sequence.",
-        type=str
+        type=str,
+        required=True,
     )
     parser.add_argument(
-        "-g", "--guide-rna",
+        "-g",
+        "--guide-rna",
         dest="guide_rna",
         help="Guide RNA sequence used to target the genome.",
-        type=str
+        type=str,
+        required=True,
     )
     return parser
 
@@ -62,7 +60,10 @@ def count_sizes(fastq_file, amplicon, guide_rna, window=20, anchor_length=10):
 
     editing_position = amplicon.index(guide_rna)
 
-    guide_plus_window = (editing_position - window, editing_position + len(guide_rna) + window)
+    guide_plus_window = (
+        editing_position - window,
+        editing_position + len(guide_rna) + window,
+    )
 
     left_anchor_start = guide_plus_window[0] - anchor_length
     right_anchor_end = guide_plus_window[1] + anchor_length
@@ -70,19 +71,20 @@ def count_sizes(fastq_file, amplicon, guide_rna, window=20, anchor_length=10):
     left_anchor_end = left_anchor_start + anchor_length
     right_anchor_start = right_anchor_end - anchor_length
 
-    a = amplicon[left_anchor_start: left_anchor_end]
-    b = amplicon[right_anchor_start: right_anchor_end]
+    a = amplicon[left_anchor_start:left_anchor_end]
+    b = amplicon[right_anchor_start:right_anchor_end]
 
     pattern = a + "(.*)" + b
 
-    window_size = (right_anchor_start - left_anchor_end)
+    window_size = right_anchor_start - left_anchor_end
 
     # Open file handle
     if fastq_file.endswith(".gz"):
         import gzip
-        handle = gzip.open(fastq_file, 'r')
+
+        handle = gzip.open(fastq_file, "r")
     else:
-        handle = open(fastq_file, 'r')
+        handle = open(fastq_file, "r")
 
     # Iterate over sequence lines, append matches
     seqs = itertools.islice(handle, 1, None, 4)
@@ -100,16 +102,19 @@ def count_sizes(fastq_file, amplicon, guide_rna, window=20, anchor_length=10):
 def main():
     # Parse command-line arguments
     parser = ArgumentParser(
-        prog="amplicon-pipeline",
-        description="Amplicon pipeline."
+        prog="amplicon-pipeline", description="Amplicon pipeline."
     )
     parser = arg_parser(parser)
-    parser = pypiper.add_pypiper_args(parser, groups=["all"])
+    parser = pypiper.add_pypiper_args(
+        parser, groups=["ngs", "looper", "pypiper"]
+    )
     args = parser.parse_args()
+
+    print(args)
 
     print("Processing sample {}.".format(args.sample_name))
 
-    output_folder = os.path.abspath(os.path.join(args.output_parent, args.sample_name))
+    output_folder = os.path.abspath(args.output_parent)
 
     # Create output directories if not existing
     for path in [args.output_parent, output_folder]:
@@ -121,22 +126,27 @@ def main():
 
     # Count length of pattern matches
     sizes = count_sizes(
-        fastq_file=args.input,
-        amplicon=args.amplicon,
-        guide_rna=args.guide_rna)
+        fastq_file=args.input, amplicon=args.amplicon, guide_rna=args.guide_rna
+    )
 
     # Calculate efficiency
     efficiency = (sizes[sizes.index != 0].sum() / float(sizes.sum())) * 100
 
     # Save
-    with open(os.path.join(output_folder, args.sample_name + ".efficiency.csv"), 'w') as handle:
+    with open(
+        os.path.join(output_folder, args.sample_name + ".efficiency.csv"), "w"
+    ) as handle:
         handle.write("{},{}\n".format(args.sample_name, efficiency))
 
-    print("Sample {} has an editing efficiency of {}.".format(args.sample_name, efficiency))
+    print(
+        "Sample {} has an editing efficiency of {}.".format(
+            args.sample_name, efficiency
+        )
+    )
     print("Finished processing sample {}.".format(args.sample_name))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         sys.exit(main())
     except KeyboardInterrupt:
